@@ -1,26 +1,159 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #F8F9FA;
+  --foreground: #111827;
+  
+  --card: #F1F3F5; /* Fond légèrement plus foncé et teinté que le blanc pur */
+  --card-hover: #E9ECEF;
+  --card-border: #DDE1E5;
+
+  --sidebar-bg: #FFFFFF;
+  --sidebar-border: #E5E7EB;
+
+  --input-bg: #F9FAFB;
+  --input-border: #D1D5DB;
+  --input-text: #111827;
+
+  --accent: #166534;
+  --accent-hover: #14532D;
+  --accent-light: #F0FDF4;
+  --accent-border: #BBF7D0;
+  --accent-text: #166534;
+
+  --text-main: #111827;
+  --text-muted: #6B7280;
+  --text-subtle: #9CA3AF;
+
+  /* Aliases pour rétrocompatibilité */
+  --card-bg: var(--card);
+  --border: var(--card-border);
+  --tint: var(--accent);
+}
+
+.dark, [data-theme="dark"] {
+  --background: #090B0D;
+  --foreground: #F3F4F6;
+  
+  --card: #13161A; /* Fond légèrement plus profond et épuré */
+  --card-hover: #191D22;
+  --card-border: #22272F;
+
+  --sidebar-bg: #0C0E10;
+  --sidebar-border: #1F2328;
+
+  --input-bg: #14171B;
+  --input-border: #2A2F36;
+  --input-text: #F3F4F6;
+
+  --accent: #22C55E;
+  --accent-hover: #16A34A;
+  --accent-light: #052E16;
+  --accent-border: #166534;
+  --accent-text: #4ADE80;
+
+  --text-main: #F3F4F6;
+  --text-muted: #9CA3AF;
+  --text-subtle: #6B7280;
+
+  /* Aliases pour rétrocompatibilité */
+  --card-bg: var(--card);
+  --border: var(--card-border);
+  --tint: var(--accent);
 }
 
 @theme inline {
+  --font-sans: var(--font-app), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-serif: var(--font-app), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-card: var(--card);
+  --color-card-border: var(--card-border);
+  --color-accent: var(--accent);
+  --color-accent-light: var(--accent-light);
+  --color-accent-border: var(--accent-border);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  font-size: 14px;
 }
 
 body {
-  background: var(--background);
+  background-color: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-app), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  min-height: 100vh;
+  line-height: 1.5;
+  letter-spacing: -0.011em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.font-heritage {
+  font-family: var(--font-app), sans-serif;
+  letter-spacing: -0.02em;
+}
+
+/* Card & Surface styles - épurés, sans fioritures ni ombres gonflées */
+.kanto-card {
+  background-color: var(--card);
+  border: 1px solid var(--card-border);
+  color: var(--foreground);
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.kanto-input {
+  background-color: var(--input-bg);
+  border: 1px solid var(--input-border);
+  color: var(--input-text);
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.kanto-input:focus {
+  border-color: var(--accent);
+}
+
+/* Utilitaires minimalistes épurés (ombres très atténuées / quasi-plates) */
+.shadow-soft {
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.02);
+}
+
+.shadow-hover:hover {
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.04);
+}
+
+.dark .shadow-soft, [data-theme="dark"] .shadow-soft {
+  box-shadow: none;
+}
+
+.dark .shadow-hover:hover, [data-theme="dark"] .shadow-hover:hover {
+  box-shadow: none;
+}
+
+/* Scrollbars fines adaptatives */
+::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(140, 140, 140, 0.25);
+  border-radius: 4px;
+}
+
+.dark ::-webkit-scrollbar-thumb, [data-theme="dark"] ::-webkit-scrollbar-thumb {
+  background: rgba(200, 200, 200, 0.2);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(140, 140, 140, 0.45);
 }

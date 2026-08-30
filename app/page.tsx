@@ -1,69 +1,285 @@
-import Image from "next/image";
+'use client';
 
-export default function Home() {
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { AdminShell } from '@/components/layout/AdminShell';
+import { PageHeader } from '@/components/layout/PageHeader';
+import { StatCard } from '@/components/ui';
+import { fetchApi } from '@/lib/api-client';
+import {
+  BookOpen,
+  Headphones,
+  ScrollText,
+  ArrowUpRight,
+  Volume2,
+  Quote,
+  Mic,
+  Lock,
+  CheckCheck,
+  Puzzle,
+  LayoutDashboard,
+} from 'lucide-react';
+
+interface StatsData {
+  totalContes: number;
+  contesWithAudioMg: number;
+  contesWithAudioFr: number;
+  totalItems: number;
+  totalCitations: number;
+}
+
+interface ConteSummary {
+  id: string;
+  audioUrlMg?: string | null;
+  audioUrlFr?: string | null;
+}
+
+export default function AdminDashboardPage() {
+  const [stats, setStats] = useState<StatsData>({
+    totalContes: 0,
+    contesWithAudioMg: 0,
+    contesWithAudioFr: 0,
+    totalItems: 0,
+    totalCitations: 0,
+  });
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadStats() {
+      try {
+        const contesRes = await fetchApi<{ data: ConteSummary[] }>('/contes?limit=100');
+        const contes = contesRes.data || [];
+
+        const withMg = contes.filter((c) => !!c.audioUrlMg).length;
+        const withFr = contes.filter((c) => !!c.audioUrlFr).length;
+
+        let itemsCount = 0;
+        let citationsCount = 0;
+        try {
+          const itemsRes = await fetchApi<{ meta?: { total?: number } }>('/items?limit=1');
+          itemsCount = itemsRes.meta?.total || 0;
+        } catch {}
+
+        try {
+          const citRes = await fetchApi<{ meta?: { total?: number } }>('/citations?limit=1');
+          citationsCount = citRes.meta?.total || 0;
+        } catch {}
+
+        if (!isMounted) return;
+        setStats({
+          totalContes: contes.length,
+          contesWithAudioMg: withMg,
+          contesWithAudioFr: withFr,
+          totalItems: itemsCount,
+          totalCitations: citationsCount,
+        });
+      } catch (err: unknown) {
+        console.error('Erreur chargement des métriques :', err);
+      } finally {
+        if (isMounted) setIsLoading(false);
+      }
+    }
+
+    void loadStats();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const mgPercentage =
+    stats.totalContes > 0
+      ? Math.round((stats.contesWithAudioMg / stats.totalContes) * 100)
+      : 0;
+  const frPercentage =
+    stats.totalContes > 0
+      ? Math.round((stats.contesWithAudioFr / stats.totalContes) * 100)
+      : 0;
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <AdminShell>
+      <div className="space-y-6 max-w-6xl">
+        {/* En-tête standardisé */}
+        <PageHeader
+          title="Vue d'ensemble • Conservatoire"
+          description="Supervision du patrimoine culturel numérisé et des flux audio Gemini TTS."
+          icon={LayoutDashboard}
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+
+        {/* Grille de cartes métriques épurée et standardisée */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatCard
+            title="Contes Traditionnels"
+            value={isLoading ? '...' : stats.totalContes}
+            subtitle="Récits intégraux répertoriés"
+            icon={BookOpen}
+            variant="default"
+          />
+
+          <StatCard
+            title="Audio Malagasy (MG)"
+            value={isLoading ? '...' : `${stats.contesWithAudioMg}/${stats.totalContes}`}
+            subtitle={`${mgPercentage}% avec enregistrement`}
+            icon={Headphones}
+            variant="success"
+            badge={`${mgPercentage}%`}
+          />
+
+          <StatCard
+            title="Audio Français (FR)"
+            value={isLoading ? '...' : `${stats.contesWithAudioFr}/${stats.totalContes}`}
+            subtitle={`${frPercentage}% avec enregistrement`}
+            icon={Volume2}
+            variant="info"
+            badge={`${frPercentage}%`}
+          />
+
+          <StatCard
+            title="Proverbes & Sagesses"
+            value={isLoading ? '...' : stats.totalItems}
+            subtitle="Corpus Ohabolana & Fady"
+            icon={ScrollText}
+            variant="warning"
+          />
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+
+        {/* Accès Rapides */}
+        <div className="space-y-3 pt-2">
+          <div className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+            Collections & Modules
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+            <Link
+              href="/contes"
+              className="p-3.5 rounded-xl border border-[var(--card-border)] bg-[var(--card)] hover:bg-[var(--card-hover)] transition group flex items-center justify-between shadow-xs"
+            >
+              <div className="flex items-center gap-2.5">
+                <BookOpen size={16} className="text-[var(--text-muted)] group-hover:text-[var(--accent)] transition-colors" />
+                <div>
+                  <div className="text-xs font-semibold text-[var(--foreground)]">
+                    Contes & Angano
+                  </div>
+                  <div className="text-[11px] text-[var(--text-muted)]">
+                    Studio Audio Gemini TTS
+                  </div>
+                </div>
+              </div>
+              <ArrowUpRight size={14} className="text-[var(--text-muted)] group-hover:text-[var(--foreground)] transition-colors" />
+            </Link>
+
+            <Link
+              href="/proverbes"
+              className="p-3.5 rounded-xl border border-[var(--card-border)] bg-[var(--card)] hover:bg-[var(--card-hover)] transition group flex items-center justify-between shadow-xs"
+            >
+              <div className="flex items-center gap-2.5">
+                <ScrollText size={16} className="text-[var(--text-muted)] group-hover:text-[var(--accent)] transition-colors" />
+                <div>
+                  <div className="text-xs font-semibold text-[var(--foreground)]">
+                    Proverbes & Fady
+                  </div>
+                  <div className="text-[11px] text-[var(--text-muted)]">
+                    Recueil des Ohabolana
+                  </div>
+                </div>
+              </div>
+              <ArrowUpRight size={14} className="text-[var(--text-muted)] group-hover:text-[var(--foreground)] transition-colors" />
+            </Link>
+
+            <Link
+              href="/kabary"
+              className="p-3.5 rounded-xl border border-[var(--card-border)] bg-[var(--card)] hover:bg-[var(--card-hover)] transition group flex items-center justify-between shadow-xs"
+            >
+              <div className="flex items-center gap-2.5">
+                <Mic size={16} className="text-[var(--text-muted)] group-hover:text-[var(--accent)] transition-colors" />
+                <div>
+                  <div className="text-xs font-semibold text-[var(--foreground)]">
+                    Discours & Kabary
+                  </div>
+                  <div className="text-[11px] text-[var(--text-muted)]">
+                    Protocoles oratoires
+                  </div>
+                </div>
+              </div>
+              <ArrowUpRight size={14} className="text-[var(--text-muted)] group-hover:text-[var(--foreground)] transition-colors" />
+            </Link>
+
+            <Link
+              href="/citations"
+              className="p-3.5 rounded-xl border border-[var(--card-border)] bg-[var(--card)] hover:bg-[var(--card-hover)] transition group flex items-center justify-between shadow-xs"
+            >
+              <div className="flex items-center gap-2.5">
+                <Quote size={16} className="text-[var(--text-muted)] group-hover:text-[var(--accent)] transition-colors" />
+                <div>
+                  <div className="text-xs font-semibold text-[var(--foreground)]">
+                    Citations & Auteurs
+                  </div>
+                  <div className="text-[11px] text-[var(--text-muted)]">
+                    Pensées et figures historiques
+                  </div>
+                </div>
+              </div>
+              <ArrowUpRight size={14} className="text-[var(--text-muted)] group-hover:text-[var(--foreground)] transition-colors" />
+            </Link>
+
+            <Link
+              href="/true-false"
+              className="p-3.5 rounded-xl border border-[var(--card-border)] bg-[var(--card)] hover:bg-[var(--card-hover)] transition group flex items-center justify-between shadow-xs"
+            >
+              <div className="flex items-center gap-2.5">
+                <CheckCheck size={16} className="text-[var(--text-muted)] group-hover:text-[var(--accent)] transition-colors" />
+                <div>
+                  <div className="text-xs font-semibold text-[var(--foreground)]">
+                    Vrai ou Faux (Jeux)
+                  </div>
+                  <div className="text-[11px] text-[var(--text-muted)]">
+                    Affirmations bilingues
+                  </div>
+                </div>
+              </div>
+              <ArrowUpRight size={14} className="text-[var(--text-muted)] group-hover:text-[var(--foreground)] transition-colors" />
+            </Link>
+
+            <Link
+              href="/word-puzzle"
+              className="p-3.5 rounded-xl border border-[var(--card-border)] bg-[var(--card)] hover:bg-[var(--card-hover)] transition group flex items-center justify-between shadow-xs"
+            >
+              <div className="flex items-center gap-2.5">
+                <Puzzle size={16} className="text-[var(--text-muted)] group-hover:text-[var(--accent)] transition-colors" />
+                <div>
+                  <div className="text-xs font-semibold text-[var(--foreground)]">
+                    Remise en Ordre (Jeux)
+                  </div>
+                  <div className="text-[11px] text-[var(--text-muted)]">
+                    Niveaux romains & phrases
+                  </div>
+                </div>
+              </div>
+              <ArrowUpRight size={14} className="text-[var(--text-muted)] group-hover:text-[var(--foreground)] transition-colors" />
+            </Link>
+
+            <Link
+              href="/locks"
+              className="p-3.5 rounded-xl border border-[var(--card-border)] bg-[var(--card)] hover:bg-[var(--card-hover)] transition group flex items-center justify-between shadow-xs"
+            >
+              <div className="flex items-center gap-2.5">
+                <Lock size={16} className="text-[var(--text-muted)] group-hover:text-[var(--accent)] transition-colors" />
+                <div>
+                  <div className="text-xs font-semibold text-[var(--foreground)]">
+                    Accès & Verrouillage
+                  </div>
+                  <div className="text-[11px] text-[var(--text-muted)]">
+                    Contrôle en direct des modules
+                  </div>
+                </div>
+              </div>
+              <ArrowUpRight size={14} className="text-[var(--text-muted)] group-hover:text-[var(--foreground)] transition-colors" />
+            </Link>
+          </div>
         </div>
-      </main>
-    </div>
+      </div>
+    </AdminShell>
   );
 }
