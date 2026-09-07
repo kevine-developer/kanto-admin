@@ -20,6 +20,7 @@ import {
   Smartphone,
   Bell,
   Puzzle,
+  Star,
 } from 'lucide-react';
 
 const NAV_ITEMS = [
@@ -62,6 +63,11 @@ const NAV_ITEMS = [
     label: 'Mot Manquant (Jeux)',
     href: '/missing-word',
     icon: HelpCircle,
+  },
+  {
+    label: 'Progression & XP',
+    href: '/progression',
+    icon: Star,
   },
   {
     label: 'Jeux & Catégories',
