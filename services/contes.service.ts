@@ -65,10 +65,25 @@ export const contesService = {
     id: string,
     lang: 'mg' | 'fr' | 'all',
     force: boolean = false
-  ): Promise<ConteItem> {
-    return fetchApi<ConteItem>(`/admin/contes/${id}/generate-audio`, {
+  ): Promise<{
+    id?: string;
+    slug?: string;
+    audioUrl?: string;
+    language?: string;
+    audioUrlMg?: string | null;
+    audioUrlFr?: string | null;
+    status?: string;
+  }> {
+    if (lang === 'all') {
+      return fetchApi(`/contes/${id}/generate-audio-both`, {
+        method: 'POST',
+        body: JSON.stringify({ force }),
+      });
+    }
+
+    return fetchApi(`/contes/${id}/generate-audio`, {
       method: 'POST',
-      body: JSON.stringify({ lang, force }),
+      body: JSON.stringify({ language: lang, force }),
     });
   },
 };

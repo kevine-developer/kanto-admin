@@ -308,7 +308,7 @@ export default function OnboardingAdminPage() {
 
   return (
     <AdminShell>
-      <div className="max-w-5xl mx-auto space-y-4">
+      <div className="w-full space-y-4 pb-8">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-neutral-200 dark:border-neutral-800 pb-3">
           <div>

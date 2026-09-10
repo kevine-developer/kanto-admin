@@ -30,33 +30,51 @@ export function PageHeader({
   primaryAction,
 }: PageHeaderProps) {
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-[var(--card-border)]">
-      <div className="flex items-start gap-3">
+    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 pb-6">
+      <div className="flex items-start gap-3.5">
         {backHref && (
           <Link
             href={backHref}
-            className="p-1.5 rounded-lg border border-[var(--card-border)] hover:bg-[var(--card-hover)] text-[var(--text-muted)] hover:text-[var(--foreground)] transition-colors mt-0.5"
+            className="p-1.5 rounded-lg transition-colors mt-1"
+            style={{
+              border: '1px solid var(--card-border)',
+              color: 'var(--text-muted)',
+              background: 'var(--card)',
+            }}
             title="Retour"
           >
-            <ArrowLeft size={16} />
+            <ArrowLeft size={15} />
           </Link>
         )}
 
         {Icon && (
-          <div className="p-2 rounded-xl bg-[var(--accent)]/10 text-[var(--accent)] border border-[var(--accent)]/20 shrink-0">
-            <Icon size={20} />
+          <div
+            className="p-2.5 rounded-xl shrink-0 mt-0.5"
+            style={{
+              background: 'color-mix(in srgb, var(--accent) 10%, transparent)',
+              border: '1px solid color-mix(in srgb, var(--accent) 20%, transparent)',
+              color: 'var(--accent)',
+            }}
+          >
+            <Icon size={18} />
           </div>
         )}
 
         <div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <h1 className="text-lg font-bold text-[var(--foreground)] tracking-tight">
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <h1
+              className="text-xl font-bold tracking-tight font-heritage leading-tight"
+              style={{ color: 'var(--foreground)' }}
+            >
               {title}
             </h1>
             {badge}
           </div>
           {description && (
-            <p className="text-xs text-[var(--text-muted)] mt-0.5 max-w-2xl leading-relaxed">
+            <p
+              className="text-xs mt-1 max-w-2xl leading-relaxed"
+              style={{ color: 'var(--text-muted)' }}
+            >
               {description}
             </p>
           )}
@@ -74,11 +92,7 @@ export function PageHeader({
                 </Button>
               </Link>
             ) : (
-              <Button
-                size="sm"
-                onClick={primaryAction.onClick}
-                leftIcon={primaryAction.icon}
-              >
+              <Button size="sm" onClick={primaryAction.onClick} leftIcon={primaryAction.icon}>
                 {primaryAction.label}
               </Button>
             ))}

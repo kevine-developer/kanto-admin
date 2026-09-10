@@ -42,9 +42,23 @@ export function useContes() {
   };
 
   const generateAudio = async (id: string, lang: 'mg' | 'fr' | 'all', force: boolean) => {
-    const updated = await contesService.generateAudio(id, lang, force);
-    setContes((prev) => prev.map((c) => (c.id === id ? updated : c)));
-    return updated;
+    const res = await contesService.generateAudio(id, lang, force);
+    if (res && (res.audioUrlMg !== undefined || res.audioUrlFr !== undefined)) {
+      setContes((prev) =>
+        prev.map((c) =>
+          c.id === id
+            ? {
+                ...c,
+                audioUrlMg: res.audioUrlMg ?? c.audioUrlMg,
+                audioUrlFr: res.audioUrlFr ?? c.audioUrlFr,
+              }
+            : c
+        )
+      );
+    } else {
+      await loadContes();
+    }
+    return res;
   };
 
   return {

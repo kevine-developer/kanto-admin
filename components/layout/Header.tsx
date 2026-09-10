@@ -1,89 +1,117 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { signOut } from '@/lib/auth-client';
-import { ThemeToggle } from '@/components/ui/ThemeToggle';
-import { SettingsModal } from '@/components/ui/SettingsModal';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { Settings2, Sun, Moon, PanelLeft } from 'lucide-react';
 import { useTheme } from '@/lib/theme-context';
-import { LogOut, Sliders } from 'lucide-react';
 
-interface HeaderProps {
-  user?: {
-    name?: string | null;
-    email?: string | null;
-    role?: string | null;
-    image?: string | null;
-  } | null;
+// Mapping pathname → titre de page
+const PAGE_TITLES: Record<string, string> = {
+  '/':              "Vue d'ensemble",
+  '/contributions': 'Contributions',
+  '/contes':        'Contes & Angano',
+  '/proverbes':     'Proverbes & Fady',
+  '/kabary':        'Discours & Kabary',
+  '/citations':     'Citations & Auteurs',
+  '/true-false':    'Vrai ou Faux',
+  '/word-puzzle':   "Remets dans l'ordre",
+  '/missing-word':  'Mot Manquant',
+  '/locks':         'Catégories & Jeux',
+  '/progression':   'Progression & XP',
+  '/onboarding':    'Onboarding & Slides',
+  '/notifications': 'Notifications',
+  '/users':         'Utilisateurs & Rôles',
+  '/settings':      'Paramètres & Configuration',
+};
+
+function resolveTitle(pathname: string): string {
+  if (PAGE_TITLES[pathname]) return PAGE_TITLES[pathname];
+  // match prefix (/contes/...)
+  for (const [key, value] of Object.entries(PAGE_TITLES)) {
+    if (key !== '/' && pathname.startsWith(key)) return value;
+  }
+  return 'Kanto Admin';
 }
 
-export function Header({ user }: HeaderProps) {
-  const router = useRouter();
-  const { zoomLevel } = useTheme();
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+export function Header() {
+  const { toggleTheme, resolvedTheme } = useTheme();
+  const pathname = usePathname();
 
-  const handleLogout = async () => {
-    try {
-      await signOut();
-      router.replace('/login');
-    } catch (err) {
-      console.error('Erreur lors de la déconnexion :', err);
-    }
-  };
+  const pageTitle = resolveTitle(pathname);
+  const isSettings = pathname === '/settings';
 
   return (
-    <>
-      <header className="h-13 border-b border-[var(--card-border)] bg-[var(--card)]/90 backdrop-blur-md px-6 flex items-center justify-between sticky top-0 z-10 transition-colors">
-        <div className="text-xs font-medium text-[var(--text-muted)] flex items-center gap-2">
-          <span>Conservatoire Culturel Malagasy</span>
-          <span className="text-neutral-300 dark:text-neutral-700">&bull;</span>
-          <span className="text-neutral-400 dark:text-neutral-500 font-mono text-[11px]">Backoffice Admin</span>
+    <header
+      className="h-14 px-6 lg:px-8 flex items-center justify-between sticky top-0 z-10 shrink-0 transition-colors"
+      style={{
+        borderBottom: '1px solid var(--card-border)',
+        background: 'color-mix(in srgb, var(--background) 85%, transparent)',
+        backdropFilter: 'blur(12px)',
+      }}
+    >
+      {/* Gauche : Bouton toggle sidebar + Titre contextuel */}
+      <div className="flex items-center gap-3">
+        <button
+          onClick={() => window.dispatchEvent(new CustomEvent('kanto:toggle-sidebar'))}
+          title="Afficher / Masquer la barre latérale"
+          className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors cursor-pointer hover:bg-[var(--card-hover)] text-[var(--text-subtle)] hover:text-[var(--foreground)]"
+        >
+          <PanelLeft size={16} />
+        </button>
+
+        <div className="h-4 w-[1px] bg-[var(--card-border)] hidden sm:block" />
+
+        <div className="flex items-center gap-2">
+          <span
+            className="text-sm font-semibold tracking-tight font-heritage"
+            style={{ color: 'var(--foreground)' }}
+          >
+            {pageTitle}
+          </span>
+        </div>
+      </div>
+
+      {/* Actions droite */}
+      <div className="flex items-center gap-2">
+        {/* Indicateur de statut API */}
+        <div
+          className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono font-medium"
+          style={{
+            background: 'rgba(34,197,94,0.08)',
+            border: '1px solid rgba(34,197,94,0.2)',
+            color: '#22c55e',
+          }}
+          title="Backend NestJS & Base de données connectés"
+        >
+          <span className="w-1.5 h-1.5 rounded-full bg-[#22c55e] animate-pulse" />
+          <span>API Active</span>
         </div>
 
-        <div className="flex items-center gap-3">
-          {/* Quick Settings & Zoom indicator */}
-          <button
-            onClick={() => setIsSettingsOpen(true)}
-            title="Ouvrir les Paramètres d'affichage & Zoom"
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-[var(--card-border)] bg-[var(--card)] hover:bg-[var(--card-hover)] text-[var(--foreground)] text-xs font-medium transition-all cursor-pointer"
-          >
-            <Sliders size={13} className="text-[var(--accent)]" />
-            <span className="hidden sm:inline">Affichage</span>
-            <span className="px-1 py-0.2 rounded bg-[var(--input-bg)] font-mono text-[10px] text-[var(--text-muted)]">
-              {zoomLevel}%
-            </span>
-          </button>
+        {/* Toggle thème */}
+        <button
+          onClick={toggleTheme}
+          title={resolvedTheme === 'dark' ? 'Passer en mode clair' : 'Passer en mode sombre'}
+          className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors cursor-pointer hover:bg-[var(--card-hover)] text-[var(--text-subtle)] hover:text-[var(--foreground)]"
+        >
+          {resolvedTheme === 'dark'
+            ? <Sun size={15} style={{ color: '#f59e0b' }} />
+            : <Moon size={15} style={{ color: 'var(--accent)' }} />
+          }
+        </button>
 
-          {/* Quick Theme Toggle */}
-          <ThemeToggle />
-
-          {/* User Info */}
-          <div className="flex items-center gap-2.5 pl-3 border-l border-[var(--card-border)]">
-            <div className="w-7 h-7 rounded-full bg-[var(--accent)] text-white flex items-center justify-center text-xs font-bold font-heritage">
-              {user?.name ? user.name.charAt(0).toUpperCase() : 'A'}
-            </div>
-            <div className="text-xs leading-tight hidden md:block">
-              <div className="font-semibold text-[var(--foreground)]">
-                {user?.name || 'Administrateur'}
-              </div>
-              <div className="text-[10.5px] text-[var(--text-subtle)] font-mono">
-                {user?.email || 'admin@kanto.mg'}
-              </div>
-            </div>
-          </div>
-
-          {/* Logout */}
-          <button
-            onClick={handleLogout}
-            title="Se déconnecter"
-            className="p-1.5 rounded-lg text-[var(--text-subtle)] hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 transition-all cursor-pointer"
-          >
-            <LogOut size={16} />
-          </button>
-        </div>
-      </header>
-
-      <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
-    </>
+        {/* Paramètres (Lien vers la page /settings) */}
+        <Link
+          href="/settings"
+          title="Paramètres de l'application"
+          className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors cursor-pointer ${
+            isSettings
+              ? 'bg-[var(--card-hover)] text-[var(--foreground)]'
+              : 'hover:bg-[var(--card-hover)] text-[var(--text-subtle)] hover:text-[var(--foreground)]'
+          }`}
+        >
+          <Settings2 size={15} className={isSettings ? 'text-[var(--accent)]' : ''} />
+        </Link>
+      </div>
+    </header>
   );
 }

@@ -33,9 +33,18 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
   if (isPending) {
     return (
-      <div className="h-screen w-screen flex flex-col items-center justify-center bg-[var(--background)] text-[var(--foreground)]">
-        <Loader2 size={28} className="animate-spin text-[#2D6A4F] dark:text-[#52B788] mb-3" />
-        <div className="text-sm font-semibold text-[#525252] dark:text-[#A6ACA8]">
+      <div
+        className="h-screen w-screen flex flex-col items-center justify-center gap-3"
+        style={{ background: 'var(--sidebar-bg)' }}
+      >
+        <div
+          className="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-lg font-heritage"
+          style={{ background: 'var(--sidebar-accent)', color: '#080B0F' }}
+        >
+          K
+        </div>
+        <Loader2 size={18} className="animate-spin" style={{ color: 'var(--sidebar-accent)' }} />
+        <div className="text-xs font-medium font-mono" style={{ color: 'var(--sidebar-muted)' }}>
           Ouverture du Conservatoire...
         </div>
       </div>
@@ -44,17 +53,33 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
   if (!session || !isAdmin) {
     return (
-      <div className="h-screen w-screen flex flex-col items-center justify-center bg-[var(--background)] text-[var(--foreground)] p-6 text-center">
-        <div className="w-14 h-14 rounded-2xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800/40 flex items-center justify-center text-red-600 dark:text-red-400 mb-4 shadow-sm">
-          <ShieldAlert size={28} />
+      <div
+        className="h-screen w-screen flex flex-col items-center justify-center p-6 text-center gap-4"
+        style={{ background: 'var(--background)', color: 'var(--foreground)' }}
+      >
+        <div
+          className="w-14 h-14 rounded-2xl flex items-center justify-center"
+          style={{
+            background: 'rgba(239,68,68,0.08)',
+            border: '1px solid rgba(239,68,68,0.2)',
+            color: '#ef4444',
+          }}
+        >
+          <ShieldAlert size={26} />
         </div>
-        <div className="text-lg font-bold text-red-950 dark:text-red-300">Accès Refusé</div>
-        <p className="text-sm text-[#525252] dark:text-[#A6ACA8] max-w-sm mt-1 mb-5">
-          Vous devez posséder les privilèges <strong>ADMIN</strong> pour accéder au Conservatoire Kanto.
-        </p>
+        <div>
+          <div className="text-base font-bold" style={{ color: '#ef4444' }}>
+            Accès Refusé
+          </div>
+          <p className="text-xs mt-1 max-w-xs" style={{ color: 'var(--text-muted)' }}>
+            Vous devez posséder les privilèges <strong>ADMIN</strong> pour accéder au Conservatoire
+            Kanto.
+          </p>
+        </div>
         <button
           onClick={() => router.replace('/login')}
-          className="px-5 py-2.5 text-sm font-semibold rounded-xl bg-[#1A1A1A] dark:bg-[#2D6A4F] text-white hover:opacity-90 transition-opacity cursor-pointer shadow-soft"
+          className="px-5 py-2 text-xs font-semibold rounded-xl text-white transition-opacity hover:opacity-90 cursor-pointer"
+          style={{ background: 'var(--accent)' }}
         >
           Se connecter
         </button>
@@ -63,11 +88,16 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="flex min-h-screen bg-[var(--background)] text-[var(--foreground)] transition-colors">
+    <div
+      className="flex min-h-screen transition-colors"
+      style={{ background: 'var(--background)', color: 'var(--foreground)' }}
+    >
       <Sidebar />
       <div className="flex-1 flex flex-col min-w-0">
-        <Header user={user} />
-        <main className="flex-1 p-8 md:p-10 overflow-y-auto">{children}</main>
+        <Header />
+        <main className="flex-1 px-4 sm:px-6 lg:px-8 py-6 sm:py-8 overflow-y-auto page-animate w-full">
+          {children}
+        </main>
       </div>
     </div>
   );
