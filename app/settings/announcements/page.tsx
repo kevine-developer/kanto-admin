@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { AdminShell } from '@/components/layout/AdminShell';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { fetchApi } from '@/lib/api-client';
@@ -36,21 +36,21 @@ export default function AnnouncementsPage() {
 
   const [editingId, setEditingId] = useState<string | null>(null);
 
-  const loadAnnouncements = async () => {
+  const loadAnnouncements = useCallback(async () => {
     setIsLoading(true);
     try {
-      const data = await fetchApi('/announcements');
+      const data = await fetchApi<Announcement[]>('/announcements');
       setAnnouncements(data);
-    } catch (err) {
+    } catch {
       toast.error('Erreur lors du chargement des annonces.');
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [toast]);
 
   useEffect(() => {
-    loadAnnouncements();
-  }, []);
+    void loadAnnouncements();
+  }, [loadAnnouncements]);
 
   const handleEdit = (announcement: Announcement) => {
     setEditingId(announcement.id);
@@ -94,8 +94,8 @@ export default function AnnouncementsPage() {
         toast.success('Nouvelle annonce créée.');
       }
       handleCancel();
-      loadAnnouncements();
-    } catch (err) {
+      void loadAnnouncements();
+    } catch {
       toast.error('Erreur lors de la sauvegarde de l\'annonce.');
     } finally {
       setIsSaving(false);
@@ -107,8 +107,8 @@ export default function AnnouncementsPage() {
     try {
       await fetchApi(`/announcements/${id}`, { method: 'DELETE' });
       toast.success('Annonce supprimée.');
-      loadAnnouncements();
-    } catch (err) {
+      void loadAnnouncements();
+    } catch {
       toast.error('Erreur lors de la suppression.');
     }
   };
@@ -190,10 +190,10 @@ export default function AnnouncementsPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1">
-                <label className="text-xs font-semibold text-[var(--foreground)]">Type d'annonce</label>
+                <label className="text-xs font-semibold text-[var(--foreground)]">Type d&apos;annonce</label>
                 <select
                   value={formData.type}
-                  onChange={e => setFormData({ ...formData, type: e.target.value as any })}
+                  onChange={e => setFormData({ ...formData, type: e.target.value as Announcement['type'] })}
                   className="w-full px-3 py-2 bg-[var(--input-bg)] border border-[var(--card-border)] rounded-lg text-sm text-[var(--foreground)] focus:border-[var(--accent)] outline-none"
                 >
                   <option value="INFO">Information Générale</option>
@@ -211,7 +211,7 @@ export default function AnnouncementsPage() {
                   />
                   <span className="text-sm font-semibold text-[var(--foreground)]">Activer cette annonce</span>
                 </label>
-                <span className="ml-2 text-xs text-[var(--text-muted)]">(Désactivera l'annonce active précédente)</span>
+                <span className="ml-2 text-xs text-[var(--text-muted)]">(Désactivera l&apos;annonce active précédente)</span>
               </div>
             </div>
 
@@ -247,7 +247,7 @@ export default function AnnouncementsPage() {
             <div className="p-8 text-center text-[var(--text-muted)] text-sm">Chargement...</div>
           ) : announcements.length === 0 ? (
             <div className="p-8 text-center text-[var(--text-muted)] text-sm bg-[var(--card)] rounded-2xl border border-[var(--card-border)]">
-              Aucune annonce n'a été créée pour le moment.
+              Aucune annonce n&apos;a été créée pour le moment.
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-3">

@@ -17,7 +17,6 @@ import {
   CheckCheck,
   Puzzle,
   HeartHandshake,
-  Sparkles,
 } from 'lucide-react';
 
 interface StatsData {

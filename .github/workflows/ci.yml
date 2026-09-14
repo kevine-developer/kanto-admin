@@ -4,13 +4,10 @@ on:
   push:
     branches:
       - main
-      - master
-      - develop
   pull_request:
     branches:
       - main
-      - master
-      - develop
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -23,15 +20,16 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
           version: 11.7.0
+          run_install: false
 
       - name: Setup Node.js 22
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: 'pnpm'
@@ -45,5 +43,6 @@ jobs:
       - name: Build Next.js Application
         run: pnpm run build
         env:
+          NODE_ENV: 'production'
           NEXT_PUBLIC_API_URL: 'http://localhost:3000'
           NEXT_PUBLIC_APP_URL: 'http://localhost:3001'

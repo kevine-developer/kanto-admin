@@ -11,7 +11,6 @@ import {
 import {
   ProgressionStats,
   LeaderboardUserItem,
-  CulturalRank,
 } from '@/types/progression';
 import {
   Star,
