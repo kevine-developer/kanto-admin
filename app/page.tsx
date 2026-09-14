@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { AdminShell } from '@/components/layout/AdminShell';
-import { PageHeader } from '@/components/layout/PageHeader';
 import { StatCard } from '@/components/ui';
 import { fetchApi } from '@/lib/api-client';
 import {
@@ -17,7 +16,7 @@ import {
   Lock,
   CheckCheck,
   Puzzle,
-  LayoutDashboard,
+  HeartHandshake,
 } from 'lucide-react';
 
 interface StatsData {
@@ -34,6 +33,69 @@ interface ConteSummary {
   audioUrlFr?: string | null;
 }
 
+const QUICK_LINKS = [
+  {
+    href: '/contributions',
+    icon: HeartHandshake,
+    label: 'Contributions',
+    sub: 'Modération & Objectif Hebdo',
+    accent: '#3FB950',
+  },
+  {
+    href: '/contes',
+    icon: BookOpen,
+    label: 'Contes & Angano',
+    sub: 'Studio Audio Gemini TTS',
+    accent: null,
+  },
+  {
+    href: '/proverbes',
+    icon: ScrollText,
+    label: 'Proverbes & Fady',
+    sub: 'Recueil des Ohabolana',
+    accent: null,
+  },
+  {
+    href: '/kabary',
+    icon: Mic,
+    label: 'Discours & Kabary',
+    sub: 'Protocoles oratoires',
+    accent: null,
+  },
+  {
+    href: '/citations',
+    icon: Quote,
+    label: 'Citations & Auteurs',
+    sub: 'Pensées et figures historiques',
+    accent: null,
+  },
+  {
+    href: '/true-false',
+    icon: CheckCheck,
+    label: 'Vrai ou Faux',
+    sub: 'Affirmations bilingues',
+    accent: null,
+  },
+  {
+    href: '/word-puzzle',
+    icon: Puzzle,
+    label: 'Remise en Ordre',
+    sub: 'Niveaux romains & phrases',
+    accent: null,
+  },
+  {
+    href: '/locks',
+    icon: Lock,
+    label: 'Accès & Verrouillage',
+    sub: 'Contrôle des modules',
+    accent: null,
+  },
+];
+
+/**
+ * Tableau de bord principal de l'administration Kanto.
+ * Présente les métriques clés de la plateforme, les accès rapides et l'état des modules.
+ */
 export default function AdminDashboardPage() {
   const [stats, setStats] = useState<StatsData>({
     totalContes: 0,
@@ -83,10 +145,7 @@ export default function AdminDashboardPage() {
     }
 
     void loadStats();
-
-    return () => {
-      isMounted = false;
-    };
+    return () => { isMounted = false; };
   }, []);
 
   const mgPercentage =
@@ -100,185 +159,151 @@ export default function AdminDashboardPage() {
 
   return (
     <AdminShell>
-      <div className="space-y-6 max-w-6xl">
-        {/* En-tête standardisé */}
-        <PageHeader
-          title="Vue d'ensemble • Conservatoire"
-          description="Supervision du patrimoine culturel numérisé et des flux audio Gemini TTS."
-          icon={LayoutDashboard}
-        />
+      <div className="w-full space-y-8 pb-10">
 
-        {/* Grille de cartes métriques épurée et standardisée */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard
-            title="Contes Traditionnels"
-            value={isLoading ? '...' : stats.totalContes}
-            subtitle="Récits intégraux répertoriés"
-            icon={BookOpen}
-            variant="default"
-          />
-
-          <StatCard
-            title="Audio Malagasy (MG)"
-            value={isLoading ? '...' : `${stats.contesWithAudioMg}/${stats.totalContes}`}
-            subtitle={`${mgPercentage}% avec enregistrement`}
-            icon={Headphones}
-            variant="success"
-            badge={`${mgPercentage}%`}
-          />
-
-          <StatCard
-            title="Audio Français (FR)"
-            value={isLoading ? '...' : `${stats.contesWithAudioFr}/${stats.totalContes}`}
-            subtitle={`${frPercentage}% avec enregistrement`}
-            icon={Volume2}
-            variant="info"
-            badge={`${frPercentage}%`}
-          />
-
-          <StatCard
-            title="Proverbes & Sagesses"
-            value={isLoading ? '...' : stats.totalItems}
-            subtitle="Corpus Ohabolana & Fady"
-            icon={ScrollText}
-            variant="warning"
-          />
-        </div>
-
-        {/* Accès Rapides */}
-        <div className="space-y-3 pt-2">
-          <div className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
-            Collections & Modules
+        {/* ── En-tête Culturel & Stately ───────────────────────────── */}
+        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 pb-4 border-b" style={{ borderColor: 'var(--card-border)' }}>
+          <div>
+            <div className="flex items-center gap-2 text-xs font-mono font-medium tracking-wider uppercase mb-1.5" style={{ color: 'var(--accent)' }}>
+              <span>Patrimoine & Conservatoire Vivant Malagasy</span>
+            </div>
+            <h1
+              className="text-2xl sm:text-3xl font-bold font-heritage tracking-tight leading-tight"
+              style={{ color: 'var(--foreground)' }}
+            >
+              Vue d&apos;ensemble
+            </h1>
+            <p
+              className="text-xs sm:text-sm mt-1 max-w-2xl leading-relaxed"
+              style={{ color: 'var(--text-muted)' }}
+            >
+              Supervision des archives culturelles numérisées, des enregistrements bilingues et de la modération.
+            </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+          <div className="flex items-center gap-2.5 shrink-0">
             <Link
               href="/contes"
-              className="p-3.5 rounded-xl border border-[var(--card-border)] bg-[var(--card)] hover:bg-[var(--card-hover)] transition group flex items-center justify-between shadow-xs"
+              className="px-4 py-2 rounded-xl text-xs font-semibold transition-all duration-150 flex items-center gap-2 shadow-xs cursor-pointer text-white"
+              style={{ background: 'var(--accent)' }}
             >
-              <div className="flex items-center gap-2.5">
-                <BookOpen size={16} className="text-[var(--text-muted)] group-hover:text-[var(--accent)] transition-colors" />
-                <div>
-                  <div className="text-xs font-semibold text-[var(--foreground)]">
-                    Contes & Angano
-                  </div>
-                  <div className="text-[11px] text-[var(--text-muted)]">
-                    Studio Audio Gemini TTS
-                  </div>
-                </div>
-              </div>
-              <ArrowUpRight size={14} className="text-[var(--text-muted)] group-hover:text-[var(--foreground)] transition-colors" />
-            </Link>
-
-            <Link
-              href="/proverbes"
-              className="p-3.5 rounded-xl border border-[var(--card-border)] bg-[var(--card)] hover:bg-[var(--card-hover)] transition group flex items-center justify-between shadow-xs"
-            >
-              <div className="flex items-center gap-2.5">
-                <ScrollText size={16} className="text-[var(--text-muted)] group-hover:text-[var(--accent)] transition-colors" />
-                <div>
-                  <div className="text-xs font-semibold text-[var(--foreground)]">
-                    Proverbes & Fady
-                  </div>
-                  <div className="text-[11px] text-[var(--text-muted)]">
-                    Recueil des Ohabolana
-                  </div>
-                </div>
-              </div>
-              <ArrowUpRight size={14} className="text-[var(--text-muted)] group-hover:text-[var(--foreground)] transition-colors" />
-            </Link>
-
-            <Link
-              href="/kabary"
-              className="p-3.5 rounded-xl border border-[var(--card-border)] bg-[var(--card)] hover:bg-[var(--card-hover)] transition group flex items-center justify-between shadow-xs"
-            >
-              <div className="flex items-center gap-2.5">
-                <Mic size={16} className="text-[var(--text-muted)] group-hover:text-[var(--accent)] transition-colors" />
-                <div>
-                  <div className="text-xs font-semibold text-[var(--foreground)]">
-                    Discours & Kabary
-                  </div>
-                  <div className="text-[11px] text-[var(--text-muted)]">
-                    Protocoles oratoires
-                  </div>
-                </div>
-              </div>
-              <ArrowUpRight size={14} className="text-[var(--text-muted)] group-hover:text-[var(--foreground)] transition-colors" />
-            </Link>
-
-            <Link
-              href="/citations"
-              className="p-3.5 rounded-xl border border-[var(--card-border)] bg-[var(--card)] hover:bg-[var(--card-hover)] transition group flex items-center justify-between shadow-xs"
-            >
-              <div className="flex items-center gap-2.5">
-                <Quote size={16} className="text-[var(--text-muted)] group-hover:text-[var(--accent)] transition-colors" />
-                <div>
-                  <div className="text-xs font-semibold text-[var(--foreground)]">
-                    Citations & Auteurs
-                  </div>
-                  <div className="text-[11px] text-[var(--text-muted)]">
-                    Pensées et figures historiques
-                  </div>
-                </div>
-              </div>
-              <ArrowUpRight size={14} className="text-[var(--text-muted)] group-hover:text-[var(--foreground)] transition-colors" />
-            </Link>
-
-            <Link
-              href="/true-false"
-              className="p-3.5 rounded-xl border border-[var(--card-border)] bg-[var(--card)] hover:bg-[var(--card-hover)] transition group flex items-center justify-between shadow-xs"
-            >
-              <div className="flex items-center gap-2.5">
-                <CheckCheck size={16} className="text-[var(--text-muted)] group-hover:text-[var(--accent)] transition-colors" />
-                <div>
-                  <div className="text-xs font-semibold text-[var(--foreground)]">
-                    Vrai ou Faux (Jeux)
-                  </div>
-                  <div className="text-[11px] text-[var(--text-muted)]">
-                    Affirmations bilingues
-                  </div>
-                </div>
-              </div>
-              <ArrowUpRight size={14} className="text-[var(--text-muted)] group-hover:text-[var(--foreground)] transition-colors" />
-            </Link>
-
-            <Link
-              href="/word-puzzle"
-              className="p-3.5 rounded-xl border border-[var(--card-border)] bg-[var(--card)] hover:bg-[var(--card-hover)] transition group flex items-center justify-between shadow-xs"
-            >
-              <div className="flex items-center gap-2.5">
-                <Puzzle size={16} className="text-[var(--text-muted)] group-hover:text-[var(--accent)] transition-colors" />
-                <div>
-                  <div className="text-xs font-semibold text-[var(--foreground)]">
-                    Remise en Ordre (Jeux)
-                  </div>
-                  <div className="text-[11px] text-[var(--text-muted)]">
-                    Niveaux romains & phrases
-                  </div>
-                </div>
-              </div>
-              <ArrowUpRight size={14} className="text-[var(--text-muted)] group-hover:text-[var(--foreground)] transition-colors" />
-            </Link>
-
-            <Link
-              href="/locks"
-              className="p-3.5 rounded-xl border border-[var(--card-border)] bg-[var(--card)] hover:bg-[var(--card-hover)] transition group flex items-center justify-between shadow-xs"
-            >
-              <div className="flex items-center gap-2.5">
-                <Lock size={16} className="text-[var(--text-muted)] group-hover:text-[var(--accent)] transition-colors" />
-                <div>
-                  <div className="text-xs font-semibold text-[var(--foreground)]">
-                    Accès & Verrouillage
-                  </div>
-                  <div className="text-[11px] text-[var(--text-muted)]">
-                    Contrôle en direct des modules
-                  </div>
-                </div>
-              </div>
-              <ArrowUpRight size={14} className="text-[var(--text-muted)] group-hover:text-[var(--foreground)] transition-colors" />
+              <BookOpen size={14} />
+              <span>Explorer les Contes</span>
             </Link>
           </div>
         </div>
+
+        {/* ── Métriques du Corpus (Plein écran) ─────────────────────── */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <span
+              className="text-[11px] font-semibold uppercase tracking-widest font-mono"
+              style={{ color: 'var(--text-subtle)' }}
+            >
+              Métriques du Corpus Numérique
+            </span>
+            <span className="text-[11px] font-mono" style={{ color: 'var(--text-muted)' }}>
+              Données synchronisées
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3.5">
+            <StatCard
+              title="Contes (Angano)"
+              value={isLoading ? '—' : stats.totalContes}
+              subtitle="Récits oraux archivés"
+              icon={BookOpen}
+              variant="default"
+            />
+            <StatCard
+              title="Audio Malagasy"
+              value={isLoading ? '—' : `${stats.contesWithAudioMg}/${stats.totalContes}`}
+              subtitle={`${mgPercentage}% voix malagasy`}
+              icon={Headphones}
+              variant="success"
+              badge={`${mgPercentage}%`}
+            />
+            <StatCard
+              title="Audio Français"
+              value={isLoading ? '—' : `${stats.contesWithAudioFr}/${stats.totalContes}`}
+              subtitle={`${frPercentage}% voix française`}
+              icon={Volume2}
+              variant="info"
+              badge={`${frPercentage}%`}
+            />
+            <StatCard
+              title="Ohabolana & Fady"
+              value={isLoading ? '—' : stats.totalItems}
+              subtitle="Proverbes répertoriés"
+              icon={ScrollText}
+              variant="warning"
+            />
+            <StatCard
+              title="Citations"
+              value={isLoading ? '—' : stats.totalCitations}
+              subtitle="Auteurs & grandes figures"
+              icon={Quote}
+              variant="default"
+            />
+          </div>
+        </div>
+
+        {/* ── Collections & Modules d'administration ─────────────────── */}
+        <div className="space-y-3">
+          <div
+            className="text-[11px] font-semibold uppercase tracking-widest font-mono"
+            style={{ color: 'var(--text-subtle)' }}
+          >
+            Modules du Conservatoire
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3.5">
+            {QUICK_LINKS.map(({ href, icon: Icon, label, sub, accent }) => (
+              <Link
+                key={href}
+                href={href}
+                className="group relative p-4 sm:p-5 rounded-2xl flex flex-col justify-between transition-all duration-200 hover:translate-y-[-1px] cursor-pointer"
+                style={{
+                  background: 'var(--card)',
+                  border: '1px solid var(--card-border)',
+                }}
+              >
+                <div className="flex items-start justify-between">
+                  <div
+                    className="p-2 rounded-xl transition-colors"
+                    style={{
+                      background: 'color-mix(in srgb, var(--card-border) 40%, transparent)',
+                      color: accent || 'var(--foreground)',
+                    }}
+                  >
+                    <Icon size={18} />
+                  </div>
+                  <ArrowUpRight
+                    size={16}
+                    className="opacity-30 group-hover:opacity-100 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all"
+                    style={{ color: accent || 'var(--accent)' }}
+                  />
+                </div>
+
+                <div className="mt-4">
+                  <div
+                    className="text-sm font-semibold tracking-tight leading-snug font-heritage group-hover:text-[var(--accent)] transition-colors"
+                    style={{ color: 'var(--foreground)' }}
+                  >
+                    {label}
+                  </div>
+                  <div
+                    className="text-xs mt-1 leading-relaxed line-clamp-2"
+                    style={{ color: 'var(--text-subtle)' }}
+                  >
+                    {sub}
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+
       </div>
     </AdminShell>
   );

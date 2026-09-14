@@ -98,7 +98,7 @@ export default function ContesAdminPage() {
 
   return (
     <AdminShell>
-      <div className="space-y-4 max-w-6xl mx-auto">
+      <div className="w-full space-y-4 pb-8">
         <PageHeader
           title="Contes & Angano"
           description="Préservation des récits oraux malagasy et génération studio audio Gemini TTS."

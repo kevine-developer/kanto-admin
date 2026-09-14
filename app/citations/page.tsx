@@ -217,7 +217,7 @@ export default function CitationsAdminPage() {
 
   return (
     <AdminShell>
-      <div className="max-w-6xl mx-auto space-y-4">
+      <div className="w-full space-y-4 pb-8">
         {/* En-tête standardisé */}
         <PageHeader
           title="Citations & Auteurs (Tenin'olon-kendry)"

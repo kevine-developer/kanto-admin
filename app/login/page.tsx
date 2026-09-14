@@ -3,14 +3,12 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { signIn } from '@/lib/auth-client';
-import { ThemeToggle } from '@/components/ui/ThemeToggle';
-import {
-  Lock,
-  Mail,
-  Loader2,
-  ShieldAlert,
-} from 'lucide-react';
+import { Lock, Mail, Loader2, ShieldAlert, ArrowRight } from 'lucide-react';
 
+/**
+ * Page d'authentification des administrateurs du portail Kanto.
+ * Gère la saisie des identifiants et l'accès sécurisé au panneau d'administration.
+ */
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState('admin@kanto.mg');
@@ -24,17 +22,12 @@ export default function LoginPage() {
     setErrorMessage(null);
 
     try {
-      const res = await signIn.email({
-        email,
-        password,
-      });
-
+      const res = await signIn.email({ email, password });
       if (res?.error) {
         setErrorMessage(res.error.message || 'Identifiants invalides');
         setIsLoading(false);
         return;
       }
-
       router.replace('/');
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Une erreur réseau est survenue';
@@ -44,54 +37,153 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)] flex flex-col justify-between p-6 transition-colors selection:bg-[var(--accent-light)] selection:text-[var(--accent-text)]">
-      {/* Header Bar */}
-      <div className="flex items-center justify-between max-w-4xl mx-auto w-full">
-        <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-md bg-[var(--foreground)] text-[var(--background)] flex items-center justify-center font-bold text-xs">
-            K
+    <div
+      className="min-h-screen flex transition-colors"
+      style={{ background: 'var(--sidebar-bg)' }}
+    >
+      {/* ── Panneau gauche : brand ────────────────────────────────── */}
+      <div
+        className="hidden lg:flex flex-col justify-between p-10 w-[420px] shrink-0 relative overflow-hidden"
+        style={{ borderRight: '1px solid var(--sidebar-border)' }}
+      >
+        {/* Fond décoratif */}
+        <div
+          className="absolute inset-0 opacity-5"
+          style={{
+            background: `radial-gradient(ellipse at 30% 60%, var(--sidebar-accent) 0%, transparent 65%)`,
+          }}
+        />
+
+        <div className="relative z-10">
+          <div className="flex items-center gap-3 mb-12">
+            <div
+              className="w-9 h-9 rounded-xl flex items-center justify-center font-bold text-base font-heritage"
+              style={{ background: 'var(--sidebar-accent)', color: '#080B0F' }}
+            >
+              K
+            </div>
+            <div>
+              <div
+                className="font-heritage font-bold text-base leading-none"
+                style={{ color: 'var(--sidebar-fg)' }}
+              >
+                Kanto
+              </div>
+              <div
+                className="text-[10px] font-mono uppercase tracking-widest"
+                style={{ color: 'var(--sidebar-muted)' }}
+              >
+                Conservatoire
+              </div>
+            </div>
           </div>
-          <div className="flex items-baseline gap-1.5">
-            <span className="font-bold text-sm text-[var(--foreground)] leading-none">
-              Kanto
-            </span>
-            <span className="text-[10px] font-mono uppercase tracking-wider text-[var(--text-subtle)]">
-              Admin
-            </span>
+
+          <div>
+            <h2
+              className="text-3xl font-bold font-heritage leading-tight tracking-tight"
+              style={{ color: 'var(--sidebar-fg)' }}
+            >
+              Ny teny malagasy
+              <br />
+              tsara fitahiana.
+            </h2>
+            <p
+              className="text-sm mt-4 leading-relaxed"
+              style={{ color: 'var(--sidebar-muted)' }}
+            >
+              Plateforme de conservation et de valorisation du patrimoine culturel immatériel
+              malagasy.
+            </p>
           </div>
         </div>
 
-        <ThemeToggle />
+        <div className="relative z-10 space-y-3">
+          {[
+            'Phonothèque IA · Gemini TTS',
+            'Corpus des Ohabolana & Fady',
+            'Gamification & Rangs Culturels',
+          ].map((item) => (
+            <div
+              key={item}
+              className="flex items-center gap-2 text-xs"
+              style={{ color: 'var(--sidebar-muted)' }}
+            >
+              <div
+                className="w-1.5 h-1.5 rounded-full shrink-0"
+                style={{ background: 'var(--sidebar-accent)' }}
+              />
+              {item}
+            </div>
+          ))}
+        </div>
       </div>
 
-      {/* Login Card */}
-      <div className="max-w-sm w-full mx-auto my-auto space-y-4">
-        <div className="text-center space-y-1">
-          <h1 className="text-lg font-semibold text-[var(--foreground)] tracking-tight">
-            Accès Conservatoire
-          </h1>
-          <p className="text-xs text-[var(--text-muted)]">
-            Espace d&apos;administration du patrimoine Kanto
-          </p>
-        </div>
+      {/* ── Panneau droit : formulaire ───────────────────────────── */}
+      <div className="flex-1 flex items-center justify-center p-6 lg:p-12">
+        <div className="w-full max-w-sm space-y-7">
 
-        <div className="kanto-card rounded-xl p-5 border border-[var(--card-border)] bg-[var(--card)]">
+          {/* Logo mobile */}
+          <div className="flex items-center gap-3 lg:hidden">
+            <div
+              className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm font-heritage"
+              style={{ background: 'var(--sidebar-accent)', color: '#080B0F' }}
+            >
+              K
+            </div>
+            <span
+              className="font-heritage font-bold text-base"
+              style={{ color: 'var(--sidebar-fg)' }}
+            >
+              Kanto Admin
+            </span>
+          </div>
+
+          {/* Titre */}
+          <div>
+            <h1
+              className="text-2xl font-bold font-heritage tracking-tight"
+              style={{ color: 'var(--sidebar-fg)' }}
+            >
+              Accès Admin
+            </h1>
+            <p
+              className="text-xs mt-1"
+              style={{ color: 'var(--sidebar-muted)' }}
+            >
+              Espace réservé aux administrateurs du Conservatoire
+            </p>
+          </div>
+
+          {/* Erreur */}
           {errorMessage && (
-            <div className="mb-4 p-2.5 rounded-md bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800/40 text-red-700 dark:text-red-300 text-xs flex items-start gap-2">
+            <div
+              className="flex items-start gap-2 p-3 rounded-xl text-xs"
+              style={{
+                background: 'rgba(239,68,68,0.08)',
+                border: '1px solid rgba(239,68,68,0.2)',
+                color: 'rgba(239,68,68,0.9)',
+              }}
+            >
               <ShieldAlert size={14} className="shrink-0 mt-0.5" />
               <div>{errorMessage}</div>
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-3.5">
-            <div>
-              <label className="block text-xs font-medium text-[var(--foreground)] mb-1">
+          {/* Formulaire */}
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Email */}
+            <div className="space-y-1.5">
+              <label
+                className="text-xs font-medium"
+                style={{ color: 'var(--sidebar-fg)' }}
+              >
                 Adresse Email
               </label>
               <div className="relative">
                 <Mail
                   size={14}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-subtle)]"
+                  className="absolute left-3 top-1/2 -translate-y-1/2"
+                  style={{ color: 'var(--sidebar-muted)' }}
                 />
                 <input
                   type="email"
@@ -99,19 +191,29 @@ export default function LoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="admin@kanto.mg"
-                  className="w-full pl-8 pr-3 py-1.5 rounded-md kanto-input text-xs placeholder-[var(--text-subtle)]"
+                  className="w-full pl-9 pr-3 py-2.5 rounded-xl text-xs transition-all outline-none focus-visible:ring-2 focus-visible:ring-[var(--sidebar-accent)]"
+                  style={{
+                    background: 'var(--sidebar-hover)',
+                    border: '1px solid var(--sidebar-border)',
+                    color: 'var(--sidebar-fg)',
+                  }}
                 />
               </div>
             </div>
 
-            <div>
-              <label className="block text-xs font-medium text-[var(--foreground)] mb-1">
+            {/* Mot de passe */}
+            <div className="space-y-1.5">
+              <label
+                className="text-xs font-medium"
+                style={{ color: 'var(--sidebar-fg)' }}
+              >
                 Mot de Passe
               </label>
               <div className="relative">
                 <Lock
                   size={14}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-subtle)]"
+                  className="absolute left-3 top-1/2 -translate-y-1/2"
+                  style={{ color: 'var(--sidebar-muted)' }}
                 />
                 <input
                   type="password"
@@ -119,7 +221,12 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••••••"
-                  className="w-full pl-8 pr-3 py-1.5 rounded-md kanto-input text-xs placeholder-[var(--text-subtle)]"
+                  className="w-full pl-9 pr-3 py-2.5 rounded-xl text-xs transition-all outline-none focus-visible:ring-2 focus-visible:ring-[var(--sidebar-accent)]"
+                  style={{
+                    background: 'var(--sidebar-hover)',
+                    border: '1px solid var(--sidebar-border)',
+                    color: 'var(--sidebar-fg)',
+                  }}
                 />
               </div>
             </div>
@@ -127,24 +234,33 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full py-2 px-4 rounded-md bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900 font-medium text-xs flex items-center justify-center gap-2 hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-50 mt-2"
+              className="w-full py-2.5 px-4 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50 mt-2"
+              style={{
+                background: 'var(--sidebar-accent)',
+                color: '#080B0F',
+              }}
             >
               {isLoading ? (
                 <>
-                  <Loader2 size={14} className="animate-spin" />
+                  <Loader2 size={13} className="animate-spin" />
                   <span>Connexion en cours...</span>
                 </>
               ) : (
-                <span>Se Connecter</span>
+                <>
+                  <span>Accéder au Conservatoire</span>
+                  <ArrowRight size={13} />
+                </>
               )}
             </button>
           </form>
-        </div>
-      </div>
 
-      {/* Footer */}
-      <div className="text-center text-xs text-[var(--text-subtle)] max-w-4xl mx-auto w-full">
-        Plateforme Kanto &bull; Patrimoine &amp; Langue Malagasy
+          <div
+            className="text-center text-[11px]"
+            style={{ color: 'var(--sidebar-muted)' }}
+          >
+            Plateforme Kanto · Patrimoine & Langue Malagasy
+          </div>
+        </div>
       </div>
     </div>
   );

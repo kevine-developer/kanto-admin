@@ -4,17 +4,19 @@ on:
   push:
     branches:
       - main
-      - master
-      - develop
+      - dev
   pull_request:
     branches:
       - main
-      - master
-      - develop
+      - dev
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
+
+permissions:
+  contents: write
 
 jobs:
   build-and-lint:
@@ -23,15 +25,16 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
           version: 11.7.0
+          run_install: false
 
       - name: Setup Node.js 22
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: 'pnpm'
@@ -45,5 +48,30 @@ jobs:
       - name: Build Next.js Application
         run: pnpm run build
         env:
+          NODE_ENV: 'production'
           NEXT_PUBLIC_API_URL: 'http://localhost:3000'
           NEXT_PUBLIC_APP_URL: 'http://localhost:3001'
+
+  auto-merge-to-main:
+    name: Auto-merge to main
+    needs: build-and-lint
+    if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository with full history
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure Git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Merge dev into main and push
+        run: |
+          git fetch origin main:main
+          git checkout main
+          git merge --no-ff dev -m "ci: auto-merge 'dev' into 'main' [skip ci]"
+          git push origin main

@@ -4,6 +4,11 @@ import { useState, useEffect, useCallback } from 'react';
 import { contesService } from '@/services/contes.service';
 import { ConteItem, ConteFormData } from '@/types/conte';
 
+/**
+ * Hook personnalisé gérant l'état, le chargement et les mutations des contes malagasy.
+ * Fournit les opérations CRUD ainsi que la génération vocale TTS.
+ * @returns Fonctions et états réactifs pour la gestion des contes
+ */
 export function useContes() {
   const [contes, setContes] = useState<ConteItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -42,9 +47,23 @@ export function useContes() {
   };
 
   const generateAudio = async (id: string, lang: 'mg' | 'fr' | 'all', force: boolean) => {
-    const updated = await contesService.generateAudio(id, lang, force);
-    setContes((prev) => prev.map((c) => (c.id === id ? updated : c)));
-    return updated;
+    const res = await contesService.generateAudio(id, lang, force);
+    if (res && (res.audioUrlMg !== undefined || res.audioUrlFr !== undefined)) {
+      setContes((prev) =>
+        prev.map((c) =>
+          c.id === id
+            ? {
+                ...c,
+                audioUrlMg: res.audioUrlMg ?? c.audioUrlMg,
+                audioUrlFr: res.audioUrlFr ?? c.audioUrlFr,
+              }
+            : c
+        )
+      );
+    } else {
+      await loadContes();
+    }
+    return res;
   };
 
   return {

@@ -97,7 +97,7 @@ export default function LocksAdminPage() {
 
   return (
     <AdminShell>
-      <div className="space-y-4 max-w-6xl mx-auto">
+      <div className="w-full space-y-4 pb-8">
         {/* En-tête de la page sobre & actions principales */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[var(--card-border)] pb-3">
           <div>
