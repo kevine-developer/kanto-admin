@@ -23,6 +23,7 @@ import {
   LogOut,
   PanelLeftClose,
   PanelLeftOpen,
+  Megaphone,
 } from 'lucide-react';
 
 interface AuthUser {
@@ -65,6 +66,7 @@ const NAV_GROUPS: { label: string; items: { href: string; icon: React.ElementTyp
     items: [
       { href: '/onboarding',    icon: Smartphone, label: 'Onboarding' },
       { href: '/notifications', icon: Bell,       label: 'Notifications' },
+      { href: '/announcements', icon: Megaphone,  label: 'Annonces Système' },
       { href: '/users',         icon: Users,      label: 'Utilisateurs' },
     ],
   },
