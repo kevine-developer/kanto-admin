@@ -23,6 +23,11 @@ const ACCENT_COLORS = {
   info: '#3b82f6',
 };
 
+/**
+ * Carte de métrique et statistique du tableau de bord d'administration.
+ * Présente une valeur héroïque avec icône, tendance et badge contextuel.
+ * @param props - Propriétés de la carte de statistique
+ */
 export function StatCard({
   title,
   value,

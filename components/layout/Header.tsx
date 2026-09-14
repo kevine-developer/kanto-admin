@@ -21,6 +21,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/onboarding':    'Onboarding & Slides',
   '/notifications': 'Notifications',
   '/users':         'Utilisateurs & Rôles',
+  '/announcements': 'Annonces Système',
   '/settings':      'Paramètres & Configuration',
 };
 
@@ -33,6 +34,10 @@ function resolveTitle(pathname: string): string {
   return 'Kanto Admin';
 }
 
+/**
+ * Barre d'en-tête supérieure de l'espace d'administration.
+ * Affiche le titre de la route active, le badge contextuel, et les contrôles utilisateur.
+ */
 export function Header() {
   const { toggleTheme, resolvedTheme } = useTheme();
   const pathname = usePathname();
@@ -73,18 +78,13 @@ export function Header() {
 
       {/* Actions droite */}
       <div className="flex items-center gap-2">
-        {/* Indicateur de statut API */}
+        {/* Badge d'environnement neutre */}
         <div
-          className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono font-medium"
-          style={{
-            background: 'rgba(34,197,94,0.08)',
-            border: '1px solid rgba(34,197,94,0.2)',
-            color: '#22c55e',
-          }}
-          title="Backend NestJS & Base de données connectés"
+          className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono font-medium border border-[var(--card-border)] bg-[var(--card)] text-[var(--text-muted)]"
+          title="Espace d'administration Kanto"
         >
-          <span className="w-1.5 h-1.5 rounded-full bg-[#22c55e] animate-pulse" />
-          <span>API Active</span>
+          <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent)]" />
+          <span>Kanto Admin</span>
         </div>
 
         {/* Toggle thème */}

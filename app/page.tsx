@@ -92,6 +92,10 @@ const QUICK_LINKS = [
   },
 ];
 
+/**
+ * Tableau de bord principal de l'administration Kanto.
+ * Présente les métriques clés de la plateforme, les accès rapides et l'état des modules.
+ */
 export default function AdminDashboardPage() {
   const [stats, setStats] = useState<StatsData>({
     totalContes: 0,
@@ -199,7 +203,7 @@ export default function AdminDashboardPage() {
               Métriques du Corpus Numérique
             </span>
             <span className="text-[11px] font-mono" style={{ color: 'var(--text-muted)' }}>
-              Mise à jour en temps réel
+              Données synchronisées
             </span>
           </div>
 

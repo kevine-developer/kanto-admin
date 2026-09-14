@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { AdminShell } from '@/components/layout/AdminShell';
 import { PageHeader } from '@/components/layout/PageHeader';
@@ -38,6 +38,10 @@ interface AuthUser {
   createdAt?: string;
 }
 
+/**
+ * Page de configuration générale et paramètres de l'administration Kanto.
+ * Gère le thème, le zoom d'affichage, les préférences de sidebar et le diagnostic d'API.
+ */
 export default function SettingsPage() {
   const { theme, resolvedTheme, setTheme, zoomLevel, setZoomLevel, resetZoom } = useTheme();
   const { data: session } = useSession();
@@ -55,11 +59,14 @@ export default function SettingsPage() {
   }>({ tested: false, success: false });
 
   // État de la sidebar mémorisée
-  const [defaultCollapsed, setDefaultCollapsed] = useState(() => {
-    if (typeof window === 'undefined') return true;
+  const [defaultCollapsed, setDefaultCollapsed] = useState<boolean>(true);
+
+  useEffect(() => {
     const saved = localStorage.getItem('kanto-sidebar-collapsed');
-    return saved !== null ? saved === 'true' : true;
-  });
+    if (saved !== null) {
+      setDefaultCollapsed(saved === 'true');
+    }
+  }, []);
 
   const handleToggleDefaultSidebar = () => {
     const next = !defaultCollapsed;
@@ -406,10 +413,22 @@ export default function SettingsPage() {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between gap-1">
                   <div className="text-xs font-bold text-[var(--foreground)]">API NestJS</div>
-                  <span className="inline-flex items-center gap-1 text-[10px] font-mono font-medium text-emerald-600 dark:text-emerald-400">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                    Connecté
-                  </span>
+                  {!apiStatus.tested ? (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-mono font-medium text-[var(--text-muted)]">
+                      <span className="w-1.5 h-1.5 rounded-full bg-stone-400" />
+                      Non testé
+                    </span>
+                  ) : apiStatus.success ? (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-mono font-medium text-emerald-600 dark:text-emerald-400">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                      Connecté
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-mono font-medium text-rose-600 dark:text-rose-400">
+                      <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                      Indisponible
+                    </span>
+                  )}
                 </div>
                 <div className="text-[11px] font-mono text-[var(--text-muted)] truncate mt-0.5">
                   http://localhost:3000

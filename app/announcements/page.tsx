@@ -40,6 +40,10 @@ const ANNOUNCEMENT_TYPES = [
   { id: 'NEW_FEATURE', label: 'Nouveauté / Vaovao', icon: Sparkles, color: '#C0392B', bg: 'bg-red-500/10 text-red-500 border-red-500/20' },
 ];
 
+/**
+ * Page d'administration des annonces système bilingues (malgache/français).
+ * Permet la création, modification, suppression et activation/désactivation des bannières in-app.
+ */
 export default function AnnouncementsAdminPage() {
   const [announcements, setAnnouncements] = useState<SystemAnnouncement[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -370,7 +374,7 @@ export default function AnnouncementsAdminPage() {
                 </div>
                 <div>
                   <h2 className="font-bold text-lg" style={{ color: 'var(--foreground)' }}>
-                    {editingId ? 'Modifier l&apos;annonce' : 'Créer une annonce'}
+                    {editingId ? "Modifier l'annonce" : 'Créer une annonce'}
                   </h2>
                   <p className="text-xs" style={{ color: 'var(--sidebar-muted)' }}>
                     Configurez le message qui apparaîtra à l&apos;ouverture de l&apos;application

@@ -37,6 +37,10 @@ import {
 
 type ActiveTab = 'leaderboard' | 'ranks';
 
+/**
+ * Page d'administration de la progression, des rangs culturels et du classement des joueurs.
+ * Permet la visualisation des statistiques d'XP, la consultation du leaderboard et l'ajustement manuel d'XP.
+ */
 export default function ProgressionAdminPage() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('leaderboard');
   const [selectedLevel, setSelectedLevel] = useState<number | 'ALL'>('ALL');
@@ -93,8 +97,11 @@ export default function ProgressionAdminPage() {
   const hasActiveFilters =
     selectedLevel !== 'ALL' || searchQuery.trim().length > 0;
 
+  const requestIdRef = useRef(0);
+
   // Chargement des données
   const loadData = useCallback(async () => {
+    const currentRequestId = ++requestIdRef.current;
     try {
       setIsLoading(true);
       const levelFilter = selectedLevel === 'ALL' ? undefined : selectedLevel;
@@ -103,16 +110,22 @@ export default function ProgressionAdminPage() {
         progressionService.getLeaderboard(levelFilter, 100),
       ]);
 
-      setStats(statsData);
-      setLeaderboard(leaderboardData.entries || []);
+      if (currentRequestId === requestIdRef.current) {
+        setStats(statsData);
+        setLeaderboard(leaderboardData.entries || []);
+      }
     } catch (err: unknown) {
-      console.error('Erreur chargement progression admin:', err);
-      setFeedback({
-        type: 'error',
-        text: 'Erreur lors du chargement des métriques de progression.',
-      });
+      if (currentRequestId === requestIdRef.current) {
+        console.error('Erreur chargement progression admin:', err);
+        setFeedback({
+          type: 'error',
+          text: 'Erreur lors du chargement des métriques de progression.',
+        });
+      }
     } finally {
-      setIsLoading(false);
+      if (currentRequestId === requestIdRef.current) {
+        setIsLoading(false);
+      }
     }
   }, [selectedLevel]);
 
@@ -297,7 +310,7 @@ export default function ProgressionAdminPage() {
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Rechercher un joueur par nom ou identifiant..."
+                  placeholder="Rechercher parmi le Top 100 des joueurs (nom ou ID)..."
                   className="w-full pl-10 pr-9 py-2 text-xs rounded-xl bg-[var(--background)] border border-[var(--card-border)] text-[var(--foreground)] placeholder-[var(--text-subtle)] focus:outline-none focus:border-[var(--accent)] transition"
                 />
                 {searchQuery && (

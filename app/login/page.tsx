@@ -5,6 +5,10 @@ import { useRouter } from 'next/navigation';
 import { signIn } from '@/lib/auth-client';
 import { Lock, Mail, Loader2, ShieldAlert, ArrowRight } from 'lucide-react';
 
+/**
+ * Page d'authentification des administrateurs du portail Kanto.
+ * Gère la saisie des identifiants et l'accès sécurisé au panneau d'administration.
+ */
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState('admin@kanto.mg');
@@ -187,7 +191,7 @@ export default function LoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="admin@kanto.mg"
-                  className="w-full pl-9 pr-3 py-2.5 rounded-xl text-xs transition-all outline-none"
+                  className="w-full pl-9 pr-3 py-2.5 rounded-xl text-xs transition-all outline-none focus-visible:ring-2 focus-visible:ring-[var(--sidebar-accent)]"
                   style={{
                     background: 'var(--sidebar-hover)',
                     border: '1px solid var(--sidebar-border)',
@@ -217,7 +221,7 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••••••"
-                  className="w-full pl-9 pr-3 py-2.5 rounded-xl text-xs transition-all outline-none"
+                  className="w-full pl-9 pr-3 py-2.5 rounded-xl text-xs transition-all outline-none focus-visible:ring-2 focus-visible:ring-[var(--sidebar-accent)]"
                   style={{
                     background: 'var(--sidebar-hover)',
                     border: '1px solid var(--sidebar-border)',

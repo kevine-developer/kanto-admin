@@ -65,6 +65,10 @@ const CATEGORY_CONFIG: Record<
   },
 };
 
+/**
+ * Page de modération des contributions citoyennes et gestion des signalements.
+ * Permet la validation/rejet des contes, proverbes, kabary et citations proposés, ainsi que la résolution des signalements.
+ */
 export default function AdminContributionsPage() {
   const [activeTab, setActiveTab] = useState<TabType>('pending');
   const [contributions, setContributions] = useState<ContributionItem[]>([]);

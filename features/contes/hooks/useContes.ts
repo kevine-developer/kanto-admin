@@ -4,6 +4,11 @@ import { useState, useEffect, useCallback } from 'react';
 import { contesService } from '@/services/contes.service';
 import { ConteItem, ConteFormData } from '@/types/conte';
 
+/**
+ * Hook personnalisé gérant l'état, le chargement et les mutations des contes malagasy.
+ * Fournit les opérations CRUD ainsi que la génération vocale TTS.
+ * @returns Fonctions et états réactifs pour la gestion des contes
+ */
 export function useContes() {
   const [contes, setContes] = useState<ConteItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);

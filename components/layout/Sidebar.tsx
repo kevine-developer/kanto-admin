@@ -72,16 +72,22 @@ const NAV_GROUPS: { label: string; items: { href: string; icon: React.ElementTyp
   },
 ];
 
+/**
+ * Barre de navigation latérale de l'espace d'administration Kanto.
+ * Gère le repliage dynamique, la navigation par module et la déconnexion.
+ */
 export function Sidebar() {
   const pathname = usePathname();
   const router   = useRouter();
   const { data: session } = useSession();
-  // Lazy initializer : lit localStorage au premier rendu sans useEffect
-  const [collapsed, setCollapsed] = useState<boolean>(() => {
-    if (typeof window === 'undefined') return true;
+  const [collapsed, setCollapsed] = useState<boolean>(true);
+
+  useEffect(() => {
     const saved = localStorage.getItem('kanto-sidebar-collapsed');
-    return saved !== null ? saved === 'true' : true;
-  });
+    if (saved !== null) {
+      setCollapsed(saved === 'true');
+    }
+  }, []);
 
   const toggleCollapsed = () => {
     setCollapsed((prev) => {

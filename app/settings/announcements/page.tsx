@@ -19,6 +19,10 @@ interface Announcement {
   createdAt: string;
 }
 
+/**
+ * Page de paramétrage et configuration rapide des annonces système.
+ * Permet la création rapide d'une annonce et l'affichage des annonces enregistrées.
+ */
 export default function AnnouncementsPage() {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [isLoading, setIsLoading] = useState(true);

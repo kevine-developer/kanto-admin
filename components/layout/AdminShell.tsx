@@ -15,6 +15,10 @@ interface AuthUser {
   image?: string | null;
 }
 
+/**
+ * Enveloppe globale d'administration avec protection de session et vérification du rôle ADMIN.
+ * @param props - Composants enfants à rendre dans le shell d'administration
+ */
 export function AdminShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { data: session, isPending } = useSession();

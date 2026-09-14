@@ -103,53 +103,50 @@ export const CULTURAL_RANKS: CulturalRank[] = [
 
 export const progressionService = {
   /**
-   * Récupérer les statistiques globales de progression
+   * Récupère les statistiques globales de progression et de distribution des niveaux.
+   * Propage les erreurs réseau/serveur pour permettre à l'UI d'afficher l'état d'erreur réel.
+   * @throws {Error} En cas d'échec de la requête API ou de réponse invalide
+   * @returns Statistiques agrégées de progression
    */
   async getAdminStats(): Promise<ProgressionStats> {
-    try {
-      return await fetchApi<ProgressionStats>('/progress/admin/stats');
-    } catch (err) {
-      console.error('Erreur getAdminStats progression:', err);
-      return {
-        totalPlayers: 0,
-        totalXpDistributed: 0,
-        totalCoinsDistributed: 0,
-        maxLevel: 1,
-        highestXp: 0,
-        maxStreakDays: 0,
-        averageLevel: 1,
-        activeStreaksCount: 0,
-        levelDistribution: {},
-      };
+    const stats = await fetchApi<ProgressionStats>('/progress/admin/stats');
+    if (!stats || typeof stats !== 'object' || typeof stats.totalPlayers !== 'number') {
+      throw new Error('Statistiques de progression invalides reçues du serveur');
     }
+    return stats;
   },
 
   /**
-   * Récupérer le classement des joueurs (avec filtre optionnel par niveau)
+   * Récupère le classement des joueurs (avec filtre optionnel par niveau).
+   * Propage les erreurs pour différencier une panne d'un classement vide.
+   * @param level - Niveau optionnel pour filtrer les joueurs (1 à 10)
+   * @param limit - Nombre maximum d'entrées à récupérer (défaut : 100)
+   * @throws {Error} En cas de panne de l'API
+   * @returns Données du classement incluant les entrées et le total de joueurs
    */
   async getLeaderboard(
     level?: number,
     limit: number = 100
   ): Promise<LeaderboardData> {
-    try {
-      const params = new URLSearchParams();
-      params.set('limit', String(limit));
-      if (level !== undefined && level !== null && level > 0) {
-        params.set('level', String(level));
-      }
-      return await fetchApi<LeaderboardData>(`/leaderboard?${params.toString()}`);
-    } catch (err) {
-      console.error('Erreur getLeaderboard:', err);
-      return {
-        entries: [],
-        totalPlayers: 0,
-        period: 'alltime',
-      };
+    const params = new URLSearchParams();
+    params.set('limit', String(limit));
+    if (level !== undefined && level !== null && level > 0) {
+      params.set('level', String(level));
     }
+    const data = await fetchApi<LeaderboardData>(`/leaderboard?${params.toString()}`);
+    if (!data || !Array.isArray(data.entries)) {
+      throw new Error('Réponse invalide du serveur pour le classement');
+    }
+    return data;
   },
 
   /**
-   * Ajustement manuel de l'XP d'un joueur
+   * Ajuste manuellement l'expérience (XP) d'un joueur par un administrateur.
+   * @param userId - Identifiant unique de l'utilisateur
+   * @param xpDelta - Quantité de points d'XP à ajouter (positif) ou déduire (négatif)
+   * @param reason - Motif facultatif consigné dans le journal d'administration
+   * @throws {Error} En cas d'échec de la modification
+   * @returns Résultat de l'ajustement
    */
   async adjustUserXp(
     userId: string,
@@ -163,14 +160,17 @@ export const progressionService = {
   },
 
   /**
-   * Retourne la configuration complète des 10 Rangs
+   * Retourne la liste complète ordonnée des 10 Rangs Culturels Malagasy.
+   * @returns Tableau immuable des rangs culturels
    */
   getRanks(): CulturalRank[] {
     return CULTURAL_RANKS;
   },
 
   /**
-   * Trouve le rang correspondant à un niveau
+   * Détermine le rang culturel associé à un niveau d'expérience donné (1 à 10).
+   * @param level - Niveau du joueur (1-10)
+   * @returns L'objet CulturalRank correspondant au niveau
    */
   getRankForLevel(level: number): CulturalRank {
     const safeLevel = Math.min(10, Math.max(1, level));

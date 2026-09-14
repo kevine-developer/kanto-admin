@@ -20,6 +20,10 @@ export interface PageHeaderProps {
   };
 }
 
+/**
+ * En-tête standardisé de page d'administration avec titre, sous-titre, icône et actions rapides.
+ * @param props - Propriétés de l'en-tête de page
+ */
 export function PageHeader({
   title,
   description,
