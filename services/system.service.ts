@@ -1,5 +1,5 @@
 import { fetchApi } from '@/lib/api-client';
-import { NotificationItem, OnboardingSlideItem, UserAccount } from '@/types';
+import { NotificationItem, UserAccount } from '@/types';
 
 export const systemService = {
   // ─── Notifications ─────────────────────────────────────────────────────────
@@ -19,37 +19,6 @@ export const systemService = {
     await fetchApi(`/admin/notifications/${id}`, { method: 'DELETE' });
   },
 
-  // ─── Onboarding Slides ──────────────────────────────────────────────────────
-  async getOnboardingSlides(): Promise<OnboardingSlideItem[]> {
-    const res = await fetchApi<OnboardingSlideItem[]>('/admin/onboarding');
-    return res || [];
-  },
-
-  async createSlide(data: Partial<OnboardingSlideItem>): Promise<OnboardingSlideItem> {
-    return fetchApi<OnboardingSlideItem>('/admin/onboarding', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-  },
-
-  async updateSlide(id: string, data: Partial<OnboardingSlideItem>): Promise<OnboardingSlideItem> {
-    return fetchApi<OnboardingSlideItem>(`/admin/onboarding/${id}`, {
-      method: 'PATCH',
-      body: JSON.stringify(data),
-    });
-  },
-
-  async reorderSlides(slideIds: string[]): Promise<void> {
-    await fetchApi('/admin/onboarding/reorder', {
-      method: 'POST',
-      body: JSON.stringify({ slideIds }),
-    });
-  },
-
-  async deleteSlide(id: string): Promise<void> {
-    await fetchApi(`/admin/onboarding/${id}`, { method: 'DELETE' });
-  },
-
   // ─── Utilisateurs ───────────────────────────────────────────────────────────
   async getUsers(): Promise<UserAccount[]> {
     const res = await fetchApi<{ data: UserAccount[] }>('/admin/users');
@@ -60,6 +29,14 @@ export const systemService = {
     await fetchApi(`/admin/users/${id}/role`, {
       method: 'PATCH',
       body: JSON.stringify({ role }),
+    });
+  },
+
+  // ─── Diagnostic & Test Email ────────────────────────────────────────────────
+  async sendTestEmail(to: string): Promise<{ success: boolean; message: string }> {
+    return fetchApi('/admin/system/test-email', {
+      method: 'POST',
+      body: JSON.stringify({ to }),
     });
   },
 };

@@ -16,21 +16,6 @@ export interface NotificationItem {
   updatedAt: string;
 }
 
-export interface OnboardingSlideItem {
-  id: string;
-  order: number;
-  title: string;
-  titleMg: string;
-  subtitle?: string | null;
-  description: string;
-  imageUrl?: string | null;
-  accentColor?: string | null;
-  iconName?: string | null;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
-
 export interface UserAccount {
   id: string;
   name: string;

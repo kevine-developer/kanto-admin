@@ -1,5 +1,7 @@
 import type { NextConfig } from "next";
 
+const isDev = process.env.NODE_ENV !== 'production';
+
 const nextConfig: NextConfig = {
   allowedDevOrigins: [
     'localhost',
@@ -51,7 +53,9 @@ const nextConfig: NextConfig = {
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "font-src 'self' https://fonts.gstatic.com",
               "img-src 'self' data: https://res.cloudinary.com blob:",
-              "connect-src 'self' " + (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000"),
+              isDev
+                ? "connect-src 'self' http: ws: https: wss:"
+                : "connect-src 'self' " + (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000"),
               "frame-ancestors 'none'",
             ].join("; "),
           },
