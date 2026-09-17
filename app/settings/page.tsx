@@ -8,6 +8,7 @@ import { useTheme } from '@/lib/theme-context';
 import { useSession, signOut } from '@/lib/auth-client';
 import { useToast } from '@/lib/hooks/useToast';
 import { fetchApi } from '@/lib/api-client';
+import { systemService } from '@/services/system.service';
 import {
   Sliders,
   Sun,
@@ -28,6 +29,8 @@ import {
   Loader2,
   Sparkles,
   Info,
+  Mail,
+  Send,
 } from 'lucide-react';
 
 interface AuthUser {
@@ -57,6 +60,30 @@ export default function SettingsPage() {
     latencyMs?: number;
     message?: string;
   }>({ tested: false, success: false });
+
+  // État du test d'envoi d'email
+  const [testEmailAddress, setTestEmailAddress] = useState('');
+  const [isSendingTestEmail, setIsSendingTestEmail] = useState(false);
+
+  const handleSendTestEmail = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const email = testEmailAddress.trim();
+    if (!email || !email.includes('@')) {
+      toast.error('Veuillez saisir une adresse email valide');
+      return;
+    }
+    try {
+      setIsSendingTestEmail(true);
+      await systemService.sendTestEmail(email);
+      toast.success(`Email de test envoyé avec succès à ${email} !`);
+      setTestEmailAddress('');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Échec d\'envoi de l\'email';
+      toast.error(msg);
+    } finally {
+      setIsSendingTestEmail(false);
+    }
+  };
 
   // État de la sidebar mémorisée
   const [defaultCollapsed, setDefaultCollapsed] = useState<boolean>(true);
@@ -472,7 +499,7 @@ export default function SettingsPage() {
                   </span>
                 </div>
                 <div className="text-[11px] text-[var(--text-muted)] mt-0.5">
-                  Hébergement haute disponibilité des audios et photos d&apos;onboarding.
+                  Hébergement haute disponibilité des audios et médias culturels.
                 </div>
               </div>
             </div>
@@ -492,6 +519,47 @@ export default function SettingsPage() {
                 <div className="text-[11px] text-[var(--text-muted)] mt-0.5">
                   Base relationnelle du conservatoire et registre des sagesses.
                 </div>
+              </div>
+            </div>
+
+            {/* Service Email Resend */}
+            <div className="p-3.5 rounded-xl border border-[var(--card-border)] bg-[var(--input-bg)] flex items-start gap-3 sm:col-span-2">
+              <div className="p-2 rounded-lg bg-[var(--card)] border border-[var(--card-border)] text-emerald-500 shrink-0">
+                <Mail size={16} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-1">
+                  <div className="text-xs font-bold text-[var(--foreground)]">Service Email (Resend)</div>
+                  <span className="text-[10px] font-mono font-medium text-emerald-600 dark:text-emerald-400">
+                    Actif
+                  </span>
+                </div>
+                <div className="text-[11px] text-[var(--text-muted)] mt-0.5">
+                  Envoi des emails transactionnels (réinitialisation de mot de passe, bienvenue et alertes).
+                </div>
+                {/* Formulaire de test */}
+                <form onSubmit={handleSendTestEmail} className="mt-2.5 flex flex-col sm:flex-row items-center gap-2">
+                  <input
+                    type="email"
+                    required
+                    value={testEmailAddress}
+                    onChange={(e) => setTestEmailAddress(e.target.value)}
+                    placeholder="Entrez votre email pour tester la réception..."
+                    className="w-full sm:flex-1 px-3 py-1.5 text-xs rounded-lg border border-[var(--card-border)] bg-[var(--card)] text-[var(--foreground)] placeholder:text-[var(--text-subtle)] focus:outline-hidden focus:ring-1 focus:ring-[var(--accent)]"
+                  />
+                  <button
+                    type="submit"
+                    disabled={isSendingTestEmail}
+                    className="w-full sm:w-auto px-3 py-1.5 rounded-lg bg-[var(--accent)] text-white text-xs font-semibold hover:opacity-90 transition disabled:opacity-50 flex items-center justify-center gap-1.5 shrink-0 cursor-pointer shadow-xs"
+                  >
+                    {isSendingTestEmail ? (
+                      <Loader2 size={12} className="animate-spin" />
+                    ) : (
+                      <Send size={12} />
+                    )}
+                    <span>{isSendingTestEmail ? 'Envoi...' : 'Envoyer un test'}</span>
+                  </button>
+                </form>
               </div>
             </div>
           </div>

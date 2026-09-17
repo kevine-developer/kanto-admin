@@ -7,7 +7,6 @@ import {
   CheckCheck,
   Puzzle,
   HelpCircle,
-  Smartphone,
   Bell,
   Users,
   LayoutDashboard,
@@ -23,7 +22,6 @@ export const APP_NAVIGATION = [
   { label: "Remets dans l'ordre (Jeux)", href: '/word-puzzle', icon: Puzzle },
   { label: 'Mot Manquant (Jeux)', href: '/missing-word', icon: HelpCircle },
   { label: 'Jeux & Catégories', href: '/locks', icon: Lock },
-  { label: 'Onboarding & Slides', href: '/onboarding', icon: Smartphone },
   { label: 'Notifications & Alertes', href: '/notifications', icon: Bell },
   { label: 'Utilisateurs & Rôles', href: '/users', icon: Users },
 ];
@@ -33,15 +31,6 @@ export const PRESET_LOCK_REASONS = [
   'En cours de maintenance technique',
   'Mise à jour du contenu culturel',
   'Temporairement indisponible',
-];
-
-export const PRESET_SLIDE_COLORS = [
-  { label: 'Olive Tanimbary', value: '#4A6741' },
-  { label: 'Feuille Forêt', value: '#5C7A3E' },
-  { label: 'Jade Émeraude', value: '#3E6B55' },
-  { label: 'Terre Cuite', value: '#C85A32' },
-  { label: 'Ambre Sacré', value: '#D97706' },
-  { label: 'Végétal Profond', value: '#2D6A4F' },
 ];
 
 export const THEMES_TRUE_FALSE: Record<string, string> = {

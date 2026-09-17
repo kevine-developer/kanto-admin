@@ -6,3 +6,4 @@ export * from './game';
 export * from './system';
 export * from './contribution';
 export * from './progression';
+export * from './welcome-slide';

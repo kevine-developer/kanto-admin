@@ -18,7 +18,6 @@ const PAGE_TITLES: Record<string, string> = {
   '/missing-word':  'Mot Manquant',
   '/locks':         'Catégories & Jeux',
   '/progression':   'Progression & XP',
-  '/onboarding':    'Onboarding & Slides',
   '/notifications': 'Notifications',
   '/users':         'Utilisateurs & Rôles',
   '/announcements': 'Annonces Système',

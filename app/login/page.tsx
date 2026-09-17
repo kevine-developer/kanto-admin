@@ -22,13 +22,14 @@ export default function LoginPage() {
     setErrorMessage(null);
 
     try {
-      const res = await signIn.email({ email, password });
+      const res = await signIn.email({ email: email.trim().toLowerCase(), password });
       if (res?.error) {
         setErrorMessage(res.error.message || 'Identifiants invalides');
         setIsLoading(false);
         return;
       }
-      router.replace('/');
+      // Rechargement direct pour garantir la prise en compte immédiate des cookies de session
+      window.location.href = '/';
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Une erreur réseau est survenue';
       setErrorMessage(msg);
@@ -253,6 +254,35 @@ export default function LoginPage() {
               )}
             </button>
           </form>
+
+          <div
+            className="rounded-xl p-3 text-[11.5px] space-y-1"
+            style={{
+              background: 'var(--sidebar-hover)',
+              border: '1px solid var(--sidebar-border)',
+              color: 'var(--sidebar-muted)',
+            }}
+          >
+            <div className="flex items-center justify-between">
+              <span className="font-semibold" style={{ color: 'var(--sidebar-fg)' }}>
+                Identifiants administrateur :
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  setEmail('admin@kanto.mg');
+                  setPassword('AdminKanto2026!');
+                }}
+                className="text-[10.5px] px-2 py-0.5 rounded font-mono font-medium hover:underline cursor-pointer"
+                style={{ background: 'rgba(255,255,255,0.06)', color: 'var(--sidebar-accent)' }}
+              >
+                Pré-remplir
+              </button>
+            </div>
+            <div className="font-mono text-[11px] opacity-80">
+              admin@kanto.mg / AdminKanto2026!
+            </div>
+          </div>
 
           <div
             className="text-center text-[11px]"

@@ -1,12 +1,12 @@
 import { ApiResponse } from '@/types/common';
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+import { getAuthBaseUrl } from './auth-client';
 
 export async function fetchApi<T = unknown>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> {
-  const url = endpoint.startsWith('http') ? endpoint : `${API_BASE_URL}${endpoint}`;
+  const baseUrl = getAuthBaseUrl();
+  const url = endpoint.startsWith('http') ? endpoint : `${baseUrl}${endpoint}`;
 
   const response = await fetch(url, {
     ...options,

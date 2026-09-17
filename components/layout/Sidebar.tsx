@@ -15,7 +15,6 @@ import {
   CheckCheck,
   HelpCircle,
   Layers,
-  Smartphone,
   Bell,
   Puzzle,
   Star,
@@ -24,6 +23,8 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Megaphone,
+  Landmark,
+  Images,
 } from 'lucide-react';
 
 interface AuthUser {
@@ -45,6 +46,7 @@ const NAV_GROUPS: { label: string; items: { href: string; icon: React.ElementTyp
   {
     label: 'Patrimoine',
     items: [
+      { href: '/histoire',  icon: Landmark,   label: 'Histoire & Emblèmes' },
       { href: '/contes',    icon: BookOpen,   label: 'Contes & Angano' },
       { href: '/proverbes', icon: ScrollText, label: 'Proverbes & Fady' },
       { href: '/kabary',    icon: Mic,        label: 'Discours & Kabary' },
@@ -64,7 +66,7 @@ const NAV_GROUPS: { label: string; items: { href: string; icon: React.ElementTyp
   {
     label: 'Administration',
     items: [
-      { href: '/onboarding',    icon: Smartphone, label: 'Onboarding' },
+      { href: '/welcome-slides',icon: Images,     label: "Écran d'Accueil" },
       { href: '/notifications', icon: Bell,       label: 'Notifications' },
       { href: '/announcements', icon: Megaphone,  label: 'Annonces Système' },
       { href: '/users',         icon: Users,      label: 'Utilisateurs' },
