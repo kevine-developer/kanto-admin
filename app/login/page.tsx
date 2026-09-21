@@ -44,13 +44,22 @@ export default function LoginPage() {
         return;
       }
 
-      // Vérification stricte du rôle ADMIN : un utilisateur standard ne peut pas entrer
-      const freshSession = await getSession();
-      const userRole = (freshSession?.data?.user as { role?: string } | undefined)?.role?.toUpperCase();
+      // Vérification stricte du rôle ADMIN :
+      // On extrait prioritairement le rôle retourné directement dans la réponse de signIn,
+      // puis en fallback la session active (pour pallier d'éventuels délais d'écriture de cookie).
+      const userFromSignIn = (res?.data?.user as { role?: string } | undefined)?.role?.toUpperCase();
+      let userRole = userFromSignIn;
+
+      if (!userRole) {
+        const freshSession = await getSession();
+        userRole = (freshSession?.data?.user as { role?: string } | undefined)?.role?.toUpperCase();
+      }
 
       if (userRole !== 'ADMIN') {
         await signOut();
-        setErrorMessage('Accès refusé. Ce compte ne possède pas les privilèges administrateur.');
+        setErrorMessage(
+          `Accès refusé. Le compte "${email.trim().toLowerCase()}" possède le rôle "${userRole || 'USER'}" et ne dispose pas des privilèges administrateur.`,
+        );
         setIsLoading(false);
         return;
       }
