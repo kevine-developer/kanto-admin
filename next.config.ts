@@ -55,7 +55,7 @@ const nextConfig: NextConfig = {
               "img-src 'self' data: https://res.cloudinary.com blob:",
               isDev
                 ? "connect-src 'self' http: ws: https: wss:"
-                : "connect-src 'self' " + (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000"),
+                : "connect-src 'self' https://api-kanto.gastsar.fr " + (process.env.NEXT_PUBLIC_API_URL ?? ""),
               "frame-ancestors 'none'",
             ].join("; "),
           },
