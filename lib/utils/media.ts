@@ -1,3 +1,5 @@
+import { getApiBaseUrl } from '../config';
+
 /**
  * Résout une URL d'image ou d'audio pour l'administration Kanto.
  * Gère les URLs Cloudinary absolues, data URIs, et préfixes d'API locale/production.
@@ -5,7 +7,7 @@
 export function resolveMediaUrl(url?: string | null): string {
   if (!url) return '';
   
-  const backendBase = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000').replace(/\/$/, '');
+  const backendBase = getApiBaseUrl().replace(/\/$/, '');
 
   // Nettoyage des anciennes IP fixes de développement si présentes dans la base
   if (url.includes('192.168.1.100:3000')) {
