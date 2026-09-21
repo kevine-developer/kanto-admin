@@ -13,6 +13,7 @@ import {
   AlertCircle,
   Mail,
   Calendar,
+  KeyRound,
 } from 'lucide-react';
 
 export default function UsersAdminPage() {
@@ -20,7 +21,36 @@ export default function UsersAdminPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [resettingId, setResettingId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  const handleResetPassword = async (user: UserAccount) => {
+    if (
+      !confirm(
+        `Envoyer un email de réinitialisation de mot de passe à ${user.name || user.email} (${user.email}) ?`
+      )
+    ) {
+      return;
+    }
+
+    try {
+      setResettingId(user.id);
+      setFeedback(null);
+      const res = await systemService.resetUserPassword(user.id);
+      setFeedback({
+        type: 'success',
+        text: res.message || `Lien de réinitialisation envoyé à ${user.email}.`,
+      });
+    } catch (err: unknown) {
+      const msg =
+        err instanceof Error
+          ? err.message
+          : "Erreur lors de l'envoi de l'email de réinitialisation";
+      setFeedback({ type: 'error', text: msg });
+    } finally {
+      setResettingId(null);
+    }
+  };
 
   const loadUsers = useCallback(async () => {
     try {
@@ -228,23 +258,39 @@ export default function UsersAdminPage() {
                         </td>
 
                         <td className="py-2.5 px-4 text-right">
-                          <button
-                            onClick={() => handleToggleRole(user)}
-                            disabled={isUpdating}
-                            className={`px-2.5 py-1 rounded text-xs font-medium transition cursor-pointer border ${
-                              isAdmin
-                                ? 'border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800'
-                                : 'bg-neutral-900 text-white border-neutral-900 dark:bg-neutral-100 dark:text-neutral-900 hover:opacity-90'
-                            }`}
-                          >
-                            {isUpdating ? (
-                              <Loader2 size={13} className="animate-spin" />
-                            ) : isAdmin ? (
-                              'Rétrograder'
-                            ) : (
-                              'Promouvoir'
-                            )}
-                          </button>
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              onClick={() => handleResetPassword(user)}
+                              disabled={resettingId === user.id}
+                              title="Envoyer un email de réinitialisation du mot de passe"
+                              className="px-2 py-1 rounded text-xs font-medium transition cursor-pointer border border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 disabled:opacity-50 inline-flex items-center gap-1"
+                            >
+                              {resettingId === user.id ? (
+                                <Loader2 size={12} className="animate-spin" />
+                              ) : (
+                                <KeyRound size={12} />
+                              )}
+                              <span>MDP</span>
+                            </button>
+
+                            <button
+                              onClick={() => handleToggleRole(user)}
+                              disabled={isUpdating}
+                              className={`px-2.5 py-1 rounded text-xs font-medium transition cursor-pointer border ${
+                                isAdmin
+                                  ? 'border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800'
+                                  : 'bg-neutral-900 text-white border-neutral-900 dark:bg-neutral-100 dark:text-neutral-900 hover:opacity-90'
+                              }`}
+                            >
+                              {isUpdating ? (
+                                <Loader2 size={13} className="animate-spin" />
+                              ) : isAdmin ? (
+                                'Rétrograder'
+                              ) : (
+                                'Promouvoir'
+                              )}
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );

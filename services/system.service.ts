@@ -32,6 +32,13 @@ export const systemService = {
     });
   },
 
+  async resetUserPassword(id: string): Promise<{ success: boolean; message: string }> {
+    return fetchApi<{ success: boolean; message: string }>(
+      `/admin/users/${id}/reset-password`,
+      { method: 'POST' }
+    );
+  },
+
   // ─── Diagnostic & Test Email ────────────────────────────────────────────────
   async sendTestEmail(to: string): Promise<{ success: boolean; message: string }> {
     return fetchApi('/admin/system/test-email', {
