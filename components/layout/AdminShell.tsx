@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useSession } from '@/lib/auth-client';
+import { useSession, getSession } from '@/lib/auth-client';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 import { Loader2, ShieldAlert } from 'lucide-react';
@@ -22,20 +22,64 @@ interface AuthUser {
 export function AdminShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { data: session, isPending } = useSession();
+  const [isVerifying, setIsVerifying] = useState(true);
+  const [resolvedIsAdmin, setResolvedIsAdmin] = useState(false);
 
   const user = session?.user as AuthUser | undefined;
-  const role = user?.role?.toUpperCase();
+  const role = user?.role?.toString().trim().toUpperCase();
   const isAdmin = role === 'ADMIN';
 
   useEffect(() => {
-    if (!isPending) {
-      if (!session || !isAdmin) {
+    let isMounted = true;
+
+    async function checkAuth() {
+      // 1. Si useSession a déjà une session avec le rôle ADMIN confirmé
+      if (session && isAdmin) {
+        if (isMounted) {
+          setResolvedIsAdmin(true);
+          setIsVerifying(false);
+        }
+        return;
+      }
+
+      // 2. Si useSession est encore en chargement, on patiente
+      if (isPending) {
+        return;
+      }
+
+      // 3. Si useSession a fini mais n'a pas encore la session, faire un appel getSession direct
+      try {
+        const fresh = await getSession();
+        const freshUser = fresh?.data?.user as AuthUser | undefined;
+        const freshRole = freshUser?.role?.toString().trim().toUpperCase();
+
+        if (freshRole === 'ADMIN') {
+          if (isMounted) {
+            setResolvedIsAdmin(true);
+            setIsVerifying(false);
+          }
+          return;
+        }
+      } catch {
+        // En cas d'erreur de requête
+      }
+
+      // 4. Si aucune session ADMIN valide n'est confirmée, redirection vers /login
+      if (isMounted) {
+        setResolvedIsAdmin(false);
+        setIsVerifying(false);
         router.replace('/login');
       }
     }
+
+    checkAuth();
+
+    return () => {
+      isMounted = false;
+    };
   }, [session, isPending, isAdmin, router]);
 
-  if (isPending) {
+  if (isPending || isVerifying) {
     return (
       <div
         className="h-screen w-screen flex flex-col items-center justify-center gap-3"
@@ -55,7 +99,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (!session || !isAdmin) {
+  if (!resolvedIsAdmin) {
     return (
       <div
         className="h-screen w-screen flex flex-col items-center justify-center p-6 text-center gap-4"

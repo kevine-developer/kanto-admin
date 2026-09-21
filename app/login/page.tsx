@@ -25,10 +25,10 @@ export default function LoginPage() {
     if (!isSessionLoading && session?.user) {
       const role = (session.user as { role?: string }).role?.toUpperCase();
       if (role === 'ADMIN') {
-        router.replace('/');
+        window.location.href = '/';
       }
     }
-  }, [session, isSessionLoading, router]);
+  }, [session, isSessionLoading]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,8 +64,9 @@ export default function LoginPage() {
         return;
       }
 
-      // Navigation vers le tableau de bord
-      router.push('/');
+      // Redirection immédiate vers le tableau de bord avec rechargement complet
+      // pour garantir la transmission des nouveaux cookies de session HTTP à Next.js
+      window.location.href = '/';
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Une erreur réseau est survenue';
       setErrorMessage(msg);
