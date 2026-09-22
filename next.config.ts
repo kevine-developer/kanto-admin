@@ -22,6 +22,18 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "images.unsplash.com",
       },
+      {
+        protocol: "https",
+        hostname: "api-kanto.gastsar.fr",
+      },
+      {
+        protocol: "http",
+        hostname: "localhost",
+      },
+      {
+        protocol: "http",
+        hostname: "127.0.0.1",
+      },
     ],
   },
   async headers() {
@@ -64,7 +76,7 @@ const nextConfig: NextConfig = {
               "script-src 'self' 'unsafe-inline' 'unsafe-eval'", // unsafe-eval requis par Next.js dev
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "font-src 'self' https://fonts.gstatic.com",
-              "img-src 'self' data: https://res.cloudinary.com https://images.unsplash.com blob:",
+              `img-src 'self' data: https://res.cloudinary.com https://images.unsplash.com https://api-kanto.gastsar.fr blob: ${process.env.NEXT_PUBLIC_API_URL ?? ""} ${process.env.NEXT_PUBLIC_BACKEND_URL ?? ""} ${isDev ? "http:" : ""}`.trim().replace(/\s+/g, " "),
               isDev
                 ? "connect-src 'self' http: ws: https: wss:"
                 : "connect-src 'self' https://api-kanto.gastsar.fr " + (process.env.NEXT_PUBLIC_API_URL ?? ""),

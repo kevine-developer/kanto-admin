@@ -460,8 +460,8 @@ export default function TrueFalseAdminPage() {
 
       {/* ─── Modal Créer / Modifier ─────────────────────────────────────────── */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-[var(--card)] border border-[var(--card-border)] rounded-xl w-full max-w-xl max-h-[90vh] flex flex-col shadow-xl">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm overflow-y-auto flex items-start justify-center p-4 pt-6 sm:pt-10 md:pt-12 z-50">
+          <div className="bg-[var(--card)] border border-[var(--card-border)] rounded-xl w-full max-w-xl max-h-[calc(100vh-3rem)] sm:max-h-[calc(100vh-5.5rem)] flex flex-col shadow-xl animate-in fade-in slide-in-from-top-3 duration-150">
             {/* Header */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--card-border)] shrink-0">
               <h2 className="text-sm font-semibold text-[var(--foreground)]">
@@ -616,8 +616,8 @@ export default function TrueFalseAdminPage() {
 
       {/* ─── Modal Aperçu ───────────────────────────────────────────────────── */}
       {previewQ && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-[var(--card)] border border-[var(--card-border)] rounded-xl w-full max-w-sm shadow-xl">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm overflow-y-auto flex items-start justify-center p-4 pt-6 sm:pt-10 md:pt-12 z-50">
+          <div className="bg-[var(--card)] border border-[var(--card-border)] rounded-xl w-full max-w-sm max-h-[calc(100vh-3rem)] sm:max-h-[calc(100vh-5.5rem)] shadow-xl animate-in fade-in slide-in-from-top-3 duration-150">
             <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--card-border)]">
               <h3 className="text-sm font-semibold text-[var(--foreground)]">Aperçu</h3>
               <button

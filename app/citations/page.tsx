@@ -357,8 +357,8 @@ export default function CitationsAdminPage() {
 
         {/* Modal Création / Édition Citation */}
         {isModalOpen && (
-          <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-            <div className="bg-[var(--card)] rounded-xl border border-[var(--card-border)] shadow-sm max-w-lg w-full max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+          <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs overflow-y-auto flex items-start justify-center p-4 pt-6 sm:pt-10 md:pt-12">
+            <div className="bg-[var(--card)] rounded-xl border border-[var(--card-border)] shadow-xl max-w-lg w-full max-h-[calc(100vh-3rem)] sm:max-h-[calc(100vh-5.5rem)] flex flex-col overflow-hidden animate-in fade-in slide-in-from-top-3 duration-150">
               <div className="px-4 py-3 border-b border-[var(--card-border)] flex items-center justify-between">
                 <div>
                   <h2 className="text-sm font-semibold text-[var(--foreground)] tracking-tight">
@@ -477,8 +477,8 @@ export default function CitationsAdminPage() {
 
         {/* Modal Détails Citation */}
         {selectedCitation && (
-          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-            <div className="bg-[var(--card)] rounded-xl border border-[var(--card-border)] shadow-sm max-w-lg w-full max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs overflow-y-auto flex items-start justify-center p-4 pt-6 sm:pt-10 md:pt-12">
+            <div className="bg-[var(--card)] rounded-xl border border-[var(--card-border)] shadow-xl max-w-lg w-full max-h-[calc(100vh-3rem)] sm:max-h-[calc(100vh-5.5rem)] flex flex-col overflow-hidden animate-in fade-in slide-in-from-top-3 duration-150">
               <div className="px-4 py-3 border-b border-[var(--card-border)] flex items-center justify-between">
                 <div>
                   <div className="font-semibold text-xs text-[var(--foreground)]">

@@ -361,10 +361,10 @@ export default function AnnouncementsAdminPage() {
 
       {/* MODAL CRÉATION / ÉDITION */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => !isSubmitting && setIsModalOpen(false)} />
+        <div className="fixed inset-0 z-50 overflow-y-auto flex items-start justify-center p-4 pt-6 sm:pt-10 md:pt-12">
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm" onClick={() => !isSubmitting && setIsModalOpen(false)} />
           <div 
-            className="relative w-full max-w-2xl rounded-2xl flex flex-col shadow-xl max-h-[90vh]"
+            className="relative w-full max-w-2xl rounded-2xl flex flex-col shadow-xl max-h-[calc(100vh-3rem)] sm:max-h-[calc(100vh-5.5rem)] animate-in fade-in slide-in-from-top-3 duration-150"
             style={{ background: 'var(--background)', border: '1px solid var(--sidebar-border)' }}
           >
             <div className="flex items-center justify-between p-5 border-b" style={{ borderColor: 'var(--sidebar-border)' }}>

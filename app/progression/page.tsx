@@ -760,8 +760,8 @@ export default function ProgressionAdminPage() {
         {/* MODALE : AJUSTEMENT D'XP MANUEL                               */}
         {/* ───────────────────────────────────────────────────────────── */}
         {selectedUserForXp && (
-          <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-            <div className="w-full max-w-md rounded-xl border border-[var(--card-border)] bg-[var(--card)] p-5 space-y-4 shadow-xl animate-in fade-in zoom-in-95">
+          <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs overflow-y-auto flex items-start justify-center p-4 pt-6 sm:pt-10 md:pt-12">
+            <div className="w-full max-w-md rounded-xl border border-[var(--card-border)] bg-[var(--card)] p-5 space-y-4 shadow-xl animate-in fade-in slide-in-from-top-3 duration-150">
               <div className="flex items-center justify-between border-b border-[var(--card-border)] pb-3">
                 <div className="flex items-center gap-2">
                   <Star size={16} className="text-amber-500" />

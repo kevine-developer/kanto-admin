@@ -454,8 +454,8 @@ export default function WelcomeSlidesAdminPage() {
 
         {/* Modal d'Ajout / Édition */}
         {isModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
-            <div className="bg-card border border-border rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden">
+          <div className="fixed inset-0 z-50 overflow-y-auto flex items-start justify-center p-4 pt-6 sm:pt-10 md:pt-12 bg-black/60 backdrop-blur-sm animate-in fade-in">
+            <div className="bg-card border border-border rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-3 duration-150">
               {/* Header Modal */}
               <div className="p-5 border-b border-border flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
