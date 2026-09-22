@@ -187,7 +187,11 @@ export function LockModal({
           <label className="block text-[10.5px] font-mono text-[var(--text-muted)] mb-1 uppercase tracking-wider">
             Illustration du module :
           </label>
-          <ImageUploadDropzone value={formImageUrl} onChange={setFormImageUrl} />
+          <ImageUploadDropzone
+            value={formImageUrl}
+            onChange={setFormImageUrl}
+            subfolder="modules"
+          />
         </div>
 
         {/* Verrouillage initial */}

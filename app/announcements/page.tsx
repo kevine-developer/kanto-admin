@@ -3,12 +3,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { AdminShell } from '@/components/layout/AdminShell';
 import { fetchApi } from '@/lib/api-client';
+import { useToast } from '@/lib/hooks/useToast';
 import {
   Megaphone,
   Plus,
   RotateCcw,
   Trash2,
-  CheckCircle2,
   AlertCircle,
   Loader2,
   X,
@@ -19,6 +19,7 @@ import {
   ToggleLeft,
   ToggleRight,
   Pencil,
+  CheckCircle,
 } from 'lucide-react';
 
 export interface SystemAnnouncement {
@@ -37,7 +38,7 @@ export interface SystemAnnouncement {
 const ANNOUNCEMENT_TYPES = [
   { id: 'INFO', label: 'Information / Fampahafantarana', icon: Info, color: '#2980B9', bg: 'bg-blue-500/10 text-blue-500 border-blue-500/20' },
   { id: 'MAINTENANCE', label: 'Maintenance / Fikojakojana', icon: Wrench, color: '#E67E22', bg: 'bg-amber-500/10 text-amber-500 border-amber-500/20' },
-  { id: 'NEW_FEATURE', label: 'Nouveauté / Vaovao', icon: Sparkles, color: '#C0392B', bg: 'bg-red-500/10 text-red-500 border-red-500/20' },
+  { id: 'NEW_FEATURE', label: 'Nouveauté / Vaovao', icon: Sparkles, color: '#8B5CF6', bg: 'bg-purple-500/10 text-purple-500 border-purple-500/20' },
 ];
 
 /**
@@ -47,11 +48,12 @@ const ANNOUNCEMENT_TYPES = [
 export default function AnnouncementsAdminPage() {
   const [announcements, setAnnouncements] = useState<SystemAnnouncement[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const { toast } = useToast();
 
   // Modal création / édition
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [modalError, setModalError] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
 
   // Form State
@@ -67,34 +69,18 @@ export default function AnnouncementsAdminPage() {
     try {
       setIsLoading(true);
       const data = await fetchApi<SystemAnnouncement[]>('/announcements');
-      setAnnouncements(data || []);
+      setAnnouncements(Array.isArray(data) ? data : []);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Erreur lors du chargement des annonces.';
-      setMessage({ type: 'error', text: msg });
+      toast.error(msg);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [toast]);
 
   useEffect(() => {
-    let isMounted = true;
-    fetchApi<SystemAnnouncement[]>('/announcements')
-      .then((data) => {
-        if (isMounted) setAnnouncements(data || []);
-      })
-      .catch((err: unknown) => {
-        if (!isMounted) return;
-        const msg = err instanceof Error ? err.message : 'Erreur lors du chargement des annonces.';
-        setMessage({ type: 'error', text: msg });
-      })
-      .finally(() => {
-        if (isMounted) setIsLoading(false);
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+    void loadAnnouncements();
+  }, [loadAnnouncements]);
 
   const resetForm = () => {
     setTitleMg('');
@@ -105,6 +91,7 @@ export default function AnnouncementsAdminPage() {
     setIsActive(true);
     setVersion(1);
     setEditingId(null);
+    setModalError(null);
   };
 
   const handleOpenCreateModal = () => {
@@ -113,27 +100,30 @@ export default function AnnouncementsAdminPage() {
   };
 
   const handleEdit = (ann: SystemAnnouncement) => {
-    setTitleMg(ann.titleMg);
-    setTitleFr(ann.titleFr);
-    setMessageMg(ann.messageMg);
-    setMessageFr(ann.messageFr);
-    setType(ann.type);
-    setIsActive(ann.isActive);
-    setVersion(ann.version);
+    setTitleMg(ann.titleMg || '');
+    setTitleFr(ann.titleFr || '');
+    setMessageMg(ann.messageMg || '');
+    setMessageFr(ann.messageFr || '');
+    setType(ann.type || 'INFO');
+    setIsActive(Boolean(ann.isActive));
+    setVersion(Number(ann.version) || 1);
     setEditingId(ann.id);
+    setModalError(null);
     setIsModalOpen(true);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setModalError(null);
+
     if (!titleMg.trim() || !messageMg.trim() || !titleFr.trim() || !messageFr.trim()) {
-      setMessage({ type: 'error', text: 'Tous les champs de titre et de message sont requis.' });
+      setModalError('Tous les champs de titre et de message sont obligatoires.');
       return;
     }
 
     try {
       setIsSubmitting(true);
-      
+
       const payload = {
         titleMg: titleMg.trim(),
         titleFr: titleFr.trim(),
@@ -141,7 +131,7 @@ export default function AnnouncementsAdminPage() {
         messageFr: messageFr.trim(),
         type,
         isActive,
-        version: Number(version),
+        version: Math.max(1, Number(version) || 1),
       };
 
       if (editingId) {
@@ -149,49 +139,66 @@ export default function AnnouncementsAdminPage() {
           method: 'PATCH',
           body: JSON.stringify(payload),
         });
-        setMessage({ type: 'success', text: 'Annonce modifiée avec succès !' });
+        toast.success('Annonce modifiée avec succès.');
       } else {
         await fetchApi('/announcements', {
           method: 'POST',
           body: JSON.stringify(payload),
         });
-        setMessage({ type: 'success', text: 'Nouvelle annonce créée avec succès !' });
+        toast.success('Nouvelle annonce créée avec succès.');
       }
 
       setIsModalOpen(false);
       resetForm();
       await loadAnnouncements();
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Échec de l\'enregistrement de l\'annonce.';
-      setMessage({ type: 'error', text: msg });
+      const msg = err instanceof Error ? err.message : "Échec de l'enregistrement de l'annonce.";
+      setModalError(msg);
+      toast.error(msg);
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleToggleActive = async (ann: SystemAnnouncement) => {
+    const nextState = !ann.isActive;
     try {
+      // Mise à jour optimiste dans l'UI
+      setAnnouncements((prev) =>
+        prev.map((item) => {
+          if (item.id === ann.id) {
+            return { ...item, isActive: nextState };
+          }
+          // Si on active celle-ci, désactiver les autres
+          if (nextState) {
+            return { ...item, isActive: false };
+          }
+          return item;
+        })
+      );
+
       await fetchApi(`/announcements/${ann.id}`, {
         method: 'PATCH',
-        body: JSON.stringify({ isActive: !ann.isActive }),
+        body: JSON.stringify({ isActive: nextState }),
       });
+      toast.success(nextState ? 'Annonce activée.' : 'Annonce désactivée.');
       await loadAnnouncements();
-      setMessage({ type: 'success', text: `Annonce ${!ann.isActive ? 'activée' : 'désactivée'}.` });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Erreur de modification.';
-      setMessage({ type: 'error', text: msg });
+      toast.error(msg);
+      await loadAnnouncements();
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Voulez-vous vraiment supprimer cette annonce ?')) return;
+    if (!window.confirm('Voulez-vous vraiment supprimer cette annonce ?')) return;
     try {
       await fetchApi(`/announcements/${id}`, { method: 'DELETE' });
+      toast.success('Annonce supprimée avec succès.');
       await loadAnnouncements();
-      setMessage({ type: 'success', text: 'Annonce supprimée.' });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Erreur de suppression.';
-      setMessage({ type: 'error', text: msg });
+      toast.error(msg);
     }
   };
 
@@ -209,22 +216,22 @@ export default function AnnouncementsAdminPage() {
                 Annonces Système
               </h1>
               <p className="text-xs mt-1" style={{ color: 'var(--sidebar-muted)' }}>
-                Gérez les modales d&apos;information, maintenance et nouveautés au démarrage de l&apos;app
+                Gérez les modales d&apos;information, maintenance et nouveautés au démarrage de l&apos;application mobile
               </p>
             </div>
           </div>
           <div className="flex items-center gap-2">
             <button
-              onClick={() => loadAnnouncements()}
-              className="w-10 h-10 rounded-xl flex items-center justify-center transition-colors hover:bg-black/5 dark:hover:bg-white/5"
+              onClick={() => void loadAnnouncements()}
+              className="w-10 h-10 rounded-xl flex items-center justify-center transition-colors hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer"
               style={{ color: 'var(--sidebar-muted)' }}
               title="Rafraîchir"
             >
-              <RotateCcw size={18} />
+              <RotateCcw size={18} className={isLoading ? 'animate-spin' : ''} />
             </button>
             <button
               onClick={handleOpenCreateModal}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90 shadow-sm"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90 shadow-sm cursor-pointer"
               style={{ background: 'var(--accent)' }}
             >
               <Plus size={16} />
@@ -233,43 +240,29 @@ export default function AnnouncementsAdminPage() {
           </div>
         </div>
 
-        {/* Notifications toast-like (simples) */}
-        {message && (
-          <div
-            className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-xl border ${
-              message.type === 'success'
-                ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400'
-                : 'bg-red-500/10 border-red-500/20 text-red-600 dark:text-red-400'
-            }`}
-          >
-            <div className="flex items-center gap-2 text-sm font-medium">
-              {message.type === 'success' ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
-              {message.text}
-            </div>
-            <button onClick={() => setMessage(null)} className="p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
-              <X size={16} />
-            </button>
-          </div>
-        )}
-
         {/* Liste des annonces */}
-        {isLoading ? (
+        {isLoading && announcements.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 gap-3">
             <Loader2 size={24} className="animate-spin text-zinc-400" />
             <p className="text-sm font-medium text-zinc-500">Chargement des annonces...</p>
           </div>
         ) : announcements.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 px-4 text-center border border-dashed rounded-2xl" style={{ borderColor: 'var(--sidebar-border)' }}>
+          <div
+            className="flex flex-col items-center justify-center py-20 px-4 text-center border border-dashed rounded-2xl"
+            style={{ borderColor: 'var(--sidebar-border)' }}
+          >
             <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4 bg-zinc-500/5 text-zinc-400">
               <Megaphone size={32} />
             </div>
-            <h3 className="text-lg font-bold mb-1" style={{ color: 'var(--foreground)' }}>Aucune annonce</h3>
+            <h3 className="text-lg font-bold mb-1" style={{ color: 'var(--foreground)' }}>
+              Aucune annonce enregistrée
+            </h3>
             <p className="text-sm mb-6 max-w-sm" style={{ color: 'var(--sidebar-muted)' }}>
-              Vous n&apos;avez pas encore créé d&apos;annonce système.
+              Créez une annonce pour informer les utilisateurs des nouveautés ou de maintenances planifiées.
             </p>
             <button
               onClick={handleOpenCreateModal}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-colors"
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-colors cursor-pointer"
               style={{ background: 'var(--sidebar-accent)', color: 'var(--foreground)' }}
             >
               <Plus size={16} />
@@ -287,37 +280,37 @@ export default function AnnouncementsAdminPage() {
                   key={ann.id}
                   className="flex flex-col rounded-2xl border transition-all hover:shadow-sm p-5 gap-4"
                   style={{
-                    borderColor: 'var(--sidebar-border)',
+                    borderColor: ann.isActive ? 'var(--accent)' : 'var(--sidebar-border)',
                     background: 'var(--card-bg)',
-                    opacity: ann.isActive ? 1 : 0.6,
+                    opacity: ann.isActive ? 1 : 0.75,
                   }}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center border shrink-0 ${catConfig.bg}`}>
                       <CatIcon size={18} />
                     </div>
-                    <div className="flex gap-1">
+                    <div className="flex items-center gap-1">
                       <button
-                        onClick={() => handleToggleActive(ann)}
-                        className={`p-1.5 rounded-lg transition-colors ${
-                          ann.isActive 
-                          ? 'text-emerald-500 hover:bg-emerald-500/10' 
-                          : 'text-zinc-400 hover:bg-zinc-500/10'
+                        onClick={() => void handleToggleActive(ann)}
+                        className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                          ann.isActive
+                            ? 'text-emerald-500 hover:bg-emerald-500/10'
+                            : 'text-zinc-400 hover:bg-zinc-500/10'
                         }`}
-                        title={ann.isActive ? "Désactiver" : "Activer"}
+                        title={ann.isActive ? 'Désactiver' : 'Activer'}
                       >
-                        {ann.isActive ? <ToggleRight size={22} /> : <ToggleLeft size={22} />}
+                        {ann.isActive ? <ToggleRight size={24} /> : <ToggleLeft size={24} />}
                       </button>
                       <button
                         onClick={() => handleEdit(ann)}
-                        className="p-1.5 rounded-lg text-zinc-400 hover:text-blue-500 hover:bg-blue-500/10 transition-colors"
+                        className="p-1.5 rounded-lg text-zinc-400 hover:text-blue-500 hover:bg-blue-500/10 transition-colors cursor-pointer"
                         title="Modifier"
                       >
                         <Pencil size={18} />
                       </button>
                       <button
-                        onClick={() => handleDelete(ann.id)}
-                        className="p-1.5 rounded-lg text-zinc-400 hover:text-red-500 hover:bg-red-500/10 transition-colors"
+                        onClick={() => void handleDelete(ann.id)}
+                        className="p-1.5 rounded-lg text-zinc-400 hover:text-red-500 hover:bg-red-500/10 transition-colors cursor-pointer"
                         title="Supprimer"
                       >
                         <Trash2 size={18} />
@@ -326,6 +319,16 @@ export default function AnnouncementsAdminPage() {
                   </div>
 
                   <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      {ann.isActive && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                          <CheckCircle size={10} /> Active
+                        </span>
+                      )}
+                      <span className="text-[10px] font-mono text-[var(--sidebar-muted)] px-1.5 py-0.5 rounded bg-[var(--sidebar-bg)]">
+                        v{ann.version}
+                      </span>
+                    </div>
                     <h3 className="font-bold text-base line-clamp-1" style={{ color: 'var(--foreground)' }}>
                       {ann.titleFr}
                     </h3>
@@ -337,18 +340,16 @@ export default function AnnouncementsAdminPage() {
                   <div className="flex-1 text-sm line-clamp-3" style={{ color: 'var(--sidebar-muted)' }}>
                     <p>{ann.messageFr}</p>
                   </div>
-                  
-                  <div className="flex items-center justify-between mt-2 pt-4 border-t" style={{ borderColor: 'var(--sidebar-border)' }}>
-                    <div className="flex items-center gap-2">
-                       <span className="text-xs font-medium px-2.5 py-1 rounded-md" style={{ background: 'var(--sidebar-bg)', color: 'var(--sidebar-muted)' }}>
-                         v{ann.version}
-                       </span>
-                    </div>
-                    <span className="text-[10px] font-mono" style={{ color: 'var(--sidebar-muted)' }}>
-                      {new Date(ann.createdAt).toLocaleDateString('fr-FR', {
+
+                  <div className="flex items-center justify-between mt-2 pt-3 border-t text-[11px]" style={{ borderColor: 'var(--sidebar-border)' }}>
+                    <span className="font-medium" style={{ color: 'var(--sidebar-muted)' }}>
+                      {catConfig.label.split('/')[0].trim()}
+                    </span>
+                    <span className="font-mono text-[10px]" style={{ color: 'var(--sidebar-muted)' }}>
+                      {new Date(ann.updatedAt || ann.createdAt).toLocaleDateString('fr-FR', {
                         day: '2-digit',
                         month: 'short',
-                        year: 'numeric'
+                        year: 'numeric',
                       })}
                     </span>
                   </div>
@@ -359,42 +360,54 @@ export default function AnnouncementsAdminPage() {
         )}
       </div>
 
-      {/* MODAL CRÉATION / ÉDITION */}
+      {/* MODAL CRÉATION / ÉDITION INTÉGRÉ AVEC FORMULAIRE NATIF */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 overflow-y-auto flex items-start justify-center p-4 pt-6 sm:pt-10 md:pt-12">
-          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm" onClick={() => !isSubmitting && setIsModalOpen(false)} />
-          <div 
-            className="relative w-full max-w-2xl rounded-2xl flex flex-col shadow-xl max-h-[calc(100vh-3rem)] sm:max-h-[calc(100vh-5.5rem)] animate-in fade-in slide-in-from-top-3 duration-150"
+          <div
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={() => !isSubmitting && setIsModalOpen(false)}
+          />
+          <div
+            className="relative w-full max-w-2xl rounded-2xl flex flex-col shadow-2xl max-h-[calc(100vh-3rem)] sm:max-h-[calc(100vh-5.5rem)] animate-in fade-in slide-in-from-top-3 duration-150 overflow-hidden"
             style={{ background: 'var(--background)', border: '1px solid var(--sidebar-border)' }}
           >
-            <div className="flex items-center justify-between p-5 border-b" style={{ borderColor: 'var(--sidebar-border)' }}>
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-orange-500/10 text-orange-500 flex items-center justify-center">
-                  <Megaphone size={18} />
+            <form onSubmit={handleSubmit} className="flex flex-col h-full max-h-[inherit]">
+              {/* Header Modal */}
+              <div className="flex items-center justify-between p-5 border-b shrink-0" style={{ borderColor: 'var(--sidebar-border)' }}>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-orange-500/10 text-orange-500 flex items-center justify-center">
+                    <Megaphone size={18} />
+                  </div>
+                  <div>
+                    <h2 className="font-bold text-lg" style={{ color: 'var(--foreground)' }}>
+                      {editingId ? "Modifier l'annonce" : 'Créer une annonce'}
+                    </h2>
+                    <p className="text-xs" style={{ color: 'var(--sidebar-muted)' }}>
+                      Configurez le message diffusé aux utilisateurs au démarrage de l&apos;application
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h2 className="font-bold text-lg" style={{ color: 'var(--foreground)' }}>
-                    {editingId ? "Modifier l'annonce" : 'Créer une annonce'}
-                  </h2>
-                  <p className="text-xs" style={{ color: 'var(--sidebar-muted)' }}>
-                    Configurez le message qui apparaîtra à l&apos;ouverture de l&apos;application
-                  </p>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => !isSubmitting && setIsModalOpen(false)}
+                  className="p-2 rounded-xl transition-colors hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer"
+                  style={{ color: 'var(--sidebar-muted)' }}
+                  disabled={isSubmitting}
+                >
+                  <X size={20} />
+                </button>
               </div>
-              <button
-                onClick={() => !isSubmitting && setIsModalOpen(false)}
-                className="p-2 rounded-xl transition-colors hover:bg-black/5 dark:hover:bg-white/5"
-                style={{ color: 'var(--sidebar-muted)' }}
-                disabled={isSubmitting}
-              >
-                <X size={20} />
-              </button>
-            </div>
 
-            <div className="p-5 overflow-y-auto flex-1">
-              <form id="announcement-form" onSubmit={handleSubmit} className="space-y-6">
-                
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              {/* Corps du Formulaire */}
+              <div className="p-5 overflow-y-auto flex-1 space-y-5">
+                {modalError && (
+                  <div className="flex items-center gap-2 p-3.5 rounded-xl border border-red-500/20 bg-red-500/10 text-red-600 dark:text-red-400 text-xs font-medium">
+                    <AlertCircle size={16} className="shrink-0" />
+                    <span>{modalError}</span>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--sidebar-muted)' }}>
                       Type d&apos;annonce
@@ -410,22 +423,24 @@ export default function AnnouncementsAdminPage() {
                       }}
                       required
                     >
-                      {ANNOUNCEMENT_TYPES.map(t => (
-                        <option key={t.id} value={t.id}>{t.label}</option>
+                      {ANNOUNCEMENT_TYPES.map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {t.label}
+                        </option>
                       ))}
                     </select>
                   </div>
-                  
+
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--sidebar-muted)' }}>
-                      Version de l&apos;annonce
+                      Numéro de version
                     </label>
                     <div className="flex items-center gap-2">
-                       <input
+                      <input
                         type="number"
                         min="1"
                         value={version}
-                        onChange={(e) => setVersion(parseInt(e.target.value) || 1)}
+                        onChange={(e) => setVersion(Math.max(1, parseInt(e.target.value, 10) || 1))}
                         className="w-full px-4 py-2.5 rounded-xl text-sm font-medium border focus:outline-none focus:ring-2 focus:ring-offset-1 transition-all"
                         style={{
                           background: 'var(--card-bg)',
@@ -434,137 +449,142 @@ export default function AnnouncementsAdminPage() {
                         }}
                         required
                       />
-                      <div className="text-[10px] leading-tight" style={{ color: 'var(--sidebar-muted)' }}>
-                        Incrémentez pour forcer l&apos;affichage si déjà lue.
-                      </div>
                     </div>
+                    <span className="text-[10px]" style={{ color: 'var(--sidebar-muted)' }}>
+                      Augmenter la version pour réafficher la modale aux utilisateurs l&apos;ayant déjà fermée.
+                    </span>
                   </div>
                 </div>
 
-                <div className="space-y-4">
-                   <div className="space-y-1.5">
-                      <label className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--sidebar-muted)' }}>
-                        Titre (Français) <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        value={titleFr}
-                        onChange={(e) => setTitleFr(e.target.value)}
-                        placeholder="Ex: Mise à jour importante"
-                        className="w-full px-4 py-2.5 rounded-xl text-sm font-medium border focus:outline-none focus:ring-2 focus:ring-offset-1 transition-all"
-                        style={{
-                          background: 'var(--card-bg)',
-                          borderColor: 'var(--sidebar-border)',
-                          color: 'var(--foreground)',
-                        }}
-                        required
-                      />
-                    </div>
-                    
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--sidebar-muted)' }}>
-                        Message (Français) <span className="text-red-500">*</span>
-                      </label>
-                      <textarea
-                        value={messageFr}
-                        onChange={(e) => setMessageFr(e.target.value)}
-                        placeholder="Ex: L&apos;application sera en maintenance demain..."
-                        rows={3}
-                        className="w-full px-4 py-3 rounded-xl text-sm border focus:outline-none focus:ring-2 focus:ring-offset-1 transition-all resize-none"
-                        style={{
-                          background: 'var(--card-bg)',
-                          borderColor: 'var(--sidebar-border)',
-                          color: 'var(--foreground)',
-                        }}
-                        required
-                      />
-                    </div>
-                </div>
-                
-                <div className="space-y-4 pt-4 border-t" style={{ borderColor: 'var(--sidebar-border)' }}>
-                   <div className="space-y-1.5">
-                      <label className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--sidebar-muted)' }}>
-                        Titre (Malgache) <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        value={titleMg}
-                        onChange={(e) => setTitleMg(e.target.value)}
-                        placeholder="Ex: Fanavaozana lehibe"
-                        className="w-full px-4 py-2.5 rounded-xl text-sm font-medium border focus:outline-none focus:ring-2 focus:ring-offset-1 transition-all"
-                        style={{
-                          background: 'var(--card-bg)',
-                          borderColor: 'var(--sidebar-border)',
-                          color: 'var(--accent)',
-                        }}
-                        required
-                      />
-                    </div>
-                    
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--sidebar-muted)' }}>
-                        Message (Malgache) <span className="text-red-500">*</span>
-                      </label>
-                      <textarea
-                        value={messageMg}
-                        onChange={(e) => setMessageMg(e.target.value)}
-                        placeholder="Ex: Hisy fikojakojana rahampitso..."
-                        rows={3}
-                        className="w-full px-4 py-3 rounded-xl text-sm border focus:outline-none focus:ring-2 focus:ring-offset-1 transition-all resize-none"
-                        style={{
-                          background: 'var(--card-bg)',
-                          borderColor: 'var(--sidebar-border)',
-                          color: 'var(--accent)',
-                        }}
-                        required
-                      />
-                    </div>
-                </div>
-                
-                <div className="flex items-center gap-3 p-4 rounded-xl" style={{ background: 'var(--sidebar-bg)' }}>
-                   <button
-                      type="button"
-                      onClick={() => setIsActive(!isActive)}
-                      className={`p-1 rounded-full transition-colors ${
-                        isActive ? 'text-emerald-500' : 'text-zinc-400'
-                      }`}
-                    >
-                      {isActive ? <ToggleRight size={32} /> : <ToggleLeft size={32} />}
-                    </button>
-                    <div>
-                      <div className="text-sm font-bold" style={{ color: 'var(--foreground)' }}>
-                        Annonce Active
-                      </div>
-                      <div className="text-xs" style={{ color: 'var(--sidebar-muted)' }}>
-                        Si activée, cette annonce remplacera l&apos;annonce active actuelle.
-                      </div>
-                    </div>
+                {/* Section Français */}
+                <div className="space-y-4 pt-2 border-t" style={{ borderColor: 'var(--sidebar-border)' }}>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--sidebar-muted)' }}>
+                      Titre (Français) <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={titleFr}
+                      onChange={(e) => setTitleFr(e.target.value)}
+                      placeholder="Ex: Mise à jour majeure disponible"
+                      className="w-full px-4 py-2.5 rounded-xl text-sm font-medium border focus:outline-none focus:ring-2 focus:ring-offset-1 transition-all"
+                      style={{
+                        background: 'var(--card-bg)',
+                        borderColor: 'var(--sidebar-border)',
+                        color: 'var(--foreground)',
+                      }}
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--sidebar-muted)' }}>
+                      Message (Français) <span className="text-red-500">*</span>
+                    </label>
+                    <textarea
+                      value={messageFr}
+                      onChange={(e) => setMessageFr(e.target.value)}
+                      placeholder="Ex: Découvrez les nouveaux contes et légendes de Madagascar..."
+                      rows={3}
+                      className="w-full px-4 py-3 rounded-xl text-sm border focus:outline-none focus:ring-2 focus:ring-offset-1 transition-all resize-none"
+                      style={{
+                        background: 'var(--card-bg)',
+                        borderColor: 'var(--sidebar-border)',
+                        color: 'var(--foreground)',
+                      }}
+                      required
+                    />
+                  </div>
                 </div>
 
-              </form>
-            </div>
+                {/* Section Malgache */}
+                <div className="space-y-4 pt-3 border-t" style={{ borderColor: 'var(--sidebar-border)' }}>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--sidebar-muted)' }}>
+                      Titre (Malgache) <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={titleMg}
+                      onChange={(e) => setTitleMg(e.target.value)}
+                      placeholder="Ex: Fanavaozana vaovao misy"
+                      className="w-full px-4 py-2.5 rounded-xl text-sm font-medium border focus:outline-none focus:ring-2 focus:ring-offset-1 transition-all"
+                      style={{
+                        background: 'var(--card-bg)',
+                        borderColor: 'var(--sidebar-border)',
+                        color: 'var(--accent)',
+                      }}
+                      required
+                    />
+                  </div>
 
-            <div className="p-5 border-t flex items-center justify-end gap-3" style={{ borderColor: 'var(--sidebar-border)', background: 'var(--card-bg)' }}>
-              <button
-                type="button"
-                onClick={() => !isSubmitting && setIsModalOpen(false)}
-                className="px-5 py-2.5 rounded-xl text-sm font-semibold transition-colors"
-                style={{ color: 'var(--foreground)', background: 'var(--sidebar-bg)' }}
-                disabled={isSubmitting}
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--sidebar-muted)' }}>
+                      Message (Malgache) <span className="text-red-500">*</span>
+                    </label>
+                    <textarea
+                      value={messageMg}
+                      onChange={(e) => setMessageMg(e.target.value)}
+                      placeholder="Ex: Fantaro ireo angano sy tantara vaovao malagasy..."
+                      rows={3}
+                      className="w-full px-4 py-3 rounded-xl text-sm border focus:outline-none focus:ring-2 focus:ring-offset-1 transition-all resize-none"
+                      style={{
+                        background: 'var(--card-bg)',
+                        borderColor: 'var(--sidebar-border)',
+                        color: 'var(--accent)',
+                      }}
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* Statut d'activation */}
+                <div className="flex items-center gap-3 p-4 rounded-xl border" style={{ background: 'var(--sidebar-bg)', borderColor: 'var(--sidebar-border)' }}>
+                  <button
+                    type="button"
+                    onClick={() => setIsActive(!isActive)}
+                    className={`p-1 rounded-full transition-colors cursor-pointer ${
+                      isActive ? 'text-emerald-500' : 'text-zinc-400'
+                    }`}
+                  >
+                    {isActive ? <ToggleRight size={32} /> : <ToggleLeft size={32} />}
+                  </button>
+                  <div>
+                    <div className="text-sm font-bold" style={{ color: 'var(--foreground)' }}>
+                      Annonce Active
+                    </div>
+                    <div className="text-xs" style={{ color: 'var(--sidebar-muted)' }}>
+                      Si cochée, cette annonce deviendra l&apos;unique annonce active affichée sur l&apos;application.
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Footer Modal avec Boutons natifs */}
+              <div
+                className="p-5 border-t flex items-center justify-end gap-3 shrink-0"
+                style={{ borderColor: 'var(--sidebar-border)', background: 'var(--card-bg)' }}
               >
-                Annuler
-              </button>
-              <button
-                type="submit"
-                form="announcement-form"
-                disabled={isSubmitting}
-                className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold text-white transition-all shadow-sm hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{ background: 'var(--accent)' }}
-              >
-                {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
-                {editingId ? 'Enregistrer' : 'Créer l\'annonce'}
-              </button>
-            </div>
+                <button
+                  type="button"
+                  onClick={() => !isSubmitting && setIsModalOpen(false)}
+                  className="px-5 py-2.5 rounded-xl text-sm font-semibold transition-colors cursor-pointer"
+                  style={{ color: 'var(--foreground)', background: 'var(--sidebar-bg)' }}
+                  disabled={isSubmitting}
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold text-white transition-all shadow-sm hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                  style={{ background: 'var(--accent)' }}
+                >
+                  {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+                  {editingId ? 'Enregistrer les modifications' : "Créer l'annonce"}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

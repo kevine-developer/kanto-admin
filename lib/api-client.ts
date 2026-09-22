@@ -28,7 +28,15 @@ export async function fetchApi<T = unknown>(
     throw new Error(errorMsg);
   }
 
-  return (await response.json()) as T;
+  const text = await response.text();
+  if (!text || text.trim().length === 0) {
+    return null as T;
+  }
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    return text as unknown as T;
+  }
 }
 
 export type { ApiResponse };
