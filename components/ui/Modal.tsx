@@ -11,6 +11,7 @@ export interface ModalProps {
   children: React.ReactNode;
   footer?: React.ReactNode;
   maxWidth?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl';
+  align?: 'top' | 'center';
 }
 
 export function Modal({
@@ -21,6 +22,7 @@ export function Modal({
   children,
   footer,
   maxWidth = '2xl',
+  align = 'top',
 }: ModalProps) {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -43,10 +45,20 @@ export function Modal({
     '3xl': 'max-w-3xl',
   };
 
+  const alignWrapperStyles =
+    align === 'top'
+      ? 'overflow-y-auto flex items-start justify-center p-4 pt-6 sm:pt-10 md:pt-12'
+      : 'flex items-center justify-center p-4';
+
+  const cardHeightStyles =
+    align === 'top'
+      ? 'max-h-[calc(100vh-3rem)] sm:max-h-[calc(100vh-5.5rem)]'
+      : 'max-h-[90vh]';
+
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+    <div className={`fixed inset-0 z-50 bg-black/50 backdrop-blur-xs ${alignWrapperStyles}`}>
       <div
-        className={`kanto-card rounded-xl border border-[var(--card-border)] shadow-xl w-full ${maxWidthStyles[maxWidth]} max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-100`}
+        className={`kanto-card rounded-xl border border-[var(--card-border)] shadow-xl w-full ${maxWidthStyles[maxWidth]} ${cardHeightStyles} flex flex-col overflow-hidden animate-in fade-in slide-in-from-top-3 duration-150`}
       >
         {/* Modal Header */}
         <div className="px-4 py-3 border-b border-[var(--card-border)] flex items-center justify-between">

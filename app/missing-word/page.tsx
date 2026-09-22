@@ -741,8 +741,8 @@ export default function MissingWordAdminPage() {
 
       {/* ─── Modal Niveau ─────────────────────────────────────────────────────── */}
       {showLevelModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="w-full max-w-sm bg-[var(--card)] rounded-xl border border-[var(--card-border)] shadow-xl">
+        <div className="fixed inset-0 z-50 overflow-y-auto flex items-start justify-center p-4 pt-6 sm:pt-10 md:pt-12 bg-black/50 backdrop-blur-sm">
+          <div className="w-full max-w-sm bg-[var(--card)] rounded-xl border border-[var(--card-border)] shadow-xl animate-in fade-in slide-in-from-top-3 duration-150">
             <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--card-border)]">
               <h3 className="text-sm font-semibold">
                 {editingLevel ? 'Modifier le niveau' : 'Nouveau niveau'}
@@ -824,8 +824,8 @@ export default function MissingWordAdminPage() {
 
       {/* ─── Modal Question ─────────────────────────────────────────────────────── */}
       {showQuestionModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="w-full max-w-md bg-[var(--card)] rounded-xl border border-[var(--card-border)] shadow-xl max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 overflow-y-auto flex items-start justify-center p-4 pt-6 sm:pt-10 md:pt-12 bg-black/50 backdrop-blur-sm">
+          <div className="w-full max-w-md bg-[var(--card)] rounded-xl border border-[var(--card-border)] shadow-xl max-h-[calc(100vh-3rem)] sm:max-h-[calc(100vh-5.5rem)] overflow-y-auto animate-in fade-in slide-in-from-top-3 duration-150">
             <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--card-border)] sticky top-0 bg-[var(--card)] z-10">
               <h3 className="text-sm font-semibold">
                 {editingQuestion ? 'Modifier la question' : 'Ajouter une question'}

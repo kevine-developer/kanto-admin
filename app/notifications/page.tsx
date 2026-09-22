@@ -388,8 +388,8 @@ export default function NotificationsAdminPage() {
 
         {/* Modal de Diffusion */}
         {isModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
-            <div className="w-full max-w-2xl rounded-2xl border border-[var(--sidebar-border)] bg-[var(--card-bg)] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+          <div className="fixed inset-0 z-50 overflow-y-auto flex items-start justify-center p-4 pt-6 sm:pt-10 md:pt-12 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
+            <div className="w-full max-w-2xl rounded-2xl border border-[var(--sidebar-border)] bg-[var(--card-bg)] shadow-2xl overflow-hidden flex flex-col max-h-[calc(100vh-3rem)] sm:max-h-[calc(100vh-5.5rem)] animate-in fade-in slide-in-from-top-3 duration-150">
               {/* Header modal */}
               <div className="px-6 py-4 border-b border-[var(--sidebar-border)] flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
