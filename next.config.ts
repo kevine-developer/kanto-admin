@@ -12,6 +12,18 @@ const nextConfig: NextConfig = {
     '169.254.109.248',
     '172.18.80.1',
   ],
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "res.cloudinary.com",
+      },
+      {
+        protocol: "https",
+        hostname: "images.unsplash.com",
+      },
+    ],
+  },
   async headers() {
     return [
       {
@@ -52,7 +64,7 @@ const nextConfig: NextConfig = {
               "script-src 'self' 'unsafe-inline' 'unsafe-eval'", // unsafe-eval requis par Next.js dev
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "font-src 'self' https://fonts.gstatic.com",
-              "img-src 'self' data: https://res.cloudinary.com blob:",
+              "img-src 'self' data: https://res.cloudinary.com https://images.unsplash.com blob:",
               isDev
                 ? "connect-src 'self' http: ws: https: wss:"
                 : "connect-src 'self' https://api-kanto.gastsar.fr " + (process.env.NEXT_PUBLIC_API_URL ?? ""),
