@@ -11,6 +11,7 @@ interface ImageUploadDropzoneProps {
   maxSizeBytes?: number; // Défaut 10Mo
   uploadEndpoint?: string;
   className?: string;
+  subfolder?: string;
 }
 
 export function ImageUploadDropzone({
@@ -19,6 +20,7 @@ export function ImageUploadDropzone({
   maxSizeBytes = 10 * 1024 * 1024,
   uploadEndpoint = '/admin/locks/upload-image',
   className = '',
+  subfolder,
 }: ImageUploadDropzoneProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
@@ -47,6 +49,7 @@ export function ImageUploadDropzone({
           body: JSON.stringify({
             imageBase64: base64,
             fileName: file.name,
+            subfolder,
           }),
         });
 

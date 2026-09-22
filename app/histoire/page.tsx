@@ -54,6 +54,16 @@ type TabKey =
   | 'dates'
   | 'lessons';
 
+const TAB_SUBFOLDER_MAP: Record<TabKey, string> = {
+  presidents: 'presidents',
+  emblems: 'national_emblems',
+  banknotes: 'banknotes',
+  provinces: 'provinces',
+  nature: 'nature',
+  dates: 'dates',
+  lessons: 'lessons',
+};
+
 export interface HistoryFormData {
   id?: string;
   name?: string;
@@ -1305,6 +1315,7 @@ function HistoireAdminContent() {
                 value={formValues.imageUrl}
                 onChange={(url) => setFormValues((prev) => ({ ...prev, imageUrl: url }))}
                 uploadEndpoint="/admin/history/upload-image"
+                subfolder={TAB_SUBFOLDER_MAP[activeTab] || 'history'}
               />
             </Field>
 
