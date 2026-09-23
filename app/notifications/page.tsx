@@ -20,6 +20,10 @@ import {
   Users,
   Info,
   ExternalLink,
+  Smartphone,
+  Radio,
+  Globe,
+  Wand2,
 } from 'lucide-react';
 
 export interface NotificationItem {
@@ -63,6 +67,101 @@ const PRESET_ROUTES = [
   { label: 'Institutions civiques', value: '/civiqueList/institutionListScreen' },
 ];
 
+interface CulturalPreset {
+  id: string;
+  name: string;
+  tag: string;
+  category: string;
+  titleMg: string;
+  titleFr: string;
+  messageMg: string;
+  messageFr: string;
+  badgeText: string;
+  badgeType: string;
+  targetRoute: string;
+}
+
+const CULTURAL_PRESETS: CulturalPreset[] = [
+  {
+    id: 'ohabolana',
+    name: 'Ohabolana anio',
+    tag: 'Sagesse',
+    category: 'culture',
+    titleMg: 'Ohabolana anio',
+    titleFr: 'Proverbe du jour',
+    messageMg: "Ny hevitra no mahery fa tsy ny sandry. Diniho ny hevitra lalina fonosin'ity ohabolana ity.",
+    messageFr: 'La réflexion surpasse la force brute. Découvrez le sens profond de ce proverbe ancestral.',
+    badgeText: 'Ohabolana',
+    badgeType: 'new',
+    targetRoute: '/categoriesAllScreen/listItemAll',
+  },
+  {
+    id: 'angano',
+    name: 'Angano vaovao',
+    tag: 'Conte',
+    category: 'culture',
+    titleMg: 'Angano vaovao azon-tsary sy feo',
+    titleFr: 'Nouveau conte audio immersif',
+    messageMg: "Misy angano vaovao miandry anao ao amin'ny Kanto. Mihainoa ny tantaran'i Trimobe sy Iketaka.",
+    messageFr: 'Une nouvelle histoire traditionnelle vous attend. Écoutez le récit immersif de Trimobe et Iketaka.',
+    badgeText: 'Angano',
+    badgeType: 'new',
+    targetRoute: '/categoriesAllScreen/listItemAll',
+  },
+  {
+    id: 'kabary',
+    name: 'Kabary nentin-drazana',
+    tag: 'Éloquence',
+    category: 'culture',
+    titleMg: 'Kabary : Haipirenena sy haisoratra',
+    titleFr: "Kabary : L'art oratoire traditionnel",
+    messageMg: 'Ireo fomba fiteny am-panajana sy fandraisam-pitenenana nentim-paharazana nozaraina anio.',
+    messageFr: "Explorez les subtilités de l'éloquence malgache et les formules cérémonielles d'antan.",
+    badgeText: 'Kabary',
+    badgeType: 'info',
+    targetRoute: '/categoriesAllScreen/listItemAll',
+  },
+  {
+    id: 'fanamby',
+    name: 'Fanamby lalao',
+    tag: 'Défi',
+    category: 'game',
+    titleMg: 'Fanamby lalao vaovao anio !',
+    titleFr: 'Défi jeux du jour disponible !',
+    messageMg: "Andramo ny fahalalanao momba ny tantaran'i Madagasikara ary mitadiava isa ambony indrindra !",
+    messageFr: "Testez vos connaissances sur l'histoire de Madagascar et relevez le défi du jour !",
+    badgeText: 'Fanamby',
+    badgeType: 'streak',
+    targetRoute: '/jeux',
+  },
+  {
+    id: 'vintana',
+    name: "Vintana & Tonon'andro",
+    tag: 'Astrologie',
+    category: 'culture',
+    titleMg: 'Vintana anio : Andro Tsara',
+    titleFr: 'Horoscope du jour : Énergies favorables',
+    messageMg: "Jereo ny momba ny vintana sy ny tetiandron'ny andro anio araka ny fomban-drazana.",
+    messageFr: 'Consultez les orientations astrologiques et énergétiques de votre signe selon la tradition.',
+    badgeText: 'Vintana',
+    badgeType: 'info',
+    targetRoute: '',
+  },
+  {
+    id: 'fanambarana',
+    name: 'Fampahafantarana Kanto',
+    tag: 'Officiel',
+    category: 'system',
+    titleMg: 'Fanavaozana ny rindranasa Kanto',
+    titleFr: 'Mise à jour disponible sur Kanto',
+    messageMg: 'Misy endri-javatra vaovao sy fanatsarana nampidirina ho anao.',
+    messageFr: 'De nouvelles fonctionnalités et améliorations culturelles sont disponibles sur votre application.',
+    badgeText: 'Vaovao',
+    badgeType: 'info',
+    targetRoute: '',
+  },
+];
+
 export default function NotificationsAdminPage() {
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -71,6 +170,7 @@ export default function NotificationsAdminPage() {
   // Modal création
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isTestingPush, setIsTestingPush] = useState(false);
 
   // Form State
   const [titleMg, setTitleMg] = useState('');
@@ -81,6 +181,10 @@ export default function NotificationsAdminPage() {
   const [badgeText, setBadgeText] = useState('');
   const [badgeType, setBadgeType] = useState('new');
   const [targetRoute, setTargetRoute] = useState('');
+
+  // Preview State
+  const [previewLanguage, setPreviewLanguage] = useState<'mg' | 'fr'>('mg');
+  const [previewMode, setPreviewMode] = useState<'lockscreen' | 'inapp'>('lockscreen');
 
   // Charger les notifications
   const loadNotifications = useCallback(async () => {
@@ -131,11 +235,46 @@ export default function NotificationsAdminPage() {
     setBadgeText('');
     setBadgeType('new');
     setTargetRoute('');
+    setPreviewLanguage('mg');
+    setPreviewMode('lockscreen');
   };
 
   const handleOpenCreateModal = () => {
     resetForm();
     setIsModalOpen(true);
+  };
+
+  const handleApplyPreset = (preset: CulturalPreset) => {
+    setTitleMg(preset.titleMg);
+    setTitleFr(preset.titleFr);
+    setMessageMg(preset.messageMg);
+    setMessageFr(preset.messageFr);
+    setCategory(preset.category);
+    setBadgeText(preset.badgeText);
+    setBadgeType(preset.badgeType);
+    setTargetRoute(preset.targetRoute);
+  };
+
+  const handleTestPush = async () => {
+    try {
+      setIsTestingPush(true);
+      const res = await fetchApi<{ success: boolean; message: string; sentCount?: number }>(
+        '/admin/notifications/test-push',
+        {
+          method: 'POST',
+          body: JSON.stringify({}),
+        },
+      );
+      setMessage({
+        type: res.success ? 'success' : 'error',
+        text: res.message || 'Test push exécuté avec succès.',
+      });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Erreur lors du test de notification push.';
+      setMessage({ type: 'error', text: msg });
+    } finally {
+      setIsTestingPush(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -190,6 +329,8 @@ export default function NotificationsAdminPage() {
   };
 
   const currentCat = CATEGORIES.find((c) => c.id === category) || CATEGORIES[0];
+  const activeTitle = previewLanguage === 'mg' ? (titleMg || 'Lohateny...') : (titleFr || titleMg || 'Titre...');
+  const activeMessage = previewLanguage === 'mg' ? (messageMg || 'Hafatra...') : (messageFr || messageMg || 'Message...');
 
   return (
     <AdminShell>
@@ -205,19 +346,33 @@ export default function NotificationsAdminPage() {
                 Notifications &amp; Alertes
               </h1>
               <p className="text-xs text-[var(--muted)]">
-                Diffuser des annonces, actualités culturelles et rappels à tous les utilisateurs
+                Diffuser des annonces, actualités culturelles et alertes push à tous les utilisateurs
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              onClick={handleTestPush}
+              disabled={isTestingPush}
+              title="Envoyer une notification push test vers les appareils enregistrés"
+              className="px-3 py-2 text-xs font-medium rounded-lg border border-[var(--sidebar-border)] text-[var(--foreground)] hover:bg-[var(--sidebar-border)]/20 transition-colors flex items-center gap-1.5"
+            >
+              {isTestingPush ? (
+                <Loader2 size={13} className="animate-spin text-amber-500" />
+              ) : (
+                <Radio size={13} className="text-amber-500" />
+              )}
+              <span>Tester le Push</span>
+            </button>
+
             <button
               onClick={loadNotifications}
               disabled={isLoading}
-              className="px-3 py-2 text-xs font-medium rounded-lg border border-[var(--sidebar-border)] text-[var(--foreground)] hover:bg-[var(--sidebar-border)]/20 transition-colors flex items-center gap-2"
+              className="px-3 py-2 text-xs font-medium rounded-lg border border-[var(--sidebar-border)] text-[var(--foreground)] hover:bg-[var(--sidebar-border)]/20 transition-colors flex items-center gap-1.5"
             >
-              <RotateCcw size={14} className={isLoading ? 'animate-spin' : ''} />
-              Actualiser
+              <RotateCcw size={13} className={isLoading ? 'animate-spin' : ''} />
+              <span>Actualiser</span>
             </button>
 
             <button
@@ -349,32 +504,30 @@ export default function NotificationsAdminPage() {
                         <td className="py-3 px-4 align-top">
                           <div className="flex flex-col gap-1 items-start">
                             {item.badgeText && (
-                              <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-[var(--sidebar-border)]/40 text-[var(--foreground)] border border-[var(--sidebar-border)]">
+                              <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-[var(--sidebar-border)]/40 text-[var(--foreground)]">
                                 {item.badgeText}
                               </span>
                             )}
-                            {item.targetRoute ? (
-                              <span className="inline-flex items-center gap-1 text-[10px] text-[var(--muted)] font-mono">
+                            {item.targetRoute && (
+                              <span className="text-[10px] text-[var(--muted)] font-mono flex items-center gap-1">
                                 <ExternalLink size={10} />
-                                {item.targetRoute.split('/').pop()}
+                                {item.targetRoute}
                               </span>
-                            ) : (
-                              <span className="text-[10px] text-[var(--muted)]">Général</span>
                             )}
                           </div>
                         </td>
 
-                        <td className="py-3 px-4 align-top text-[var(--muted)] text-[11px] whitespace-nowrap">
+                        <td className="py-3 px-4 align-top text-[var(--muted)] whitespace-nowrap">
                           {dateFormatted}
                         </td>
 
-                        <td className="py-3 px-4 align-top text-right whitespace-nowrap">
+                        <td className="py-3 px-4 align-top text-right">
                           <button
                             onClick={() => handleDelete(item.id)}
-                            className="p-1.5 rounded-lg text-red-500 hover:bg-red-500/10 transition-colors inline-block"
+                            className="p-1.5 rounded-lg text-red-500 hover:bg-red-500/10 transition-colors inline-flex items-center justify-center"
                             title="Supprimer la notification"
                           >
-                            <Trash2 size={15} />
+                            <Trash2 size={14} />
                           </button>
                         </td>
                       </tr>
@@ -389,7 +542,7 @@ export default function NotificationsAdminPage() {
         {/* Modal de Diffusion */}
         {isModalOpen && (
           <div className="fixed inset-0 z-50 overflow-y-auto flex items-start justify-center p-4 pt-6 sm:pt-10 md:pt-12 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
-            <div className="w-full max-w-2xl rounded-2xl border border-[var(--sidebar-border)] bg-[var(--card-bg)] shadow-2xl overflow-hidden flex flex-col max-h-[calc(100vh-3rem)] sm:max-h-[calc(100vh-5.5rem)] animate-in fade-in slide-in-from-top-3 duration-150">
+            <div className="w-full max-w-3xl rounded-2xl border border-[var(--sidebar-border)] bg-[var(--card-bg)] shadow-2xl overflow-hidden flex flex-col max-h-[calc(100vh-3rem)] sm:max-h-[calc(100vh-5.5rem)] animate-in fade-in slide-in-from-top-3 duration-150">
               {/* Header modal */}
               <div className="px-6 py-4 border-b border-[var(--sidebar-border)] flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
@@ -401,7 +554,7 @@ export default function NotificationsAdminPage() {
                       Diffuser une nouvelle notification
                     </h3>
                     <p className="text-xs text-[var(--muted)]">
-                      L&apos;annonce sera instantanément visible sur l&apos;application mobile de tous les lecteurs
+                      L&apos;annonce sera diffusée via notification push Expo et publiée dans le centre de notifications de l&apos;application
                     </p>
                   </div>
                 </div>
@@ -413,8 +566,41 @@ export default function NotificationsAdminPage() {
                 </button>
               </div>
 
-              {/* Contenu du formulaire avec Live Preview */}
+              {/* Contenu du formulaire */}
               <form onSubmit={handleSubmit} className="overflow-y-auto p-6 space-y-5">
+                {/* Modèles culturels prédéfinis (Presets) */}
+                <div className="p-3.5 rounded-xl border border-[var(--sidebar-border)] bg-[var(--sidebar-border)]/10 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-[var(--foreground)] flex items-center gap-1.5">
+                      <Wand2 size={13} className="text-[var(--primary)]" />
+                      Modèles culturels prédéfinis (remplissage en 1 clic) :
+                    </span>
+                    <span className="text-[10px] text-[var(--muted)]">Cliquez pour appliquer</span>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {CULTURAL_PRESETS.map((preset) => (
+                      <button
+                        key={preset.id}
+                        type="button"
+                        onClick={() => handleApplyPreset(preset)}
+                        className="px-2.5 py-2 rounded-lg border border-[var(--sidebar-border)] bg-[var(--card-bg)] hover:border-[var(--primary)] text-left transition-all group"
+                      >
+                        <div className="flex items-center justify-between gap-1 mb-0.5">
+                          <span className="text-[10px] font-semibold text-[var(--foreground)] group-hover:text-[var(--primary)] truncate">
+                            {preset.name}
+                          </span>
+                          <span className="text-[9px] px-1.5 py-0.2 rounded bg-[var(--sidebar-border)]/40 text-[var(--muted)] shrink-0">
+                            {preset.tag}
+                          </span>
+                        </div>
+                        <div className="text-[10px] text-[var(--muted)] truncate">
+                          {preset.titleMg}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 {/* Catégorie */}
                 <div>
                   <label className="block text-xs font-semibold text-[var(--foreground)] mb-2">
@@ -513,7 +699,7 @@ export default function NotificationsAdminPage() {
                       type="text"
                       value={badgeText}
                       onChange={(e) => setBadgeText(e.target.value)}
-                      placeholder="Ex: Ohabolana, +25 Pts..."
+                      placeholder="Ex: Ohabolana, Fanamby..."
                       className="w-full px-3 py-2 text-xs rounded-lg border border-[var(--sidebar-border)] bg-[var(--background)] text-[var(--foreground)] focus:outline-hidden focus:ring-1 focus:ring-[var(--primary)]"
                     />
                   </div>
@@ -553,45 +739,158 @@ export default function NotificationsAdminPage() {
                   </div>
                 </div>
 
-                {/* Aperçu en direct façon carte mobile (Live Preview) */}
-                <div className="p-4 rounded-xl border border-[var(--sidebar-border)] bg-[var(--background)] space-y-2">
-                  <div className="text-[11px] font-semibold text-[var(--muted)] uppercase tracking-wider flex items-center gap-1.5">
-                    <Sparkles size={13} className="text-amber-500" />
-                    Aperçu sur l&apos;application mobile
-                  </div>
-
-                  <div className="p-3.5 rounded-xl border border-[var(--sidebar-border)] bg-[var(--card-bg)] flex items-start gap-3 shadow-xs">
-                    <div
-                      className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
-                      style={{ backgroundColor: `${currentCat.color}15` }}
-                    >
-                      {(() => {
-                        const CatIcon = currentCat.icon;
-                        return <CatIcon size={18} color={currentCat.color} />;
-                      })()}
+                {/* Aperçu en direct Smartphone (Live Smartphone Preview) */}
+                <div className="p-4 rounded-xl border border-[var(--sidebar-border)] bg-[var(--background)] space-y-3">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <div className="text-[11px] font-semibold text-[var(--muted)] uppercase tracking-wider flex items-center gap-1.5">
+                      <Smartphone size={14} className="text-[var(--primary)]" />
+                      Prévisualisation mobile en direct
                     </div>
 
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="font-bold text-xs text-[var(--foreground)] truncate">
-                          {titleMg || 'Titre de la notification'}
+                    <div className="flex items-center gap-3">
+                      {/* Switch mode aperçu */}
+                      <div className="inline-flex rounded-lg border border-[var(--sidebar-border)] p-0.5 bg-[var(--card-bg)] text-[10px]">
+                        <button
+                          type="button"
+                          onClick={() => setPreviewMode('lockscreen')}
+                          className={`px-2 py-0.5 rounded-md font-medium transition-colors ${
+                            previewMode === 'lockscreen'
+                              ? 'bg-[var(--primary)] text-white'
+                              : 'text-[var(--muted)] hover:text-[var(--foreground)]'
+                          }`}
+                        >
+                          Push Écran
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setPreviewMode('inapp')}
+                          className={`px-2 py-0.5 rounded-md font-medium transition-colors ${
+                            previewMode === 'inapp'
+                              ? 'bg-[var(--primary)] text-white'
+                              : 'text-[var(--muted)] hover:text-[var(--foreground)]'
+                          }`}
+                        >
+                          Carte In-App
+                        </button>
+                      </div>
+
+                      {/* Switch langue aperçu */}
+                      <div className="inline-flex rounded-lg border border-[var(--sidebar-border)] p-0.5 bg-[var(--card-bg)] text-[10px]">
+                        <button
+                          type="button"
+                          onClick={() => setPreviewLanguage('mg')}
+                          className={`px-2 py-0.5 rounded-md font-medium transition-colors ${
+                            previewLanguage === 'mg'
+                              ? 'bg-[var(--primary)] text-white'
+                              : 'text-[var(--muted)] hover:text-[var(--foreground)]'
+                          }`}
+                        >
+                          Malgache
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setPreviewLanguage('fr')}
+                          className={`px-2 py-0.5 rounded-md font-medium transition-colors ${
+                            previewLanguage === 'fr'
+                              ? 'bg-[var(--primary)] text-white'
+                              : 'text-[var(--muted)] hover:text-[var(--foreground)]'
+                          }`}
+                        >
+                          Français
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {previewMode === 'lockscreen' ? (
+                    /* Rendu Smartphone Lockscreen */
+                    <div className="max-w-md mx-auto rounded-2xl border border-zinc-700/60 bg-gradient-to-b from-zinc-950 via-zinc-900 to-zinc-950 p-4 shadow-xl text-zinc-100">
+                      {/* Barre d'état smartphone */}
+                      <div className="flex items-center justify-between text-[11px] text-zinc-400 mb-3 px-1">
+                        <span className="font-semibold">09:41</span>
+                        <div className="w-16 h-3.5 rounded-full bg-zinc-800 border border-zinc-700 mx-auto" />
+                        <span className="text-[10px]">100%</span>
+                      </div>
+
+                      {/* Date & Heure Lockscreen discrète */}
+                      <div className="text-center my-3">
+                        <div className="text-xs text-zinc-400">
+                          {previewLanguage === 'mg' ? 'Talata 22 Septambra' : 'Mardi 22 Septembre'}
                         </div>
-                        <span className="text-[10px] text-[var(--muted)] shrink-0">Vao haingana</span>
+                        <div className="text-3xl font-light tracking-tight text-zinc-100">
+                          09:41
+                        </div>
                       </div>
 
-                      <div className="text-xs text-[var(--foreground)]/80 mt-1 line-clamp-2">
-                        {messageMg || 'Le message de la notification s’affichera ici.'}
-                      </div>
-
-                      {badgeText && (
-                        <div className="mt-2">
-                          <span className="inline-block px-2 py-0.5 rounded text-[10px] font-semibold bg-red-500/10 text-red-500 border border-red-500/20">
-                            {badgeText}
+                      {/* Bannière de notification Push système */}
+                      <div className="rounded-xl border border-white/10 bg-white/10 backdrop-blur-md p-3 shadow-lg">
+                        <div className="flex items-center justify-between mb-1.5">
+                          <div className="flex items-center gap-1.5">
+                            <div className="w-4 h-4 rounded bg-[#8B2519] text-white flex items-center justify-center text-[8px] font-bold">
+                              K
+                            </div>
+                            <span className="text-[10px] font-semibold text-zinc-200 uppercase tracking-wider">
+                              KANTO
+                            </span>
+                          </div>
+                          <span className="text-[9px] text-zinc-400">
+                            {previewLanguage === 'mg' ? 'Vao haingana' : 'À l’instant'}
                           </span>
                         </div>
-                      )}
+
+                        <div className="font-semibold text-xs text-white">
+                          {activeTitle}
+                        </div>
+                        <div className="text-[11px] text-zinc-300 mt-0.5 line-clamp-2 leading-relaxed">
+                          {activeMessage}
+                        </div>
+
+                        {badgeText && (
+                          <div className="mt-2 flex items-center gap-1.5">
+                            <span className="text-[9px] px-1.5 py-0.2 rounded bg-white/15 text-zinc-200 font-medium">
+                              {badgeText}
+                            </span>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
+                  ) : (
+                    /* Rendu Carte In-App Kanto */
+                    <div className="p-3.5 rounded-xl border border-[var(--sidebar-border)] bg-[var(--card-bg)] flex items-start gap-3 shadow-xs">
+                      <div
+                        className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
+                        style={{ backgroundColor: `${currentCat.color}15` }}
+                      >
+                        {(() => {
+                          const CatIcon = currentCat.icon;
+                          return <CatIcon size={18} color={currentCat.color} />;
+                        })()}
+                      </div>
+
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="font-bold text-xs text-[var(--foreground)] truncate">
+                            {activeTitle}
+                          </div>
+                          <span className="text-[10px] text-[var(--muted)] shrink-0">
+                            {previewLanguage === 'mg' ? 'Vao haingana' : 'À l’instant'}
+                          </span>
+                        </div>
+
+                        <div className="text-xs text-[var(--foreground)]/80 mt-1 line-clamp-2">
+                          {activeMessage}
+                        </div>
+
+                        {badgeText && (
+                          <div className="mt-2">
+                            <span className="inline-block px-2 py-0.5 rounded text-[10px] font-semibold bg-red-500/10 text-red-500 border border-red-500/20">
+                              {badgeText}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Boutons actions modal */}

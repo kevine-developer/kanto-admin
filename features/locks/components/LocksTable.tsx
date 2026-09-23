@@ -44,12 +44,12 @@ export function LocksTable({
       <table className="w-full text-left text-xs border-collapse">
         <thead>
           <tr className="border-b border-[var(--card-border)] bg-[var(--card-hover)]/40 text-[10.5px] font-mono text-[var(--text-subtle)] uppercase tracking-wider">
-            <th className="py-2.5 px-3 w-12 text-center">Image</th>
-            <th className="py-2.5 px-3">Nom &amp; Identification</th>
+            <th className="py-2.5 px-3 w-24 text-center">Visuel</th>
+            <th className="py-2.5 px-3">Nom &amp; Clé</th>
             <th className="py-2.5 px-3 w-28">Type</th>
             <th className="py-2.5 px-3 w-32 text-center">Disponibilité</th>
-            <th className="py-2.5 px-3">Motif / Statut</th>
-            <th className="py-2.5 px-3 w-20 text-right">Actions</th>
+            <th className="py-2.5 px-3">Statut / Motif</th>
+            <th className="py-2.5 px-3 w-24 text-right">Actions</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-[var(--card-border)]">
@@ -63,34 +63,44 @@ export function LocksTable({
                   item.isLocked ? 'bg-rose-50/20 dark:bg-rose-950/10' : ''
                 }`}
               >
-                {/* Image miniature ou icône par défaut */}
-                <td className="py-2.5 px-3 text-center">
-                  {item.imageUrl ? (
-                    <div className="relative inline-block mx-auto group">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={resolveMediaUrl(item.imageUrl)}
-                        alt={item.nameFr}
-                        className="w-8 h-8 rounded-md object-cover border border-[var(--card-border)] mx-auto shadow-xs"
-                      />
-                      {item.imageUrl.includes('cloudinary.com') && (
-                        <span
-                          className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[7.5px] ring-1 ring-[var(--card)]"
-                          title="Hébergé sur Cloudinary CDN"
-                        >
-                          ☁
-                        </span>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="w-8 h-8 rounded-md bg-[var(--input-bg)] border border-[var(--card-border)] flex items-center justify-center mx-auto text-[var(--text-subtle)]">
-                      {item.type === 'GAME' ? (
-                        <Gamepad2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                      ) : (
-                        <BookOpen className="w-4 h-4 text-sky-600 dark:text-sky-400" />
-                      )}
-                    </div>
-                  )}
+                {/* Photo de présentation au format vignette 16:10 */}
+                <td className="py-2 px-3 text-center">
+                  <div
+                    onClick={() => onEdit(item)}
+                    title="Cliquer pour modifier la photo et les informations"
+                    className="relative inline-block mx-auto group cursor-pointer"
+                  >
+                    {item.imageUrl ? (
+                      <div className="relative w-16 h-10 rounded-lg overflow-hidden border border-[var(--card-border)] shadow-xs bg-[var(--input-bg)]">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={resolveMediaUrl(item.imageUrl)}
+                          alt={item.nameFr}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                        />
+                        {item.imageUrl.includes('cloudinary.com') && (
+                          <span
+                            className="absolute top-0.5 right-0.5 px-1 py-0.2 rounded bg-emerald-600 text-white font-mono text-[8px] font-bold shadow-xs"
+                            title="Hébergé sur Cloudinary CDN"
+                          >
+                            CDN
+                          </span>
+                        )}
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white text-[9px] font-medium">
+                          Changer
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="w-16 h-10 rounded-lg bg-[var(--input-bg)] border border-dashed border-[var(--card-border)] flex flex-col items-center justify-center text-[var(--text-subtle)] group-hover:border-[var(--accent)] group-hover:text-[var(--accent)] transition-colors">
+                        {item.type === 'GAME' ? (
+                          <Gamepad2 className="w-3.5 h-3.5" />
+                        ) : (
+                          <BookOpen className="w-3.5 h-3.5" />
+                        )}
+                        <span className="text-[8px] mt-0.5 font-medium">+ Photo</span>
+                      </div>
+                    )}
+                  </div>
                 </td>
 
                 {/* Nom & Clé */}

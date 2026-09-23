@@ -43,6 +43,7 @@ import {
   Sparkles,
   Palette,
   Award,
+  RotateCcw,
 } from 'lucide-react';
 
 type TabKey =
@@ -129,6 +130,7 @@ export interface HistoryFormData {
   categoryRaw?: string;
   category?: string[];
   imageUrl?: string | null;
+  imageUrlVerso?: string | null;
   orderIndex?: number;
   accentColor?: string;
   status?: ContentStatus;
@@ -188,6 +190,12 @@ function HistoireAdminContent() {
   const [natureEmblems, setNatureEmblems] = useState<NatureEmblemItem[]>([]);
   const [historyDates, setHistoryDates] = useState<HistoryDateItem[]>([]);
   const [lessons, setLessons] = useState<CivicLessonItem[]>([]);
+
+  // Filtre et bascule de face pour les billets
+  const [banknoteSeriesFilter, setBanknoteSeriesFilter] = useState<
+    'ALL' | 'SERIE_2017' | 'SERIE_2003' | 'SERIE_FMG'
+  >('ALL');
+  const [flippedBanknotes, setFlippedBanknotes] = useState<Record<string, boolean>>({});
 
   // Modales
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -273,6 +281,8 @@ function HistoireAdminContent() {
       defaults.colorLight = '#2E7D32';
       defaults.colorDark = '#1B5E20';
       defaults.securityFeaturesRaw = '';
+      defaults.imageUrl = '';
+      defaults.imageUrlVerso = '';
     } else if (activeTab === 'dates') {
       defaults.accentColor = '#B71C1C';
       defaults.era = 'Époque contemporaine';
@@ -553,13 +563,19 @@ function HistoireAdminContent() {
       e.government.toLowerCase().includes(q) ||
       e.descriptionFr.toLowerCase().includes(q)
   );
-  const filteredBanknotes = banknotes.filter(
-    (b) =>
+  const filteredBanknotes = banknotes.filter((b) => {
+    const matchesQuery =
       !q ||
       b.titleFr.toLowerCase().includes(q) ||
+      b.titleMg.toLowerCase().includes(q) ||
       String(b.valueAriary).includes(q) ||
-      b.series.toLowerCase().includes(q)
-  );
+      String(b.valueFmg).includes(q) ||
+      b.series.toLowerCase().includes(q) ||
+      b.period.toLowerCase().includes(q);
+    const matchesSeries =
+      banknoteSeriesFilter === 'ALL' || b.series === banknoteSeriesFilter;
+    return matchesQuery && matchesSeries;
+  });
   const filteredProvinces = provinces.filter(
     (pr) =>
       !q ||
@@ -639,8 +655,8 @@ function HistoireAdminContent() {
           })}
         </div>
 
-        {/* Recherche */}
-        <div className="flex items-center justify-between gap-4">
+        {/* Recherche & Filtres */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
           <div className="w-full max-w-md">
             <SearchBar
               value={searchQuery}
@@ -648,6 +664,28 @@ function HistoireAdminContent() {
               placeholder="Rechercher par nom, province, mot-clé, date..."
             />
           </div>
+
+          {activeTab === 'banknotes' && (
+            <div className="flex items-center gap-2 self-start sm:self-auto">
+              <span className="text-xs font-medium text-stone-500 dark:text-stone-400">
+                Période / Série :
+              </span>
+              <select
+                value={banknoteSeriesFilter}
+                onChange={(e) =>
+                  setBanknoteSeriesFilter(
+                    e.target.value as 'ALL' | 'SERIE_2017' | 'SERIE_2003' | 'SERIE_FMG'
+                  )
+                }
+                className="px-3 py-2 rounded-xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 text-xs font-semibold text-stone-800 dark:text-stone-200 focus:ring-2 focus:ring-emerald-500 shadow-xs"
+              >
+                <option value="ALL">Toutes les séries ({banknotes.length})</option>
+                <option value="SERIE_2017">Série 2017 — Ariary moderne</option>
+                <option value="SERIE_2003">Série 2003 — Transition FMG / Ariary</option>
+                <option value="SERIE_FMG">Franc Malgache & Période Coloniale</option>
+              </select>
+            </div>
+          )}
         </div>
 
         {isLoading ? (
@@ -1015,60 +1053,124 @@ function HistoireAdminContent() {
                 />
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {filteredBanknotes.map((item) => (
-                    <div
-                      key={item.id}
-                      className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-2xl p-4 shadow-sm flex flex-col justify-between space-y-3"
-                    >
-                      <div className="relative h-36 bg-stone-100 dark:bg-stone-800 rounded-xl overflow-hidden border border-stone-200 dark:border-stone-700">
-                        {item.imageUrl ? (
-                          <img
-                            src={resolveMediaUrl(item.imageUrl)}
-                            alt={item.titleFr}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-stone-400">
-                            <BanknoteIcon size={32} />
+                  {filteredBanknotes.map((item) => {
+                    const isVerso = !!flippedBanknotes[item.id];
+                    const activeImg = isVerso
+                      ? item.imageUrlVerso || item.imageUrl
+                      : item.imageUrl;
+
+                    return (
+                      <div
+                        key={item.id}
+                        className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-2xl p-4 shadow-sm flex flex-col justify-between space-y-3"
+                      >
+                        {/* Visuel du billet avec flip recto/verso interactif */}
+                        <div className="relative h-44 bg-stone-100 dark:bg-stone-800 rounded-xl overflow-hidden border border-stone-200 dark:border-stone-700 group">
+                          {activeImg ? (
+                            <img
+                              src={resolveMediaUrl(activeImg)}
+                              alt={`${item.titleFr} (${isVerso ? 'Verso' : 'Recto'})`}
+                              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-stone-400">
+                              <BanknoteIcon size={36} />
+                            </div>
+                          )}
+
+                          {/* Badge de valeur en haut à droite */}
+                          <div className="absolute top-2.5 right-2.5 flex flex-col items-end gap-1">
+                            <span className="px-2.5 py-1 bg-emerald-600/90 backdrop-blur-xs text-white text-xs font-bold rounded-lg shadow-sm">
+                              {item.valueAriary.toLocaleString()} Ariary
+                            </span>
+                            <span className="px-2 py-0.5 bg-black/65 backdrop-blur-xs text-stone-200 text-[10px] font-semibold rounded-md">
+                              {item.valueFmg.toLocaleString()} Fmg
+                            </span>
                           </div>
-                        )}
-                        <span className="absolute top-2.5 right-2.5 px-2 py-0.5 bg-emerald-600 text-white text-xs font-bold rounded-md shadow-xs">
-                          {item.valueAriary.toLocaleString()} Ariary
-                        </span>
-                      </div>
 
-                      <div>
-                        <div className="flex items-center justify-between text-xs text-stone-500 mb-1">
-                          <span className="font-mono">{item.series}</span>
-                          <span>{item.period}</span>
+                          {/* Bouton de bascule Recto / Verso */}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setFlippedBanknotes((prev) => ({
+                                ...prev,
+                                [item.id]: !prev[item.id],
+                              }));
+                            }}
+                            className="absolute bottom-2.5 left-2.5 px-2.5 py-1 bg-black/75 hover:bg-black/90 text-white rounded-lg text-xs font-medium flex items-center gap-1.5 shadow-md backdrop-blur-xs transition-all cursor-pointer"
+                          >
+                            <RotateCcw
+                              size={12}
+                              className={isVerso ? 'rotate-180 transition-transform' : 'transition-transform'}
+                            />
+                            <span>{isVerso ? 'Verso (Arrière)' : 'Recto (Avant)'}</span>
+                          </button>
+
+                          {/* Indicateur si le verso existe */}
+                          {item.imageUrlVerso && (
+                            <span className="absolute top-2.5 left-2.5 px-2 py-0.5 bg-white/90 dark:bg-stone-900/90 text-stone-700 dark:text-stone-300 text-[10px] font-bold rounded-md shadow-xs backdrop-blur-xs">
+                              2 Faces
+                            </span>
+                          )}
                         </div>
-                        <h4 className="font-bold text-stone-900 dark:text-white text-base">
-                          {item.titleFr}
-                        </h4>
-                        <p className="text-xs text-stone-500 dark:text-stone-400 font-medium">
-                          🇲🇬 {item.titleMg}
-                        </p>
-                        <p className="text-xs text-stone-600 dark:text-stone-300 line-clamp-2 mt-1">
-                          Recto : {item.obverseDescriptionFr}
-                        </p>
-                      </div>
 
-                      <div className="flex items-center justify-end gap-2 pt-2 border-t border-stone-100 dark:border-stone-800">
-                        <button
-                          onClick={() => handleOpenEdit(item)}
-                          className="p-1.5 text-stone-600 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 rounded-lg transition-colors"
-                        >
-                          <Edit2 size={16} />
-                        </button>
-                        <button
-                          onClick={() => setDeletingItem({ id: item.id, name: item.titleFr })}
-                          className="p-1.5 text-stone-600 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition-colors"
-                        >
-                          <Trash2 size={16} />
-                        </button>
+                        {/* Informations textuelles */}
+                        <div>
+                          <div className="flex items-center justify-between text-xs text-stone-500 mb-1.5">
+                            <span
+                              className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${
+                                item.series === 'SERIE_2017'
+                                  ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
+                                  : item.series === 'SERIE_2003'
+                                  ? 'bg-purple-100 text-purple-800 dark:bg-purple-950/60 dark:text-purple-300'
+                                  : 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300'
+                              }`}
+                            >
+                              {item.series}
+                            </span>
+                            <span className="font-medium text-stone-600 dark:text-stone-400">
+                              {item.period}
+                            </span>
+                          </div>
+
+                          <h4 className="font-bold text-stone-900 dark:text-white text-base">
+                            {item.titleFr}
+                          </h4>
+                          <p className="text-xs text-stone-500 dark:text-stone-400 font-medium">
+                            🇲🇬 {item.titleMg}
+                          </p>
+
+                          <div className="mt-2 p-2 bg-stone-50 dark:bg-stone-800/50 rounded-lg border border-stone-100 dark:border-stone-800">
+                            <p className="text-xs text-stone-600 dark:text-stone-300 line-clamp-2">
+                              <span className="font-semibold text-stone-900 dark:text-white">
+                                {isVerso ? 'Verso : ' : 'Recto : '}
+                              </span>
+                              {isVerso ? item.reverseDescriptionFr : item.obverseDescriptionFr}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex items-center justify-end gap-2 pt-2 border-t border-stone-100 dark:border-stone-800">
+                          <button
+                            onClick={() => handleOpenEdit(item)}
+                            className="p-1.5 text-stone-600 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 rounded-lg transition-colors"
+                            title="Modifier"
+                          >
+                            <Edit2 size={16} />
+                          </button>
+                          <button
+                            onClick={() => setDeletingItem({ id: item.id, name: item.titleFr })}
+                            className="p-1.5 text-stone-600 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition-colors"
+                            title="Supprimer"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ))}
 
@@ -1310,14 +1412,35 @@ function HistoireAdminContent() {
         >
           <form onSubmit={handleSave} className="space-y-4 max-h-[78vh] overflow-y-auto px-1">
             {/* Zone de Dropzone / Illustration */}
-            <Field label="Illustration / Photo / Sceau officiel">
-              <ImageUploadDropzone
-                value={formValues.imageUrl}
-                onChange={(url) => setFormValues((prev) => ({ ...prev, imageUrl: url }))}
-                uploadEndpoint="/admin/history/upload-image"
-                subfolder={TAB_SUBFOLDER_MAP[activeTab] || 'history'}
-              />
-            </Field>
+            {activeTab === 'banknotes' ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-3 bg-stone-50 dark:bg-stone-800/40 rounded-xl border border-stone-200 dark:border-stone-800">
+                <Field label="Face Recto (Avant du billet)" required>
+                  <ImageUploadDropzone
+                    value={formValues.imageUrl}
+                    onChange={(url) => setFormValues((prev) => ({ ...prev, imageUrl: url }))}
+                    uploadEndpoint="/admin/history/upload-image"
+                    subfolder="banknotes"
+                  />
+                </Field>
+                <Field label="Face Verso (Arrière du billet)">
+                  <ImageUploadDropzone
+                    value={formValues.imageUrlVerso}
+                    onChange={(url) => setFormValues((prev) => ({ ...prev, imageUrlVerso: url }))}
+                    uploadEndpoint="/admin/history/upload-image"
+                    subfolder="banknotes"
+                  />
+                </Field>
+              </div>
+            ) : (
+              <Field label="Illustration / Photo / Sceau officiel">
+                <ImageUploadDropzone
+                  value={formValues.imageUrl}
+                  onChange={(url) => setFormValues((prev) => ({ ...prev, imageUrl: url }))}
+                  uploadEndpoint="/admin/history/upload-image"
+                  subfolder={TAB_SUBFOLDER_MAP[activeTab] || 'history'}
+                />
+              </Field>
+            )}
 
             {/* Statut & Ordre d'affichage communs */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 p-3 bg-stone-50 dark:bg-stone-800/40 rounded-xl border border-stone-200 dark:border-stone-800">

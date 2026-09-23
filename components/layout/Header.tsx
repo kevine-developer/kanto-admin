@@ -8,7 +8,11 @@ import { useTheme } from '@/lib/theme-context';
 // Mapping pathname → titre de page
 const PAGE_TITLES: Record<string, string> = {
   '/':              "Vue d'ensemble",
-  '/contributions': 'Contributions',
+  '/contributions': 'Contributions & Modération',
+  '/welcome-slides':"Écran d'Accueil & Carrousel",
+  '/locks':         'Visuels Jeux & Catégories',
+  '/announcements': 'Annonces Système',
+  '/histoire':      'Histoire & Emblèmes',
   '/contes':        'Contes & Angano',
   '/proverbes':     'Proverbes & Fady',
   '/kabary':        'Discours & Kabary',
@@ -16,11 +20,9 @@ const PAGE_TITLES: Record<string, string> = {
   '/true-false':    'Vrai ou Faux',
   '/word-puzzle':   "Remets dans l'ordre",
   '/missing-word':  'Mot Manquant',
-  '/locks':         'Catégories & Jeux',
   '/progression':   'Progression & XP',
-  '/notifications': 'Notifications',
+  '/notifications': 'Notifications Push',
   '/users':         'Utilisateurs & Rôles',
-  '/announcements': 'Annonces Système',
   '/settings':      'Paramètres & Configuration',
 };
 
