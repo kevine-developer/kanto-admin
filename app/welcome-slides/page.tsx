@@ -8,6 +8,8 @@ import {
   CreateWelcomeSlideInput,
   UpdateWelcomeSlideInput,
 } from '@/types';
+import { ImageUploadDropzone } from '@/components/ui';
+import { useToast } from '@/lib/hooks/useToast';
 import {
   Images,
   Plus,
@@ -570,41 +572,25 @@ export default function WelcomeSlidesAdminPage() {
 
                 <div>
                   <label className="block text-xs font-semibold text-foreground mb-1">
-                    URL de l&apos;image (Cloudinary ou Web) *
+                    Photo du carrousel (Téléversement Cloudinary ou URL) *
                   </label>
-                  <input
-                    type="url"
-                    required
+                  <ImageUploadDropzone
                     value={formImageUrl}
-                    onChange={(e) => setFormImageUrl(e.target.value)}
-                    placeholder="https://images.unsplash.com/... ou Cloudinary"
-                    className="w-full px-3 py-2 text-sm rounded-lg border border-border bg-background text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+                    onChange={(url) => setFormImageUrl(url)}
+                    uploadEndpoint="/welcome-slides/upload-image"
+                    subfolder="welcome"
                   />
-                </div>
-
-                {/* Prévisualisation miniature */}
-                {formImageUrl && (
-                  <div className="p-3 bg-muted/50 rounded-xl border border-border flex items-center gap-3">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={formImageUrl}
-                      alt="Prévisualisation"
-                      className="w-14 h-14 rounded-lg object-cover border border-border flex-shrink-0"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).src =
-                          'https://placehold.co/100x100?text=Image+Invalide';
-                      }}
+                  <div className="mt-2">
+                    <input
+                      type="url"
+                      required
+                      value={formImageUrl}
+                      onChange={(e) => setFormImageUrl(e.target.value)}
+                      placeholder="Ou collez directement une URL d'image (Cloudinary, Unsplash...)"
+                      className="w-full px-3 py-1.5 text-xs rounded-lg border border-border bg-background text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
                     />
-                    <div className="text-xs truncate">
-                      <p className="font-semibold text-foreground truncate">
-                        {formTitle || 'Titre de la photo'}
-                      </p>
-                      <p className="text-muted-foreground truncate">
-                        {formBadge || 'Badge'} • {formTag || 'Tag'}
-                      </p>
-                    </div>
                   </div>
-                )}
+                </div>
 
                 {/* Checkbox Actif */}
                 <div className="flex items-center gap-2 pt-1">

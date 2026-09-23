@@ -103,14 +103,14 @@ export default function LocksAdminPage() {
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-base font-semibold text-[var(--foreground)] tracking-tight">
-                Jeux &amp; Catégories
+                Visuels &amp; Disponibilité (Jeux &amp; Catégories)
               </h1>
               <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-                Gestion Dynamique
+                Photos &amp; Accès
               </span>
             </div>
             <p className="text-xs text-[var(--text-muted)] mt-0.5">
-              Ajoutez, modifiez, illustrez et contrôlez la disponibilité des jeux et catégories de l&apos;application.
+              Gérez les photos de présentation (Cloudinary), les titres bilingues et la disponibilité de chaque jeu et catégorie culturelle.
             </p>
           </div>
 

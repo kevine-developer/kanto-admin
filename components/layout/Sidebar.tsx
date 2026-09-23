@@ -37,14 +37,22 @@ const EXPANDED_W  = 220;
 
 const NAV_GROUPS: { label: string; items: { href: string; icon: React.ElementType; label: string }[] }[] = [
   {
-    label: 'Principal',
+    label: 'Pilotage & Activité',
     items: [
       { href: '/',              icon: LayoutDashboard, label: "Vue d'ensemble" },
       { href: '/contributions', icon: HeartHandshake,  label: 'Contributions' },
     ],
   },
   {
-    label: 'Patrimoine',
+    label: 'Vitrine & Médias Mobile',
+    items: [
+      { href: '/welcome-slides',icon: Images,     label: "Écran d'Accueil" },
+      { href: '/locks',        icon: Layers,     label: 'Visuels Jeux & Catégories' },
+      { href: '/announcements', icon: Megaphone,  label: 'Annonces Système' },
+    ],
+  },
+  {
+    label: 'Patrimoine Culturel',
     items: [
       { href: '/histoire',  icon: Landmark,   label: 'Histoire & Emblèmes' },
       { href: '/contes',    icon: BookOpen,   label: 'Contes & Angano' },
@@ -54,22 +62,20 @@ const NAV_GROUPS: { label: string; items: { href: string; icon: React.ElementTyp
     ],
   },
   {
-    label: 'Jeux',
+    label: 'Jeux & Gamification',
     items: [
       { href: '/true-false',   icon: CheckCheck, label: 'Vrai ou Faux' },
       { href: '/word-puzzle',  icon: Puzzle,     label: "Remets dans l'ordre" },
       { href: '/missing-word', icon: HelpCircle, label: 'Mot Manquant' },
-      { href: '/locks',        icon: Layers,     label: 'Catégories & Jeux' },
       { href: '/progression',  icon: Star,       label: 'Progression & XP' },
     ],
   },
   {
-    label: 'Administration',
+    label: 'Comptes & Système',
     items: [
-      { href: '/welcome-slides',icon: Images,     label: "Écran d'Accueil" },
-      { href: '/notifications', icon: Bell,       label: 'Notifications' },
-      { href: '/announcements', icon: Megaphone,  label: 'Annonces Système' },
-      { href: '/users',         icon: Users,      label: 'Utilisateurs' },
+      { href: '/users',         icon: Users,      label: 'Utilisateurs & Rôles' },
+      { href: '/notifications', icon: Bell,       label: 'Notifications Push' },
+      { href: '/settings',      icon: Settings2,  label: 'Paramètres' },
     ],
   },
 ];

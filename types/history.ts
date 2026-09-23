@@ -56,6 +56,7 @@ export interface BanknoteItem {
   symbolismMg: string;
   securityFeaturesFr: string[];
   imageUrl?: string | null;
+  imageUrlVerso?: string | null;
   orderIndex: number;
   status: ContentStatus;
   createdAt: string;
