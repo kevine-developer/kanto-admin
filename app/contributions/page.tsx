@@ -30,7 +30,7 @@ import {
   Mic,
   Quote,
   Target,
-  Sparkles,
+  Info,
 } from 'lucide-react';
 
 type TabType = 'pending' | 'reports';
@@ -256,7 +256,7 @@ export default function AdminContributionsPage() {
             <div className="flex items-center gap-2">
               {feedback.type === 'success' && <CheckCircle2 size={15} className="shrink-0 text-emerald-600" />}
               {feedback.type === 'error' && <AlertTriangle size={15} className="shrink-0 text-rose-600" />}
-              {feedback.type === 'info' && <Sparkles size={15} className="shrink-0 text-blue-600" />}
+              {feedback.type === 'info' && <Info size={15} className="shrink-0 text-blue-600" />}
               <span>{feedback.text}</span>
             </div>
             <button

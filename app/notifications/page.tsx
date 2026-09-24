@@ -13,17 +13,16 @@ import {
   Loader2,
   X,
   Send,
-  Sparkles,
-  BookOpen,
-  Flame,
-  Scale,
-  Users,
-  Info,
   ExternalLink,
   Smartphone,
+  Info,
+  Flame,
+  BookOpen,
+  Scale,
+  Users,
   Radio,
   Globe,
-  Wand2,
+  Layers,
 } from 'lucide-react';
 
 export interface NotificationItem {
@@ -572,7 +571,7 @@ export default function NotificationsAdminPage() {
                 <div className="p-3.5 rounded-xl border border-[var(--sidebar-border)] bg-[var(--sidebar-border)]/10 space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-semibold text-[var(--foreground)] flex items-center gap-1.5">
-                      <Wand2 size={13} className="text-[var(--primary)]" />
+                      <Layers size={13} className="text-[var(--primary)]" />
                       Modèles culturels prédéfinis (remplissage en 1 clic) :
                     </span>
                     <span className="text-[10px] text-[var(--muted)]">Cliquez pour appliquer</span>

@@ -16,7 +16,7 @@ import {
   Eye,
   X,
   Shuffle,
-  Sparkles,
+  Layers,
 } from 'lucide-react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -453,7 +453,7 @@ export default function MissingWordAdminPage() {
               disabled={isSeeding}
               className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg border border-[var(--card-border)] bg-[var(--card)] text-xs font-medium hover:bg-[var(--accent)] transition disabled:opacity-50"
             >
-              {isSeeding ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5 text-amber-500" />}
+              {isSeeding ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Layers className="w-3.5 h-3.5 text-amber-500" />}
               Initialiser 50 questions
             </button>
           )}
@@ -482,7 +482,7 @@ export default function MissingWordAdminPage() {
                 disabled={isSeeding}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[var(--card-border)] text-xs font-medium hover:bg-[var(--accent)] transition"
               >
-                <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                <Layers className="w-3.5 h-3.5 text-amber-500" />
                 Charger les 50 questions
               </button>
             </div>

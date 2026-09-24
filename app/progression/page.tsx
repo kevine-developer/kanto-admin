@@ -13,7 +13,6 @@ import {
   LeaderboardUserItem,
 } from '@/types/progression';
 import {
-  Star,
   Trophy,
   Users,
   Flame,
@@ -25,7 +24,6 @@ import {
   CheckCircle2,
   AlertCircle,
   PlusCircle,
-  Sparkles,
   Layers,
   X,
   Loader2,
@@ -242,7 +240,7 @@ export default function ProgressionAdminPage() {
             title="Total XP Distribué"
             value={isLoading ? '...' : `${stats.totalXpDistributed.toLocaleString()} XP`}
             subtitle="Points acquis dans l'écosystème"
-            icon={Star}
+            icon={Flame}
             variant="warning"
           />
 
@@ -599,7 +597,7 @@ export default function ProgressionAdminPage() {
                                   backgroundColor: `${culturalRank.color}15`,
                                 }}
                               >
-                                <Sparkles size={11} />
+                                <Crown size={11} />
                                 <span>{culturalRank.titleMg}</span>
                                 <span className="opacity-70 text-[10px]">
                                   ({culturalRank.titleFr})
@@ -764,7 +762,7 @@ export default function ProgressionAdminPage() {
             <div className="w-full max-w-md rounded-xl border border-[var(--card-border)] bg-[var(--card)] p-5 space-y-4 shadow-xl animate-in fade-in slide-in-from-top-3 duration-150">
               <div className="flex items-center justify-between border-b border-[var(--card-border)] pb-3">
                 <div className="flex items-center gap-2">
-                  <Star size={16} className="text-amber-500" />
+                  <Award size={16} className="text-amber-500" />
                   <h3 className="font-semibold text-sm text-[var(--foreground)]">
                     Ajuster les points d&apos;XP
                   </h3>

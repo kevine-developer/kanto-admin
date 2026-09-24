@@ -25,7 +25,7 @@ import {
   ArrowDown,
   ToggleLeft,
   ToggleRight,
-  Sparkles,
+  Layers,
 } from 'lucide-react';
 
 /**
@@ -462,7 +462,7 @@ export default function WelcomeSlidesAdminPage() {
               <div className="p-5 border-b border-border flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
                   <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
-                    <Sparkles className="w-4 h-4" />
+                    <Layers className="w-4 h-4" />
                   </div>
                   <h2 className="text-lg font-bold text-foreground">
                     {editingSlide ? 'Modifier la photo' : 'Nouvelle photo carrousel'}
