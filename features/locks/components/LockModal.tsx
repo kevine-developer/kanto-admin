@@ -28,6 +28,7 @@ export function LockModal({
   const [formNameMg, setFormNameMg] = useState(editingModule?.nameMg || '');
   const [formKey, setFormKey] = useState(editingModule?.key || 'game:');
   const [formImageUrl, setFormImageUrl] = useState(editingModule?.imageUrl || '');
+  const [formBgImageUrl, setFormBgImageUrl] = useState(editingModule?.bgImageUrl || '');
   const [formIsLocked, setFormIsLocked] = useState(editingModule?.isLocked || false);
   const [formLockReason, setFormLockReason] = useState(editingModule?.lockReason || '');
   const [isSaving, setIsSaving] = useState(false);
@@ -66,6 +67,7 @@ export function LockModal({
             nameMg: formNameMg.trim(),
             type: formType,
             imageUrl: formImageUrl.trim() || null,
+            bgImageUrl: formBgImageUrl.trim() || null,
             isLocked: formIsLocked,
             lockReason: formLockReason.trim() || null,
           },
@@ -79,6 +81,7 @@ export function LockModal({
             nameFr: formNameFr.trim(),
             nameMg: formNameMg.trim(),
             imageUrl: formImageUrl.trim() || null,
+            bgImageUrl: formBgImageUrl.trim() || null,
             isLocked: formIsLocked,
             lockReason: formLockReason.trim() || null,
           },
@@ -185,12 +188,24 @@ export function LockModal({
         {/* Image / Illustration */}
         <div>
           <label className="block text-[10.5px] font-mono text-[var(--text-muted)] mb-1 uppercase tracking-wider">
-            Illustration du module :
+            Illustration du module (Catalogue) :
           </label>
           <ImageUploadDropzone
             value={formImageUrl}
             onChange={setFormImageUrl}
             subfolder="modules"
+          />
+        </div>
+
+        {/* Image d'arrière-plan immersive (Chemin de niveaux / Jeu) */}
+        <div>
+          <label className="block text-[10.5px] font-mono text-[var(--text-muted)] mb-1 uppercase tracking-wider">
+            Image d&apos;arrière-plan immersive (Chemin de niveaux / Écran de jeu) :
+          </label>
+          <ImageUploadDropzone
+            value={formBgImageUrl}
+            onChange={setFormBgImageUrl}
+            subfolder="backgrounds"
           />
         </div>
 

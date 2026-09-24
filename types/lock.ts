@@ -7,6 +7,7 @@ export interface ModuleLockItem {
   nameFr: string;
   nameMg: string;
   imageUrl?: string | null;
+  bgImageUrl?: string | null;
   isLocked: boolean;
   lockReason?: string | null;
   minTier?: string | null;
@@ -31,6 +32,7 @@ export interface CreateModuleDto {
   nameFr: string;
   nameMg: string;
   imageUrl?: string | null;
+  bgImageUrl?: string | null;
   isLocked?: boolean;
   lockReason?: string | null;
 }
@@ -40,6 +42,7 @@ export interface UpdateModuleDto {
   nameFr?: string;
   nameMg?: string;
   imageUrl?: string | null;
+  bgImageUrl?: string | null;
   isLocked?: boolean;
   lockReason?: string | null;
 }

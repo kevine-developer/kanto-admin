@@ -114,6 +114,13 @@ export function LocksTable({
                   <div className="font-mono text-[9.5px] text-[var(--text-subtle)] mt-0.5">
                     {item.key}
                   </div>
+                  {item.bgImageUrl && (
+                    <div className="mt-1">
+                      <span className="inline-flex items-center gap-1 text-[9px] text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/50 px-1.5 py-0.2 rounded font-mono">
+                        🖼️ Fond immersif actif
+                      </span>
+                    </div>
+                  )}
                 </td>
 
                 {/* Type */}
