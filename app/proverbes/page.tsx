@@ -12,7 +12,7 @@ import {
   Plus,
   Edit,
   Trash2,
-  Star,
+  Bookmark,
   X,
   Loader2,
 } from 'lucide-react';
@@ -361,7 +361,7 @@ export default function ProverbesAdminPage() {
                       </span>
                       {item.isFeatured && (
                         <span className="text-[10.5px] font-bold px-2 py-0.5 rounded bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 flex items-center gap-1">
-                          <Star size={11} fill="currentColor" />
+                          <Bookmark size={11} fill="currentColor" />
                           <span>À la Une</span>
                         </span>
                       )}
@@ -398,7 +398,7 @@ export default function ProverbesAdminPage() {
                           : 'border-[var(--card-border)] bg-[var(--input-bg)] text-[var(--text-muted)] hover:text-amber-500'
                       }`}
                     >
-                      <Star size={13} fill={item.isFeatured ? 'currentColor' : 'none'} />
+                      <Bookmark size={13} fill={item.isFeatured ? 'currentColor' : 'none'} />
                     </button>
 
                     <button

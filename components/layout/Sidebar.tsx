@@ -17,7 +17,7 @@ import {
   Layers,
   Bell,
   Puzzle,
-  Star,
+  Award,
   HeartHandshake,
   LogOut,
   PanelLeftClose,
@@ -67,7 +67,7 @@ const NAV_GROUPS: { label: string; items: { href: string; icon: React.ElementTyp
       { href: '/true-false',   icon: CheckCheck, label: 'Vrai ou Faux' },
       { href: '/word-puzzle',  icon: Puzzle,     label: "Remets dans l'ordre" },
       { href: '/missing-word', icon: HelpCircle, label: 'Mot Manquant' },
-      { href: '/progression',  icon: Star,       label: 'Progression & XP' },
+      { href: '/progression',  icon: Award,      label: 'Progression & XP' },
     ],
   },
   {

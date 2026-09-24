@@ -40,7 +40,7 @@ import {
   Edit2,
   Trash2,
   CheckCircle2,
-  Sparkles,
+  Bookmark,
   Palette,
   Award,
   RotateCcw,
@@ -1002,7 +1002,7 @@ function HistoireAdminContent() {
                             <span>{symbolsCount} symbole{symbolsCount > 1 ? 's' : ''}</span>
                           </span>
                           <span className="text-[11px] px-2 py-0.5 rounded-md font-semibold border border-stone-200 dark:border-stone-700 bg-white/70 dark:bg-stone-800/70 text-stone-600 dark:text-stone-300 flex items-center gap-1">
-                            <Sparkles size={12} />
+                            <Bookmark size={12} />
                             <span>{factsCount} fait{factsCount > 1 ? 's' : ''} clé{factsCount > 1 ? 's' : ''}</span>
                           </span>
                         </div>

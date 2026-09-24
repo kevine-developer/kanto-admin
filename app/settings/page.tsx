@@ -27,7 +27,7 @@ import {
   LogOut,
   Trash2,
   Loader2,
-  Sparkles,
+  Type,
   Info,
   Mail,
   Send,
@@ -355,7 +355,7 @@ export default function SettingsPage() {
           {/* Aperçu en direct */}
           <div className="p-3.5 rounded-xl border border-[var(--card-border)] bg-[var(--input-bg)] space-y-1">
             <div className="text-[10px] font-mono uppercase tracking-wider text-[var(--text-subtle)] flex items-center gap-1">
-              <Sparkles size={11} className="text-[var(--accent)]" />
+              <Type size={11} className="text-[var(--accent)]" />
               <span>Aperçu en direct du patrimoine typographique</span>
             </div>
             <div className="text-xs font-semibold text-[var(--foreground)]">

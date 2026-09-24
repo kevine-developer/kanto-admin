@@ -15,7 +15,7 @@ import {
   Send,
   Info,
   Wrench,
-  Sparkles,
+  Flame,
   ToggleLeft,
   ToggleRight,
   Pencil,
@@ -38,7 +38,7 @@ export interface SystemAnnouncement {
 const ANNOUNCEMENT_TYPES = [
   { id: 'INFO', label: 'Information / Fampahafantarana', icon: Info, color: '#2980B9', bg: 'bg-blue-500/10 text-blue-500 border-blue-500/20' },
   { id: 'MAINTENANCE', label: 'Maintenance / Fikojakojana', icon: Wrench, color: '#E67E22', bg: 'bg-amber-500/10 text-amber-500 border-amber-500/20' },
-  { id: 'NEW_FEATURE', label: 'Nouveauté / Vaovao', icon: Sparkles, color: '#8B5CF6', bg: 'bg-purple-500/10 text-purple-500 border-purple-500/20' },
+  { id: 'NEW_FEATURE', label: 'Nouveauté / Vaovao', icon: Flame, color: '#8B5CF6', bg: 'bg-purple-500/10 text-purple-500 border-purple-500/20' },
 ];
 
 /**

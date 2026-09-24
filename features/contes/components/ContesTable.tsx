@@ -5,7 +5,7 @@ import { ConteItem } from '@/types/conte';
 import { AudioPlayerInline } from '@/components/ui';
 import {
   Headphones,
-  Sparkles,
+  RotateCcw,
   Loader2,
   FileText,
   Trash2,
@@ -114,7 +114,7 @@ export function ContesTable({
                         {isGenMg ? (
                           <Loader2 size={12} className="animate-spin text-[var(--accent)]" />
                         ) : (
-                          <Sparkles size={12} />
+                          <RotateCcw size={12} />
                         )}
                       </button>
                     </div>
@@ -158,7 +158,7 @@ export function ContesTable({
                         {isGenFr ? (
                           <Loader2 size={12} className="animate-spin text-[var(--accent)]" />
                         ) : (
-                          <Sparkles size={12} />
+                          <RotateCcw size={12} />
                         )}
                       </button>
                     </div>
