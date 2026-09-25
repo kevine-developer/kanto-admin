@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { authClient, signIn, signOut, useSession, getSession } from '@/lib/auth-client';
 import {
   Lock,
@@ -19,15 +19,17 @@ import {
   Award,
   X,
   KeyRound,
+  MailCheck,
+  RotateCcw,
 } from 'lucide-react';
 
 /**
- * Page d'authentification des administrateurs du portail Kanto.
- * Gère la saisie des identifiants, le masquage/démasquage du mot de passe
- * et l'accès sécurisé au panneau d'administration du Conservatoire.
+ * Composant de formulaire interne gérant l'état de connexion,
+ * le basculement "Mot de passe oublié" et les paramètres d'URL.
  */
-export default function LoginPage() {
+function LoginFormContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { data: session, isPending: isSessionLoading } = useSession();
 
   const [email, setEmail] = useState('');
@@ -37,6 +39,25 @@ export default function LoginPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isForgotMode, setIsForgotMode] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
+
+  // Détection du mode "Mot de passe oublié" via l'URL (?mode=forgot ou ?forgot=1)
+  useEffect(() => {
+    const mode = searchParams.get('mode');
+    const forgot = searchParams.get('forgot');
+    if (mode === 'forgot' || forgot === '1' || forgot === 'true') {
+      setIsForgotMode(true);
+    }
+  }, [searchParams]);
+
+  // Décompte pour le renvoi d'email
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const timer = setInterval(() => {
+      setResendCooldown((prev) => prev - 1);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [resendCooldown]);
 
   // Redirection automatique si une session ADMIN est déjà active
   useEffect(() => {
@@ -62,9 +83,7 @@ export default function LoginPage() {
         return;
       }
 
-      // Vérification stricte du rôle ADMIN :
-      // On extrait prioritairement le rôle retourné directement dans la réponse de signIn,
-      // puis en fallback la session active (pour pallier d'éventuels délais d'écriture de cookie).
+      // Vérification stricte du rôle ADMIN
       const userFromSignIn = (res?.data?.user as { role?: string } | undefined)?.role?.toUpperCase();
       let userRole = userFromSignIn;
 
@@ -91,8 +110,8 @@ export default function LoginPage() {
     }
   };
 
-  const handleForgotPassword = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleForgotPassword = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     if (!email.trim()) {
       setErrorMessage('Veuillez renseigner votre adresse email administrateur.');
       return;
@@ -100,7 +119,6 @@ export default function LoginPage() {
 
     setIsLoading(true);
     setErrorMessage(null);
-    setSuccessMessage(null);
 
     try {
       const res = await authClient.requestPasswordReset({
@@ -115,8 +133,9 @@ export default function LoginPage() {
         );
       } else {
         setSuccessMessage(
-          'Si cette adresse correspond à un compte administrateur, un lien de réinitialisation sécurisé vient de vous être expédié.'
+          'Un lien de réinitialisation sécurisé vient de vous être expédié par email.'
         );
+        setResendCooldown(60);
       }
     } catch (err: unknown) {
       const msg =
@@ -346,28 +365,6 @@ export default function LoginPage() {
               </div>
             </div>
 
-            {/* En-tête du formulaire */}
-            <div className="mb-7">
-              <div className="inline-flex items-center justify-center w-11 h-11 rounded-2xl mb-4 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shadow-inner">
-                {isForgotMode ? <Mail size={20} /> : <KeyRound size={20} />}
-              </div>
-
-              <h1
-                className="text-2xl font-bold font-heritage tracking-tight"
-                style={{ color: 'var(--sidebar-fg)' }}
-              >
-                {isForgotMode ? 'Récupération de compte' : 'Connexion Administrateur'}
-              </h1>
-              <p
-                className="text-xs sm:text-sm mt-1.5 leading-relaxed"
-                style={{ color: 'var(--sidebar-muted)' }}
-              >
-                {isForgotMode
-                  ? 'Entrez l’adresse email rattachée à votre profil administrateur.'
-                  : 'Identifiez-vous pour administrer les archives et le conservatoire.'}
-              </p>
-            </div>
-
             {/* Alerte Erreur avec bouton fermer */}
             {errorMessage && (
               <div
@@ -383,7 +380,7 @@ export default function LoginPage() {
                 <button
                   type="button"
                   onClick={() => setErrorMessage(null)}
-                  className="p-1 rounded-lg text-red-400/70 hover:text-red-300 hover:bg-red-500/10 transition-colors"
+                  className="p-1 rounded-lg text-red-400/70 hover:text-red-300 hover:bg-red-500/10 transition-colors cursor-pointer"
                   aria-label="Fermer l'alerte"
                 >
                   <X size={14} />
@@ -391,223 +388,318 @@ export default function LoginPage() {
               </div>
             )}
 
-            {/* Alerte Succès avec bouton fermer */}
-            {successMessage && (
-              <div
-                className="flex items-start gap-3 p-3.5 rounded-2xl text-xs mb-5 animate-in fade-in slide-in-from-top-2 duration-200"
-                style={{
-                  background: 'rgba(16, 185, 129, 0.08)',
-                  border: '1px solid rgba(16, 185, 129, 0.25)',
-                  color: '#34D399',
-                }}
-              >
-                <CheckCircle2 size={16} className="shrink-0 mt-0.5 text-emerald-400" />
-                <div className="flex-1 leading-relaxed font-medium">{successMessage}</div>
-                <button
-                  type="button"
-                  onClick={() => setSuccessMessage(null)}
-                  className="p-1 rounded-lg text-emerald-400/70 hover:text-emerald-300 hover:bg-emerald-500/10 transition-colors"
-                  aria-label="Fermer l'alerte"
-                >
-                  <X size={14} />
-                </button>
-              </div>
-            )}
-
-            {isForgotMode ? (
-              /* ── Formulaire Mot de passe oublié ──────────────────── */
-              <form onSubmit={handleForgotPassword} className="space-y-4">
-                <div className="space-y-1.5">
-                  <label
-                    htmlFor="forgot-email"
-                    className="text-xs font-semibold block"
-                    style={{ color: 'var(--sidebar-fg)' }}
-                  >
-                    Adresse Email Administrateur
-                  </label>
-                  <div className="relative">
-                    <Mail
-                      size={15}
-                      className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none transition-colors"
-                      style={{ color: 'var(--sidebar-muted)' }}
-                    />
-                    <input
-                      id="forgot-email"
-                      type="email"
-                      required
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="admin@kanto.mg"
-                      autoComplete="email"
-                      className="w-full pl-10 pr-4 py-2.5 rounded-xl text-xs sm:text-sm transition-all outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500"
-                      style={{
-                        background: 'var(--sidebar-bg)',
-                        border: '1px solid var(--sidebar-border)',
-                        color: 'var(--sidebar-fg)',
-                      }}
-                    />
-                  </div>
+            {/* ── Mode 1 : Mot de passe oublié — Confirmation d'envoi ─── */}
+            {isForgotMode && successMessage ? (
+              <div className="space-y-6 text-center py-2 animate-in fade-in zoom-in-95 duration-200">
+                <div className="w-14 h-14 rounded-2xl mx-auto flex items-center justify-center bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 shadow-inner">
+                  <MailCheck size={28} />
                 </div>
 
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  className="w-full py-3 px-4 rounded-xl text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50 mt-3 shadow-lg shadow-emerald-500/15 hover:shadow-emerald-500/25 active:scale-[0.99]"
+                <div className="space-y-2">
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    <CheckCircle2 size={12} />
+                    Instructions envoyées
+                  </div>
+                  <h1
+                    className="text-xl font-bold font-heritage tracking-tight"
+                    style={{ color: 'var(--sidebar-fg)' }}
+                  >
+                    Vérifiez votre boîte email
+                  </h1>
+                  <p
+                    className="text-xs sm:text-sm leading-relaxed"
+                    style={{ color: 'var(--sidebar-muted)' }}
+                  >
+                    Si l&apos;adresse <span className="font-semibold text-emerald-400">{email}</span> est
+                    rattachée à un compte administrateur, un lien de réinitialisation sécurisé vous a été expédié.
+                  </p>
+                </div>
+
+                <div
+                  className="p-3.5 rounded-xl border text-left text-xs space-y-1.5"
                   style={{
-                    background: 'linear-gradient(135deg, #3FB950 0%, #2EA043 100%)',
-                    color: '#080B0F',
+                    background: 'rgba(255, 255, 255, 0.02)',
+                    borderColor: 'var(--sidebar-border)',
                   }}
                 >
-                  {isLoading ? (
-                    <>
-                      <Loader2 size={15} className="animate-spin" />
-                      <span>Transmission en cours...</span>
-                    </>
-                  ) : (
-                    <>
-                      <span>Envoyer les instructions de réinitialisation</span>
-                      <ArrowRight size={15} />
-                    </>
-                  )}
-                </button>
+                  <div className="font-semibold text-[var(--sidebar-fg)] flex items-center gap-1.5">
+                    <Sparkles size={13} className="text-emerald-400" />
+                    <span>Conseil de sécurité</span>
+                  </div>
+                  <p className="text-[11px] leading-relaxed" style={{ color: 'var(--sidebar-muted)' }}>
+                    Le lien est valable 1 heure. Si vous ne recevez rien d&apos;ici 2 minutes, vérifiez
+                    votre dossier de courriers indésirables (spams).
+                  </p>
+                </div>
 
-                <div className="text-center pt-2">
+                <div className="space-y-2.5 pt-1">
+                  <button
+                    type="button"
+                    disabled={isLoading || resendCooldown > 0}
+                    onClick={() => handleForgotPassword()}
+                    className="w-full py-2.5 px-4 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50 border border-[var(--sidebar-border)] hover:bg-white/5"
+                    style={{ color: 'var(--sidebar-fg)' }}
+                  >
+                    <RotateCcw size={13} />
+                    <span>
+                      {resendCooldown > 0
+                        ? `Renvoyer un email (${resendCooldown}s)`
+                        : "Renvoyer l'email de réinitialisation"}
+                    </span>
+                  </button>
+
                   <button
                     type="button"
                     onClick={() => {
                       setIsForgotMode(false);
-                      setErrorMessage(null);
                       setSuccessMessage(null);
+                      setErrorMessage(null);
                     }}
-                    className="inline-flex items-center gap-1.5 text-xs font-medium hover:underline cursor-pointer transition-colors p-2 rounded-lg"
+                    className="inline-flex items-center gap-1.5 text-xs font-medium hover:underline p-2 rounded-lg transition-colors cursor-pointer"
                     style={{ color: 'var(--sidebar-muted)' }}
                   >
                     <ArrowLeft size={13} />
-                    <span>Retour à la page de connexion</span>
+                    <span>Retour à la connexion</span>
                   </button>
                 </div>
-              </form>
-            ) : (
-              /* ── Formulaire Connexion Principale ─────────────────── */
-              <form onSubmit={handleSubmit} className="space-y-4">
-                {/* Champ Email */}
-                <div className="space-y-1.5">
-                  <label
-                    htmlFor="login-email"
-                    className="text-xs font-semibold block"
+              </div>
+            ) : isForgotMode ? (
+              /* ── Mode 2 : Formulaire Mot de passe oublié ───────────── */
+              <div>
+                <div className="mb-7">
+                  <div className="inline-flex items-center justify-center w-11 h-11 rounded-2xl mb-4 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shadow-inner">
+                    <Mail size={20} />
+                  </div>
+
+                  <h1
+                    className="text-2xl font-bold font-heritage tracking-tight"
                     style={{ color: 'var(--sidebar-fg)' }}
                   >
-                    Adresse Email
-                  </label>
-                  <div className="relative">
-                    <Mail
-                      size={15}
-                      className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none transition-colors"
-                      style={{ color: 'var(--sidebar-muted)' }}
-                    />
-                    <input
-                      id="login-email"
-                      type="email"
-                      required
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="admin@kanto.mg"
-                      autoComplete="username"
-                      className="w-full pl-10 pr-4 py-2.5 rounded-xl text-xs sm:text-sm transition-all outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500"
-                      style={{
-                        background: 'var(--sidebar-bg)',
-                        border: '1px solid var(--sidebar-border)',
-                        color: 'var(--sidebar-fg)',
-                      }}
-                    />
-                  </div>
+                    Récupération de compte
+                  </h1>
+                  <p
+                    className="text-xs sm:text-sm mt-1.5 leading-relaxed"
+                    style={{ color: 'var(--sidebar-muted)' }}
+                  >
+                    Entrez l&apos;adresse email rattachée à votre profil administrateur pour recevoir
+                    les instructions de réinitialisation.
+                  </p>
                 </div>
 
-                {/* Champ Mot de Passe avec Toggle Afficher/Masquer */}
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
+                <form onSubmit={handleForgotPassword} className="space-y-4">
+                  <div className="space-y-1.5">
                     <label
-                      htmlFor="login-password"
+                      htmlFor="forgot-email"
                       className="text-xs font-semibold block"
                       style={{ color: 'var(--sidebar-fg)' }}
                     >
-                      Mot de Passe
+                      Adresse Email Administrateur
                     </label>
+                    <div className="relative">
+                      <Mail
+                        size={15}
+                        className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none transition-colors"
+                        style={{ color: 'var(--sidebar-muted)' }}
+                      />
+                      <input
+                        id="forgot-email"
+                        type="email"
+                        required
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="admin@kanto.mg"
+                        autoComplete="email"
+                        className="w-full pl-10 pr-4 py-2.5 rounded-xl text-xs sm:text-sm transition-all outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500"
+                        style={{
+                          background: 'var(--sidebar-bg)',
+                          border: '1px solid var(--sidebar-border)',
+                          color: 'var(--sidebar-fg)',
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={isLoading}
+                    className="w-full py-3 px-4 rounded-xl text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50 mt-3 shadow-lg shadow-emerald-500/15 hover:shadow-emerald-500/25 active:scale-[0.99]"
+                    style={{
+                      background: 'linear-gradient(135deg, #3FB950 0%, #2EA043 100%)',
+                      color: '#080B0F',
+                    }}
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 size={15} className="animate-spin" />
+                        <span>Transmission en cours...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>Envoyer les instructions de réinitialisation</span>
+                        <ArrowRight size={15} />
+                      </>
+                    )}
+                  </button>
+
+                  <div className="text-center pt-2">
                     <button
                       type="button"
                       onClick={() => {
-                        setIsForgotMode(true);
+                        setIsForgotMode(false);
                         setErrorMessage(null);
                         setSuccessMessage(null);
                       }}
-                      className="text-[11px] font-medium hover:underline cursor-pointer transition-opacity text-emerald-400 hover:text-emerald-300"
+                      className="inline-flex items-center gap-1.5 text-xs font-medium hover:underline cursor-pointer transition-colors p-2 rounded-lg"
+                      style={{ color: 'var(--sidebar-muted)' }}
                     >
-                      Mot de passe oublié ?
+                      <ArrowLeft size={13} />
+                      <span>Retour à la page de connexion</span>
                     </button>
+                  </div>
+                </form>
+              </div>
+            ) : (
+              /* ── Mode 3 : Formulaire Connexion Principale ─────────── */
+              <div>
+                <div className="mb-7">
+                  <div className="inline-flex items-center justify-center w-11 h-11 rounded-2xl mb-4 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shadow-inner">
+                    <KeyRound size={20} />
                   </div>
 
-                  <div className="relative">
-                    <Lock
-                      size={15}
-                      className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none transition-colors"
-                      style={{ color: 'var(--sidebar-muted)' }}
-                    />
-                    <input
-                      id="login-password"
-                      type={showPassword ? 'text' : 'password'}
-                      required
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="••••••••••••"
-                      autoComplete="current-password"
-                      className="w-full pl-10 pr-11 py-2.5 rounded-xl text-xs sm:text-sm transition-all outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500"
-                      style={{
-                        background: 'var(--sidebar-bg)',
-                        border: '1px solid var(--sidebar-border)',
-                        color: 'var(--sidebar-fg)',
-                      }}
-                    />
-                    {/* Bouton Voir / Masquer Mot de passe */}
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword((prev) => !prev)}
-                      tabIndex={0}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1.5 rounded-lg transition-colors cursor-pointer text-[var(--sidebar-muted)] hover:text-[var(--sidebar-fg)] hover:bg-white/5 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
-                      aria-label={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
-                      title={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
-                    >
-                      {showPassword ? (
-                        <EyeOff size={16} className="text-emerald-400" />
-                      ) : (
-                        <Eye size={16} />
-                      )}
-                    </button>
-                  </div>
+                  <h1
+                    className="text-2xl font-bold font-heritage tracking-tight"
+                    style={{ color: 'var(--sidebar-fg)' }}
+                  >
+                    Connexion Administrateur
+                  </h1>
+                  <p
+                    className="text-xs sm:text-sm mt-1.5 leading-relaxed"
+                    style={{ color: 'var(--sidebar-muted)' }}
+                  >
+                    Identifiez-vous pour administrer les archives et le conservatoire.
+                  </p>
                 </div>
 
-                {/* Bouton de Connexion */}
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  className="w-full py-3 px-4 rounded-xl text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50 mt-4 shadow-lg shadow-emerald-500/15 hover:shadow-emerald-500/25 active:scale-[0.99]"
-                  style={{
-                    background: 'linear-gradient(135deg, #3FB950 0%, #2EA043 100%)',
-                    color: '#080B0F',
-                  }}
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 size={16} className="animate-spin" />
-                      <span>Vérification des privilèges...</span>
-                    </>
-                  ) : (
-                    <>
-                      <span>Accéder au Conservatoire</span>
-                      <ArrowRight size={16} />
-                    </>
-                  )}
-                </button>
-              </form>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  {/* Champ Email */}
+                  <div className="space-y-1.5">
+                    <label
+                      htmlFor="login-email"
+                      className="text-xs font-semibold block"
+                      style={{ color: 'var(--sidebar-fg)' }}
+                    >
+                      Adresse Email
+                    </label>
+                    <div className="relative">
+                      <Mail
+                        size={15}
+                        className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none transition-colors"
+                        style={{ color: 'var(--sidebar-muted)' }}
+                      />
+                      <input
+                        id="login-email"
+                        type="email"
+                        required
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="admin@kanto.mg"
+                        autoComplete="username"
+                        className="w-full pl-10 pr-4 py-2.5 rounded-xl text-xs sm:text-sm transition-all outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500"
+                        style={{
+                          background: 'var(--sidebar-bg)',
+                          border: '1px solid var(--sidebar-border)',
+                          color: 'var(--sidebar-fg)',
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Champ Mot de Passe avec Toggle Afficher/Masquer */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <label
+                        htmlFor="login-password"
+                        className="text-xs font-semibold block"
+                        style={{ color: 'var(--sidebar-fg)' }}
+                      >
+                        Mot de Passe
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsForgotMode(true);
+                          setErrorMessage(null);
+                          setSuccessMessage(null);
+                        }}
+                        className="text-[11px] font-medium hover:underline cursor-pointer transition-opacity text-emerald-400 hover:text-emerald-300"
+                      >
+                        Mot de passe oublié ?
+                      </button>
+                    </div>
+
+                    <div className="relative">
+                      <Lock
+                        size={15}
+                        className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none transition-colors"
+                        style={{ color: 'var(--sidebar-muted)' }}
+                      />
+                      <input
+                        id="login-password"
+                        type={showPassword ? 'text' : 'password'}
+                        required
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="••••••••••••"
+                        autoComplete="current-password"
+                        className="w-full pl-10 pr-11 py-2.5 rounded-xl text-xs sm:text-sm transition-all outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500"
+                        style={{
+                          background: 'var(--sidebar-bg)',
+                          border: '1px solid var(--sidebar-border)',
+                          color: 'var(--sidebar-fg)',
+                        }}
+                      />
+                      {/* Bouton Voir / Masquer Mot de passe */}
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword((prev) => !prev)}
+                        tabIndex={0}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1.5 rounded-lg transition-colors cursor-pointer text-[var(--sidebar-muted)] hover:text-[var(--sidebar-fg)] hover:bg-white/5 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                        aria-label={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
+                        title={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
+                      >
+                        {showPassword ? (
+                          <EyeOff size={16} className="text-emerald-400" />
+                        ) : (
+                          <Eye size={16} />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Bouton de Connexion */}
+                  <button
+                    type="submit"
+                    disabled={isLoading}
+                    className="w-full py-3 px-4 rounded-xl text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50 mt-4 shadow-lg shadow-emerald-500/15 hover:shadow-emerald-500/25 active:scale-[0.99]"
+                    style={{
+                      background: 'linear-gradient(135deg, #3FB950 0%, #2EA043 100%)',
+                      color: '#080B0F',
+                    }}
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 size={16} className="animate-spin" />
+                        <span>Vérification des privilèges...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>Accéder au Conservatoire</span>
+                        <ArrowRight size={16} />
+                      </>
+                    )}
+                  </button>
+                </form>
+              </div>
             )}
 
             {/* Note de bas de formulaire */}
@@ -638,3 +730,23 @@ export default function LoginPage() {
   );
 }
 
+/**
+ * Page d'authentification enveloppée dans un Suspense boundary
+ * pour sécuriser l'utilisation de useSearchParams en SSR Next.js.
+ */
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div
+          className="min-h-screen flex items-center justify-center"
+          style={{ background: 'var(--sidebar-bg)' }}
+        >
+          <Loader2 size={28} className="animate-spin text-emerald-400" />
+        </div>
+      }
+    >
+      <LoginFormContent />
+    </Suspense>
+  );
+}

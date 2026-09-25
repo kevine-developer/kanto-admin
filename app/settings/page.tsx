@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { AdminShell } from '@/components/layout/AdminShell';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { useTheme } from '@/lib/theme-context';
-import { useSession, signOut } from '@/lib/auth-client';
+import { useSession, signOut, authClient } from '@/lib/auth-client';
 import { useToast } from '@/lib/hooks/useToast';
 import { fetchApi } from '@/lib/api-client';
 import { systemService } from '@/services/system.service';
@@ -31,6 +31,13 @@ import {
   Info,
   Mail,
   Send,
+  KeyRound,
+  Eye,
+  EyeOff,
+  Lock,
+  Check,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 
 interface AuthUser {
@@ -82,6 +89,58 @@ export default function SettingsPage() {
       toast.error(msg);
     } finally {
       setIsSendingTestEmail(false);
+    }
+  };
+
+  // État de changement de mot de passe administrateur
+  const [isPasswordFormOpen, setIsPasswordFormOpen] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmNewPassword, setShowConfirmNewPassword] = useState(false);
+  const [revokeOtherSessions, setRevokeOtherSessions] = useState(true);
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentPassword) {
+      toast.error('Veuillez saisir votre mot de passe actuel');
+      return;
+    }
+    if (newPassword.length < 8) {
+      toast.error('Le nouveau mot de passe doit comporter au moins 8 caractères');
+      return;
+    }
+    if (newPassword !== confirmNewPassword) {
+      toast.error('Les deux nouveaux mots de passe ne correspondent pas');
+      return;
+    }
+
+    try {
+      setIsUpdatingPassword(true);
+      const res = await authClient.changePassword({
+        currentPassword,
+        newPassword,
+        revokeOtherSessions,
+      });
+
+      if (res?.error) {
+        toast.error(res.error.message || 'Échec de mise à jour du mot de passe');
+        return;
+      }
+
+      toast.success('Votre mot de passe a été mis à jour avec succès !');
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmNewPassword('');
+      setIsPasswordFormOpen(false);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Une erreur imprévue est survenue';
+      toast.error(msg);
+    } finally {
+      setIsUpdatingPassword(false);
     }
   };
 
@@ -399,6 +458,166 @@ export default function SettingsPage() {
                 {user?.email || 'admin@kanto.mg'}
               </div>
             </div>
+          </div>
+
+          {/* Bloc Modification du mot de passe */}
+          <div className="rounded-xl border border-[var(--card-border)] bg-[var(--input-bg)] overflow-hidden transition-all">
+            <button
+              type="button"
+              onClick={() => setIsPasswordFormOpen(!isPasswordFormOpen)}
+              className="w-full p-3.5 flex items-center justify-between text-left hover:bg-[var(--card-hover)] transition-colors cursor-pointer"
+            >
+              <div className="flex items-center gap-2.5">
+                <div className="w-7 h-7 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center shrink-0">
+                  <KeyRound size={15} />
+                </div>
+                <div>
+                  <div className="text-xs font-semibold text-[var(--foreground)]">
+                    Modifier mon mot de passe administrateur
+                  </div>
+                  <div className="text-[11px] text-[var(--text-muted)]">
+                    Définissez une nouvelle clé d&apos;accès sécurisée pour votre compte Kanto
+                  </div>
+                </div>
+              </div>
+              <div className="text-[var(--text-muted)]">
+                {isPasswordFormOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+              </div>
+            </button>
+
+            {isPasswordFormOpen && (
+              <form
+                onSubmit={handleChangePassword}
+                className="p-4 border-t border-[var(--card-border)] bg-[var(--card)] space-y-3.5 animate-in fade-in duration-200"
+              >
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {/* Mot de passe actuel */}
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-semibold text-[var(--foreground)]">
+                      Mot de passe actuel
+                    </label>
+                    <div className="relative">
+                      <Lock size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-subtle)]" />
+                      <input
+                        type={showCurrentPassword ? 'text' : 'password'}
+                        required
+                        value={currentPassword}
+                        onChange={(e) => setCurrentPassword(e.target.value)}
+                        placeholder="••••••••••••"
+                        autoComplete="current-password"
+                        className="w-full pl-8 pr-8 py-2 rounded-lg text-xs bg-[var(--input-bg)] border border-[var(--input-border)] text-[var(--foreground)] outline-none focus:border-[var(--accent)]"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--text-subtle)] hover:text-[var(--foreground)] p-1 cursor-pointer"
+                        aria-label="Afficher ou masquer"
+                      >
+                        {showCurrentPassword ? <EyeOff size={13} /> : <Eye size={13} />}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Nouveau mot de passe */}
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-semibold text-[var(--foreground)]">
+                      Nouveau mot de passe
+                    </label>
+                    <div className="relative">
+                      <Lock size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-subtle)]" />
+                      <input
+                        type={showNewPassword ? 'text' : 'password'}
+                        required
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        placeholder="Min. 8 caractères"
+                        autoComplete="new-password"
+                        className="w-full pl-8 pr-8 py-2 rounded-lg text-xs bg-[var(--input-bg)] border border-[var(--input-border)] text-[var(--foreground)] outline-none focus:border-[var(--accent)]"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowNewPassword(!showNewPassword)}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--text-subtle)] hover:text-[var(--foreground)] p-1 cursor-pointer"
+                        aria-label="Afficher ou masquer"
+                      >
+                        {showNewPassword ? <EyeOff size={13} /> : <Eye size={13} />}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Confirmation */}
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-semibold text-[var(--foreground)]">
+                      Confirmer le nouveau
+                    </label>
+                    <div className="relative">
+                      <Lock size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-subtle)]" />
+                      <input
+                        type={showConfirmNewPassword ? 'text' : 'password'}
+                        required
+                        value={confirmNewPassword}
+                        onChange={(e) => setConfirmNewPassword(e.target.value)}
+                        placeholder="••••••••••••"
+                        autoComplete="new-password"
+                        className="w-full pl-8 pr-8 py-2 rounded-lg text-xs bg-[var(--input-bg)] border border-[var(--input-border)] text-[var(--foreground)] outline-none focus:border-[var(--accent)]"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmNewPassword(!showConfirmNewPassword)}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--text-subtle)] hover:text-[var(--foreground)] p-1 cursor-pointer"
+                        aria-label="Afficher ou masquer"
+                      >
+                        {showConfirmNewPassword ? <EyeOff size={13} /> : <Eye size={13} />}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
+                  <label className="flex items-center gap-2 text-[11px] text-[var(--text-muted)] cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={revokeOtherSessions}
+                      onChange={(e) => setRevokeOtherSessions(e.target.checked)}
+                      className="accent-[var(--accent)] rounded"
+                    />
+                    <span>Révoquer automatiquement les autres sessions ouvertes sur d&apos;autres navigateurs</span>
+                  </label>
+
+                  <div className="flex items-center gap-2 self-end sm:self-auto">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsPasswordFormOpen(false);
+                        setCurrentPassword('');
+                        setNewPassword('');
+                        setConfirmNewPassword('');
+                      }}
+                      className="px-3 py-1.5 text-xs text-[var(--text-muted)] hover:text-[var(--foreground)] cursor-pointer"
+                    >
+                      Annuler
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={isUpdatingPassword || newPassword.length < 8 || newPassword !== confirmNewPassword}
+                      className="px-3 py-1.5 rounded-lg bg-[var(--accent)] text-white text-xs font-semibold hover:opacity-90 transition disabled:opacity-50 flex items-center gap-1.5 cursor-pointer shadow-xs"
+                    >
+                      {isUpdatingPassword ? (
+                        <>
+                          <Loader2 size={12} className="animate-spin" />
+                          <span>Mise à jour...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Check size={12} />
+                          <span>Enregistrer le mot de passe</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </form>
+            )}
           </div>
 
           <div className="flex items-center justify-between pt-2">
