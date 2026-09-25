@@ -121,9 +121,11 @@ function LoginFormContent() {
     setErrorMessage(null);
 
     try {
+      const origin = typeof window !== 'undefined' ? window.location.origin : '';
+      const redirectTo = origin ? `${origin}/reset-password` : '/reset-password';
       const res = await authClient.requestPasswordReset({
         email: email.trim().toLowerCase(),
-        redirectTo: '/reset-password',
+        redirectTo,
       });
 
       if (res?.error) {
