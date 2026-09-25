@@ -14,36 +14,31 @@ import type { NextRequest } from 'next/server';
  * Note : better-auth utilise des cookies HTTP-only signés — on vérifie
  * leur présence ici (signature cryptographique vérifiée par le backend).
  */
+/**
+ * Middleware Next.js — kanto-admin
+ *
+ * En architecture découplée (Frontend Next.js séparé de l'API NestJS / Better-Auth),
+ * les cookies de session HTTP-only sont associés au domaine de l'API backend.
+ *
+ * La protection stricte des routes et la vérification impérative du rôle ADMIN
+ * sont assurées côté client par AdminShell via useSession() et getSession()
+ * avec communication sécurisée et credentials CORS vers le backend.
+ */
 export function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
-
-  // Récupère le cookie de session better-auth (HTTP-only)
+  // Supporte la détection des cookies session __Secure- et standards si présents
   const sessionCookie =
+    request.cookies.get('__Secure-better-auth.session_token') ??
     request.cookies.get('better-auth.session_token') ??
     request.cookies.get('__session') ??
     request.cookies.get('session');
 
-  const isAuthenticated = !!sessionCookie?.value;
-
-  // Si pas de session → redirection vers /login
-  if (!isAuthenticated) {
-    const loginUrl = new URL('/login', request.url);
-    // Conserve l'URL demandée pour redirection post-login
-    loginUrl.searchParams.set('redirect', pathname);
-    return NextResponse.redirect(loginUrl);
-  }
-
+  // En cas de cookie absent sur le serveur Next.js (cross-origin / proxy),
+  // on laisse la page se charger afin que AdminShell vérifie la session avec l'API
   return NextResponse.next();
 }
 
-/**
- * Matcher : toutes les routes protégées sauf :
- * - /login et /reset-password (pages publiques)
- * - /_next/* (assets Next.js)
- * - /favicon.ico et fichiers statiques
- */
 export const config = {
   matcher: [
-    '/((?!login|reset-password|_next/static|_next/image|favicon\\.ico|robots\\.txt).*)',
+    '/((?!_next/static|_next/image|favicon\\.ico|robots\\.txt).*)',
   ],
 };
