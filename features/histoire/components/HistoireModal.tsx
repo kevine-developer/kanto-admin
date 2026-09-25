@@ -640,7 +640,7 @@ export function HistoireModal({
                   prev.period && !prev.period.includes('2017') ? prev.period : '1925 - 1960';
                 updated.colorLight = '#6B4A1E';
                 updated.colorDark = '#8C6330';
-                if (prev.valueFmg) updated.valueAriary = Math.round(Number(prev.valueFmg) / 5);
+                updated.valueAriary = 0;
               } else if (era === 'SERIE_FMG') {
                 updated.seriesLabelFr = 'Franc Malgache — Républiques (1960-2003)';
                 updated.seriesLabelMg = 'Faranka Malagasy — Repoblika (1960-2003)';
@@ -763,13 +763,10 @@ export function HistoireModal({
                   <Info size={17} className="mt-0.5 flex-shrink-0 text-amber-600 dark:text-amber-400" />
                   <div className="space-y-1">
                     <p className="font-bold text-amber-900 dark:text-amber-100">
-                      Rappel historique capital : L&apos;Ariary (MGA) n&apos;existait pas encore
+                      Régime colonial (1896 - 1960) : Seul le Franc colonial était en circulation
                     </p>
                     <p className="text-amber-800 dark:text-amber-200/90 leading-relaxed text-[11.5px]">
-                      Avant l&apos;Indépendance de 1960, les billets étaient libellés en{' '}
-                      <strong>Francs coloniaux</strong> (Banque de Madagascar ou Institut d&apos;Émission).
-                      Saisissez la valeur faciale réelle en Francs. L&apos;équivalence Ariary (÷ 5) est
-                      calculée automatiquement.
+                      Avant l&apos;Indépendance, la monnaie officielle était le Franc (Banque de Madagascar ou Institut d&apos;Émission). L&apos;équivalence en Ariary n&apos;est donc <strong>pas requise</strong>. Renseignez uniquement la valeur faciale en Francs imprimée sur le billet.
                     </p>
                   </div>
                 </div>
@@ -801,7 +798,7 @@ export function HistoireModal({
                     <Field
                       label="Valeur faciale en Francs coloniaux (ex: 500, 1000)"
                       required
-                      hint="Montant exact imprimé sur le billet historique"
+                      hint="Montant exact officiel imprimé sur le billet colonial"
                     >
                       <Input
                         type="number"
@@ -811,7 +808,7 @@ export function HistoireModal({
                           setFormValues((prev) => ({
                             ...prev,
                             valueFmg: f,
-                            valueAriary: Math.round(f / 5),
+                            valueAriary: 0,
                           }));
                         }}
                         placeholder="ex: 1000"
@@ -819,28 +816,14 @@ export function HistoireModal({
                       />
                     </Field>
 
-                    <Field
-                      label="Équivalence théorique Ariary (F ÷ 5)"
-                      hint="Calcul automatique pour la compatibilité base de données"
-                    >
-                      <div className="relative">
-                        <Input
-                          type="number"
-                          value={formValues.valueAriary || ''}
-                          onChange={(e) => {
-                            const ar = Number(e.target.value) || 0;
-                            setFormValues((prev) => ({
-                              ...prev,
-                              valueAriary: ar,
-                            }));
-                          }}
-                          placeholder="ex: 200"
-                        />
-                        <span className="absolute right-3 top-2.5 text-[10px] font-semibold text-amber-700 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/50 px-1.5 py-0.5 rounded">
-                          Non légal à l&apos;époque
-                        </span>
-                      </div>
-                    </Field>
+                    <div className="flex flex-col justify-center p-3 bg-amber-50/70 dark:bg-amber-950/20 rounded-xl border border-amber-200/70 dark:border-amber-900/40 text-xs">
+                      <span className="font-semibold text-amber-900 dark:text-amber-200">
+                        Équivalence Ariary (MGA)
+                      </span>
+                      <p className="text-[11px] text-amber-700 dark:text-amber-400 mt-0.5 leading-relaxed">
+                        <strong>Non requise</strong> : L&apos;Ariary (MGA) n&apos;existait pas avant 1960. Ce billet colonial est uniquement libellé en Francs.
+                      </p>
+                    </div>
                   </>
                 ) : currentEra === 'SERIE_FMG' ? (
                   <>
