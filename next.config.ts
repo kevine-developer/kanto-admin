@@ -77,9 +77,10 @@ const nextConfig: NextConfig = {
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "font-src 'self' https://fonts.gstatic.com",
               `img-src 'self' data: https://res.cloudinary.com https://images.unsplash.com https://api-kanto.gastsar.fr blob: ${process.env.NEXT_PUBLIC_API_URL ?? ""} ${process.env.NEXT_PUBLIC_BACKEND_URL ?? ""} ${isDev ? "http:" : ""}`.trim().replace(/\s+/g, " "),
+              `media-src 'self' data: blob: https://res.cloudinary.com https://api-kanto.gastsar.fr ${process.env.NEXT_PUBLIC_API_URL ?? ""} ${process.env.NEXT_PUBLIC_BACKEND_URL ?? ""} ${isDev ? "http:" : ""}`.trim().replace(/\s+/g, " "),
               isDev
                 ? "connect-src 'self' http: ws: https: wss:"
-                : "connect-src 'self' https://api-kanto.gastsar.fr " + (process.env.NEXT_PUBLIC_API_URL ?? ""),
+                : `connect-src 'self' https://api-kanto.gastsar.fr https://res.cloudinary.com ${process.env.NEXT_PUBLIC_API_URL ?? ""}`.trim().replace(/\s+/g, " "),
               "frame-ancestors 'none'",
             ].join("; "),
           },
