@@ -11,6 +11,10 @@ export const locksService = {
     return fetchApi<LocksResponse>('/admin/locks');
   },
 
+  async getLock(key: string): Promise<ModuleLockItem> {
+    return fetchApi<ModuleLockItem>(`/admin/locks/${encodeURIComponent(key)}`);
+  },
+
   async createModule(data: CreateModuleDto): Promise<ModuleLockItem> {
     return fetchApi<ModuleLockItem>('/admin/locks', {
       method: 'POST',
