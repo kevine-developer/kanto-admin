@@ -26,7 +26,7 @@ import type { NextRequest } from 'next/server';
  */
 export function middleware(request: NextRequest) {
   // Supporte la détection des cookies session __Secure- et standards si présents
-  const sessionCookie =
+  const _sessionCookie =
     request.cookies.get('__Secure-better-auth.session_token') ??
     request.cookies.get('better-auth.session_token') ??
     request.cookies.get('__session') ??
