@@ -10,6 +10,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/':              "Vue d'ensemble",
   '/contributions': 'Contributions & Modération',
   '/welcome-slides':"Écran d'Accueil & Carrousel",
+  '/marketing-banners': 'Bannières Marketing',
   '/locks':         'Visuels Jeux & Catégories',
   '/announcements': 'Annonces Système',
   '/histoire':      'Histoire & Emblèmes',
