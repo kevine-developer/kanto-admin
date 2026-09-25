@@ -146,3 +146,13 @@ export interface NationalEmblemItem {
   createdAt: string;
   updatedAt: string;
 }
+
+export type HistoryItem =
+  | PresidentItem
+  | NationalEmblemItem
+  | BanknoteItem
+  | ProvinceBlasonItem
+  | NatureEmblemItem
+  | HistoryDateItem
+  | CivicLessonItem;
+

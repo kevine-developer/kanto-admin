@@ -26,10 +26,10 @@ export const historyService = {
     return fetchApi<CivicLessonItem[]>('/admin/history/lessons');
   },
   async createLesson(data: Partial<CivicLessonItem>): Promise<CivicLessonItem> {
-    return fetchApi<CivicLessonItem[]>('/admin/history/lessons', {
+    return fetchApi<CivicLessonItem>('/admin/history/lessons', {
       method: 'POST',
       body: JSON.stringify(data),
-    }) as unknown as CivicLessonItem;
+    });
   },
   async updateLesson(id: string, data: Partial<CivicLessonItem>): Promise<CivicLessonItem> {
     return fetchApi<CivicLessonItem>(`/admin/history/lessons/${id}`, {
@@ -172,6 +172,14 @@ export const historyService = {
   async deleteNationalEmblem(id: string): Promise<NationalEmblemItem> {
     return fetchApi<NationalEmblemItem>(`/admin/history/national-emblems/${id}`, {
       method: 'DELETE',
+    });
+  },
+
+  // 8. Synchronisation des données par défaut
+  async seedDefaults(force = false): Promise<{ success: boolean; message: string }> {
+    return fetchApi<{ success: boolean; message: string }>('/admin/history/seed', {
+      method: 'POST',
+      body: JSON.stringify({ force }),
     });
   },
 };
