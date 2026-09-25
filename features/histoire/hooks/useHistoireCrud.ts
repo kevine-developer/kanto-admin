@@ -68,8 +68,16 @@ function normalizePayload(raw: GenericHistoryFormData): GenericHistoryFormData {
 
   // Conversion numérique
   if (payload.orderIndex !== undefined) payload.orderIndex = Number(payload.orderIndex) || 0;
-  if (payload.valueAriary !== undefined) payload.valueAriary = Number(payload.valueAriary) || 0;
-  if (payload.valueFmg !== undefined) payload.valueFmg = Number(payload.valueFmg) || 0;
+  if (payload.valueAriary !== undefined && payload.valueAriary !== null) {
+    payload.valueAriary = Number(payload.valueAriary) || 0;
+  } else {
+    payload.valueAriary = 0;
+  }
+  if (payload.valueFmg !== undefined && payload.valueFmg !== null) {
+    payload.valueFmg = Number(payload.valueFmg) || 0;
+  } else {
+    payload.valueFmg = 0;
+  }
 
   return payload;
 }
