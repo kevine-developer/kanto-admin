@@ -21,7 +21,6 @@ import {
   Scale,
   Users,
   Radio,
-  Globe,
   Layers,
 } from 'lucide-react';
 

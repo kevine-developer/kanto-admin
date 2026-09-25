@@ -9,7 +9,6 @@ import {
   UpdateWelcomeSlideInput,
 } from '@/types';
 import { ImageUploadDropzone } from '@/components/ui';
-import { useToast } from '@/lib/hooks/useToast';
 import {
   Images,
   Plus,
