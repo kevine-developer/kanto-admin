@@ -73,6 +73,7 @@ export interface BanknoteFormData {
   securityFeaturesFr?: string[];
   imageUrl?: string | null;
   imageUrlVerso?: string | null;
+  isComingSoon?: boolean;
   orderIndex?: number;
   status?: string;
 }

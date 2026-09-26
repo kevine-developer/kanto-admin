@@ -80,7 +80,7 @@ export function HistoireModal({
         {/* Zone Dropzone / Illustration */}
         {activeTab === 'banknotes' ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-3 bg-stone-50 dark:bg-stone-800/40 rounded-xl border border-stone-200 dark:border-stone-800">
-            <Field label="Face Recto (Avant du billet)" required>
+            <Field label="Face Recto (Avant du billet)" required={!formValues.isComingSoon}>
               <ImageUploadDropzone
                 value={formValues.imageUrl}
                 onChange={(url) => setFormValues((prev) => ({ ...prev, imageUrl: url }))}
@@ -672,8 +672,39 @@ export function HistoireModal({
             });
           };
 
+          const isComingSoon = Boolean(formValues.isComingSoon);
+
           return (
             <>
+              {/* Option "Contenu à venir" (Détails en cours de rédaction) */}
+              <div className="p-3.5 rounded-xl border border-amber-300 dark:border-amber-700/70 bg-amber-50/80 dark:bg-amber-950/30 flex items-start gap-3 transition-colors">
+                <input
+                  type="checkbox"
+                  id="isComingSoonCheckbox"
+                  checked={isComingSoon}
+                  onChange={(e) =>
+                    setFormValues((prev) => ({
+                      ...prev,
+                      isComingSoon: e.target.checked,
+                    }))
+                  }
+                  className="mt-1 h-4 w-4 rounded border-stone-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                />
+                <label htmlFor="isComingSoonCheckbox" className="flex-1 cursor-pointer select-none">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-amber-900 dark:text-amber-100">
+                      Marquer comme « Contenu à venir »
+                    </span>
+                    <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-amber-200/80 dark:bg-amber-900/60 text-amber-950 dark:text-amber-200 font-semibold">
+                      Mode Images Seules
+                    </span>
+                  </div>
+                  <span className="block text-[11px] text-amber-800 dark:text-amber-300 mt-1 leading-relaxed">
+                    Cochez cette case si vous disposez des photos (recto / verso) mais que les textes et détails historiques sont encore en cours de rédaction. Les descriptions et le titre deviennent <strong>optionnels</strong>.
+                  </span>
+                </label>
+              </div>
+
               {!editingItem && (
                 <Field
                   label="Identifiant unique (slug, ex: billet-20000, billet-colonial-1000f)"
@@ -913,20 +944,20 @@ export function HistoireModal({
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <Field label="Titre (FR)" required>
+                <Field label={isComingSoon ? "Titre (FR) (Optionnel si à venir)" : "Titre (FR)"} required={!isComingSoon}>
                   <Input
                     value={formValues.titleFr || ''}
                     onChange={(e) => setFormValues((prev) => ({ ...prev, titleFr: e.target.value }))}
-                    placeholder="ex: Port de Toamasina & Valiha"
-                    required
+                    placeholder={isComingSoon ? "ex: Billet 20 000 Ariary (Généré si vide)" : "ex: Port de Toamasina & Valiha"}
+                    required={!isComingSoon}
                   />
                 </Field>
-                <Field label="Titre (MG)" required>
+                <Field label={isComingSoon ? "Titre (MG) (Optionnel si à venir)" : "Titre (MG)"} required={!isComingSoon}>
                   <Input
                     value={formValues.titleMg || ''}
                     onChange={(e) => setFormValues((prev) => ({ ...prev, titleMg: e.target.value }))}
-                    placeholder="ex: Seranan'i Toamasina sy Valiha"
-                    required
+                    placeholder={isComingSoon ? "ex: Vola 20 000 Ariary (Généré si vide)" : "ex: Seranan'i Toamasina sy Valiha"}
+                    required={!isComingSoon}
                   />
                 </Field>
               </div>
@@ -992,7 +1023,7 @@ export function HistoireModal({
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <Field label="Description Recto (FR)" required>
+                <Field label={isComingSoon ? "Description Recto (FR) (Optionnel)" : "Description Recto (FR)"} required={!isComingSoon}>
                   <textarea
                     className="w-full p-2.5 rounded-xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 text-sm focus:ring-2 focus:ring-emerald-500"
                     rows={2}
@@ -1000,10 +1031,11 @@ export function HistoireModal({
                     onChange={(e) =>
                       setFormValues((prev) => ({ ...prev, obverseDescriptionFr: e.target.value }))
                     }
-                    required
+                    placeholder={isComingSoon ? "Détails en cours de rédaction..." : undefined}
+                    required={!isComingSoon}
                   />
                 </Field>
-                <Field label="Description Recto (MG)" required>
+                <Field label={isComingSoon ? "Description Recto (MG) (Optionnel)" : "Description Recto (MG)"} required={!isComingSoon}>
                   <textarea
                     className="w-full p-2.5 rounded-xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 text-sm focus:ring-2 focus:ring-emerald-500"
                     rows={2}
@@ -1011,13 +1043,14 @@ export function HistoireModal({
                     onChange={(e) =>
                       setFormValues((prev) => ({ ...prev, obverseDescriptionMg: e.target.value }))
                     }
-                    required
+                    placeholder={isComingSoon ? "Fanazavana eo am-panoratana..." : undefined}
+                    required={!isComingSoon}
                   />
                 </Field>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <Field label="Description Verso (FR)" required>
+                <Field label={isComingSoon ? "Description Verso (FR) (Optionnel)" : "Description Verso (FR)"} required={!isComingSoon}>
                   <textarea
                     className="w-full p-2.5 rounded-xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 text-sm focus:ring-2 focus:ring-emerald-500"
                     rows={2}
@@ -1025,10 +1058,11 @@ export function HistoireModal({
                     onChange={(e) =>
                       setFormValues((prev) => ({ ...prev, reverseDescriptionFr: e.target.value }))
                     }
-                    required
+                    placeholder={isComingSoon ? "Détails en cours de rédaction..." : undefined}
+                    required={!isComingSoon}
                   />
                 </Field>
-                <Field label="Description Verso (MG)" required>
+                <Field label={isComingSoon ? "Description Verso (MG) (Optionnel)" : "Description Verso (MG)"} required={!isComingSoon}>
                   <textarea
                     className="w-full p-2.5 rounded-xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 text-sm focus:ring-2 focus:ring-emerald-500"
                     rows={2}
@@ -1036,28 +1070,31 @@ export function HistoireModal({
                     onChange={(e) =>
                       setFormValues((prev) => ({ ...prev, reverseDescriptionMg: e.target.value }))
                     }
-                    required
+                    placeholder={isComingSoon ? "Fanazavana eo am-panoratana..." : undefined}
+                    required={!isComingSoon}
                   />
                 </Field>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <Field label="Symbolisme & Portée (FR)" required>
+                <Field label={isComingSoon ? "Symbolisme & Portée (FR) (Optionnel)" : "Symbolisme & Portée (FR)"} required={!isComingSoon}>
                   <Input
                     value={formValues.symbolismFr || ''}
                     onChange={(e) =>
                       setFormValues((prev) => ({ ...prev, symbolismFr: e.target.value }))
                     }
-                    required
+                    placeholder={isComingSoon ? "Symbolisme en cours de rédaction..." : undefined}
+                    required={!isComingSoon}
                   />
                 </Field>
-                <Field label="Symbolisme & Portée (MG)" required>
+                <Field label={isComingSoon ? "Symbolisme & Portée (MG) (Optionnel)" : "Symbolisme & Portée (MG)"} required={!isComingSoon}>
                   <Input
                     value={formValues.symbolismMg || ''}
                     onChange={(e) =>
                       setFormValues((prev) => ({ ...prev, symbolismMg: e.target.value }))
                     }
-                    required
+                    placeholder={isComingSoon ? "Heviny eo am-panoratana..." : undefined}
+                    required={!isComingSoon}
                   />
                 </Field>
               </div>

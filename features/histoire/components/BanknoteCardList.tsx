@@ -92,27 +92,41 @@ function BanknoteCard({
           <span>{isVerso ? 'Verso (Arrière)' : 'Recto (Avant)'}</span>
         </button>
 
-        {item.imageUrlVerso && (
-          <span className="absolute top-2.5 left-2.5 px-2 py-0.5 bg-white/90 dark:bg-stone-900/90 text-stone-700 dark:text-stone-300 text-[10px] font-bold rounded-md shadow-xs backdrop-blur-xs">
-            2 Faces
-          </span>
-        )}
+        <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5">
+          {item.imageUrlVerso && (
+            <span className="px-2 py-0.5 bg-white/90 dark:bg-stone-900/90 text-stone-700 dark:text-stone-300 text-[10px] font-bold rounded-md shadow-xs backdrop-blur-xs">
+              2 Faces
+            </span>
+          )}
+          {item.isComingSoon && (
+            <span className="px-2 py-0.5 bg-amber-500/90 text-white text-[10px] font-bold rounded-md shadow-xs backdrop-blur-xs">
+              À venir
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Informations textuelles */}
       <div>
         <div className="flex items-center justify-between text-xs text-stone-500 mb-1.5">
-          <span
-            className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${
-              item.series === 'SERIE_2017'
-                ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
-                : item.series === 'SERIE_2003'
-                ? 'bg-purple-100 text-purple-800 dark:bg-purple-950/60 dark:text-purple-300'
-                : 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300'
-            }`}
-          >
-            {item.series}
-          </span>
+          <div className="flex items-center gap-1.5">
+            <span
+              className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${
+                item.series === 'SERIE_2017'
+                  ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
+                  : item.series === 'SERIE_2003'
+                  ? 'bg-purple-100 text-purple-800 dark:bg-purple-950/60 dark:text-purple-300'
+                  : 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300'
+              }`}
+            >
+              {item.series}
+            </span>
+            {item.isComingSoon && (
+              <span className="px-1.5 py-0.5 rounded text-[9.5px] font-semibold bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60">
+                Textes à venir
+              </span>
+            )}
+          </div>
           <span className="font-medium text-stone-600 dark:text-stone-400">{item.period}</span>
         </div>
         <h4 className="font-bold text-stone-900 dark:text-white text-base">{item.titleFr}</h4>
@@ -120,7 +134,9 @@ function BanknoteCard({
         <div className="mt-2 p-2 bg-stone-50 dark:bg-stone-800/50 rounded-lg border border-stone-100 dark:border-stone-800">
           <p className="text-xs text-stone-600 dark:text-stone-300 line-clamp-2">
             <span className="font-semibold text-stone-900 dark:text-white">{isVerso ? 'Verso : ' : 'Recto : '}</span>
-            {isVerso ? item.reverseDescriptionFr : item.obverseDescriptionFr}
+            {isVerso
+              ? item.reverseDescriptionFr || (item.isComingSoon ? 'Description verso en cours de rédaction...' : 'Aucune description verso')
+              : item.obverseDescriptionFr || (item.isComingSoon ? 'Description recto en cours de rédaction...' : 'Aucune description recto')}
           </p>
         </div>
       </div>

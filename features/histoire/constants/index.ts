@@ -77,6 +77,7 @@ export const BANKNOTE_DEFAULTS = {
   securityFeaturesRaw: '',
   imageUrl: '',
   imageUrlVerso: '',
+  isComingSoon: false,
 } as const;
 
 export const HISTORY_DATE_DEFAULTS = {

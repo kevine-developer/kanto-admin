@@ -79,6 +79,10 @@ function normalizePayload(raw: GenericHistoryFormData): GenericHistoryFormData {
     payload.valueFmg = 0;
   }
 
+  if (payload.isComingSoon !== undefined) {
+    payload.isComingSoon = Boolean(payload.isComingSoon);
+  }
+
   return payload;
 }
 
@@ -131,10 +135,29 @@ export function useHistoireCrud({
           if (isEditMode) await historyService.updateNationalEmblem(id, payload as Partial<NationalEmblemItem>);
           else await historyService.createNationalEmblem(payload as Partial<NationalEmblemItem>);
           break;
-        case 'banknotes':
+        case 'banknotes': {
+          const ar = Number(payload.valueAriary) || 0;
+          const fmg = Number(payload.valueFmg) || 0;
+          if (!payload.titleFr?.trim()) {
+            payload.titleFr =
+              ar > 0
+                ? `Billet ${ar.toLocaleString('fr-FR')} Ariary`
+                : fmg > 0
+                  ? `Billet ${fmg.toLocaleString('fr-FR')} Francs`
+                  : 'Billet de Madagascar';
+          }
+          if (!payload.titleMg?.trim()) {
+            payload.titleMg =
+              ar > 0
+                ? `Vola ${ar.toLocaleString('fr-FR')} Ariary`
+                : fmg > 0
+                  ? `Vola ${fmg.toLocaleString('fr-FR')} Faranka`
+                  : 'Vola Malagasy';
+          }
           if (isEditMode) await historyService.updateBanknote(id, payload as Partial<BanknoteItem>);
           else await historyService.createBanknote(payload as Partial<BanknoteItem>);
           break;
+        }
         case 'provinces':
           if (isEditMode) await historyService.updateProvince(id, payload as Partial<ProvinceBlasonItem>);
           else await historyService.createProvince(payload as Partial<ProvinceBlasonItem>);
