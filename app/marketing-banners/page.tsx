@@ -24,6 +24,10 @@ import {
   Link as LinkIcon,
   Palette,
   Image as ImageIcon,
+  Layers,
+  Search,
+  PanelBottomOpen,
+  MessageSquare,
 } from 'lucide-react';
 
 const PRESET_COLORS = [
@@ -61,6 +65,16 @@ export default function MarketingBannersAdminPage() {
   const [accentColor, setAccentColor] = useState('#F59E0B');
   const [isActive, setIsActive] = useState(true);
 
+  // Nouveaux types d'action & modales d'information
+  const [actionType, setActionType] = useState<'DEEP_LINK' | 'BOTTOM_SHEET' | 'CENTER_MODAL'>('DEEP_LINK');
+  const [modalBodyFr, setModalBodyFr] = useState('');
+  const [modalBodyMg, setModalBodyMg] = useState('');
+  const [modalImageUrl, setModalImageUrl] = useState('');
+  const [modalCtaLabelFr, setModalCtaLabelFr] = useState('');
+  const [modalCtaLabelMg, setModalCtaLabelMg] = useState('');
+  const [modalCtaLink, setModalCtaLink] = useState('');
+  const [deepLinkSearch, setDeepLinkSearch] = useState('');
+
   const loadBanners = useCallback(async () => {
     try {
       setIsLoading(true);
@@ -96,6 +110,14 @@ export default function MarketingBannersAdminPage() {
     setSelectedDeepLinkPreset('/(screens)/subscription');
     setAccentColor('#F59E0B');
     setIsActive(true);
+    setActionType('DEEP_LINK');
+    setModalBodyFr('');
+    setModalBodyMg('');
+    setModalImageUrl('');
+    setModalCtaLabelFr('');
+    setModalCtaLabelMg('');
+    setModalCtaLink('');
+    setDeepLinkSearch('');
   };
 
   const openCreateModal = () => {
@@ -121,6 +143,14 @@ export default function MarketingBannersAdminPage() {
     
     setAccentColor(banner.accentColor || '#F59E0B');
     setIsActive(banner.isActive);
+    setActionType(banner.actionType || 'DEEP_LINK');
+    setModalBodyFr(banner.modalBodyFr || '');
+    setModalBodyMg(banner.modalBodyMg || '');
+    setModalImageUrl(banner.modalImageUrl || '');
+    setModalCtaLabelFr(banner.modalCtaLabelFr || '');
+    setModalCtaLabelMg(banner.modalCtaLabelMg || '');
+    setModalCtaLink(banner.modalCtaLink || '');
+    setDeepLinkSearch('');
     setIsModalOpen(true);
   };
 
@@ -129,6 +159,11 @@ export default function MarketingBannersAdminPage() {
     if (val !== 'custom') {
       setDeepLink(val);
     }
+  };
+
+  const handleSelectDeepLinkDirect = (val: string) => {
+    setDeepLink(val);
+    setSelectedDeepLinkPreset(val);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -153,6 +188,13 @@ export default function MarketingBannersAdminPage() {
         deepLink: deepLink.trim(),
         accentColor,
         isActive,
+        actionType,
+        modalBodyFr: modalBodyFr.trim() || undefined,
+        modalBodyMg: modalBodyMg.trim() || undefined,
+        modalImageUrl: modalImageUrl.trim() || undefined,
+        modalCtaLabelFr: modalCtaLabelFr.trim() || undefined,
+        modalCtaLabelMg: modalCtaLabelMg.trim() || undefined,
+        modalCtaLink: modalCtaLink.trim() || undefined,
       };
 
       if (editingId) {
@@ -248,21 +290,41 @@ export default function MarketingBannersAdminPage() {
 
         {/* Aperçu en direct (Live Preview fidèle au mobile) */}
         {selectedPreviewBanner && (
-          <div className="p-5 rounded-2xl border border-border bg-card/60 backdrop-blur-sm shadow-sm space-y-3">
-            <div className="flex items-center justify-between">
+          <div className="p-5 rounded-xl border border-border bg-card/60 backdrop-blur-sm shadow-sm space-y-3">
+            <div className="flex items-center justify-between flex-wrap gap-2">
               <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
                 <Eye className="w-3.5 h-3.5" />
-                Aperçu fidèle du rendu mobile (Sans icônes parasites)
+                Aperçu mobile (Design épuré & arrondis design system)
               </span>
-              <span className="text-xs px-2.5 py-0.5 rounded-full font-medium border bg-muted text-foreground">
-                Deep link : <code className="text-emerald-500 font-mono">{selectedPreviewBanner.deepLink}</code>
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] px-2 py-0.5 rounded font-medium border bg-muted text-foreground flex items-center gap-1">
+                  {selectedPreviewBanner.actionType === 'BOTTOM_SHEET' ? (
+                    <>
+                      <PanelBottomOpen className="w-3 h-3 text-indigo-400" />
+                      Tiroir bas (Contenu long)
+                    </>
+                  ) : selectedPreviewBanner.actionType === 'CENTER_MODAL' ? (
+                    <>
+                      <MessageSquare className="w-3 h-3 text-amber-400" />
+                      Modal centré (Contenu court)
+                    </>
+                  ) : (
+                    <>
+                      <LinkIcon className="w-3 h-3 text-emerald-400" />
+                      Lien direct
+                    </>
+                  )}
+                </span>
+                <span className="text-[11px] px-2 py-0.5 rounded font-mono border bg-muted text-emerald-500">
+                  {selectedPreviewBanner.deepLink}
+                </span>
+              </div>
             </div>
 
-            {/* Carte de simulation mobile */}
+            {/* Carte de simulation mobile (arrondis stricts RADIUS.md = 8px) */}
             <div className="max-w-md mx-auto">
               <div
-                className="relative h-40 rounded-xl overflow-hidden border border-white/15 bg-neutral-950 flex flex-col justify-between p-3.5 shadow-lg select-none"
+                className="relative h-40 rounded-lg overflow-hidden border border-white/15 bg-neutral-950 flex flex-col justify-between p-3.5 shadow-md select-none"
                 style={{
                   backgroundImage: `url(${selectedPreviewBanner.imageUrl})`,
                   backgroundSize: 'cover',
@@ -278,10 +340,10 @@ export default function MarketingBannersAdminPage() {
                   }}
                 />
 
-                {/* Header sans icône étoile */}
+                {/* Header : Badge sobre & compteur net (sans pilules grotesques) */}
                 <div className="relative z-10 flex items-center justify-between">
                   <div
-                    className="px-2.5 py-0.5 rounded-full text-[9.5px] font-bold tracking-wider uppercase backdrop-blur-md bg-white/10 border"
+                    className="px-2 py-0.5 rounded text-[9.5px] font-bold tracking-wider uppercase backdrop-blur-md bg-white/10 border"
                     style={{
                       color: selectedPreviewBanner.accentColor,
                       borderColor: `${selectedPreviewBanner.accentColor}50`,
@@ -289,7 +351,7 @@ export default function MarketingBannersAdminPage() {
                   >
                     {selectedPreviewBanner.badgeFr}
                   </div>
-                  <div className="text-[10px] font-semibold text-white/70 px-2 py-0.5 rounded-full bg-white/10 border border-white/15">
+                  <div className="text-[10px] font-semibold text-white/75 px-1.5 py-0.5 rounded bg-white/10 border border-white/15 font-mono">
                     01 / {String(banners.length).padStart(2, '0')}
                   </div>
                 </div>
@@ -304,12 +366,17 @@ export default function MarketingBannersAdminPage() {
                   </p>
                 </div>
 
-                {/* Footer avec CTA propre */}
-                <div className="relative z-10 flex items-center justify-start">
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white text-neutral-900 text-[11px] font-bold shadow">
+                {/* Footer avec CTA moderne et arrondi mesuré (rounded-md) */}
+                <div className="relative z-10 flex items-center justify-between">
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-white text-neutral-900 text-[11px] font-bold shadow-sm">
                     <span>{selectedPreviewBanner.ctaFr}</span>
                     <ArrowUpRight className="w-3 h-3 text-neutral-900" />
                   </div>
+                  {selectedPreviewBanner.actionType !== 'DEEP_LINK' && (
+                    <span className="text-[10px] text-white/60 font-medium">
+                      Ouvre {selectedPreviewBanner.actionType === 'BOTTOM_SHEET' ? 'le tiroir bas' : 'le dialogue centré'}
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
@@ -358,7 +425,7 @@ export default function MarketingBannersAdminPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span
-                        className="text-[10px] font-bold px-2 py-0.5 rounded-full border uppercase"
+                        className="text-[10px] font-bold px-2 py-0.5 rounded border uppercase"
                         style={{
                           color: banner.accentColor,
                           borderColor: `${banner.accentColor}40`,
@@ -368,13 +435,28 @@ export default function MarketingBannersAdminPage() {
                         {banner.badgeFr}
                       </span>
                       <span
-                        className={`text-[10px] px-2 py-0.5 rounded-full font-semibold border ${
+                        className={`text-[10px] px-2 py-0.5 rounded font-semibold border ${
                           banner.isActive
                             ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
                             : 'bg-neutral-500/10 text-neutral-400 border-neutral-500/20'
                         }`}
                       >
                         {banner.isActive ? 'Actif' : 'Inactif'}
+                      </span>
+                      <span
+                        className={`text-[10px] px-2 py-0.5 rounded font-medium border ${
+                          banner.actionType === 'BOTTOM_SHEET'
+                            ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/30'
+                            : banner.actionType === 'CENTER_MODAL'
+                            ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
+                            : 'bg-muted text-muted-foreground border-border'
+                        }`}
+                      >
+                        {banner.actionType === 'BOTTOM_SHEET'
+                          ? 'Tiroir bas (long)'
+                          : banner.actionType === 'CENTER_MODAL'
+                          ? 'Modal centré (court)'
+                          : 'Lien direct'}
                       </span>
                       <span className="text-xs text-muted-foreground font-mono">
                         #{index + 1}
@@ -579,36 +661,251 @@ export default function MarketingBannersAdminPage() {
                   </div>
                 </div>
 
-                {/* 5. Deep Link prédéfini ou personnalisé */}
-                <div className="p-3.5 rounded-xl border border-border/80 bg-muted/30 space-y-3">
-                  <div className="flex items-center gap-2">
-                    <LinkIcon className="w-4 h-4 text-emerald-500" />
-                    <span className="text-xs font-bold uppercase tracking-wider text-foreground">
-                      Destination / Deep Link
+                {/* 5. Comportement au clic : Redirection directe ou Modale d'information */}
+                <div className="p-4 rounded-xl border border-border bg-muted/20 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold uppercase tracking-wider text-foreground flex items-center gap-1.5">
+                      <Layers className="w-4 h-4 text-emerald-500" />
+                      Action au clic sur la bannière
+                    </span>
+                    <span className="text-[11px] text-muted-foreground">
+                      Choisissez comment réagit la bannière
                     </span>
                   </div>
 
-                  <div>
-                    <label className="text-xs font-medium text-muted-foreground block mb-1">
-                      Choisir une destination standard (recommandé)
-                    </label>
-                    <select
-                      value={selectedDeepLinkPreset}
-                      onChange={(e) => handleDeepLinkPresetChange(e.target.value)}
-                      className="w-full text-sm px-3 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                  {/* Choix des 3 modes */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                    <button
+                      type="button"
+                      onClick={() => setActionType('DEEP_LINK')}
+                      className={`p-3 rounded-lg border text-left transition-all ${
+                        actionType === 'DEEP_LINK'
+                          ? 'border-emerald-500 bg-emerald-500/10 shadow-sm'
+                          : 'border-border bg-background hover:bg-muted/40'
+                      }`}
                     >
-                      {DEFAULT_DEEP_LINK_OPTIONS.map((opt) => (
-                        <option key={opt.value} value={opt.value}>
-                          {opt.label} ({opt.category})
-                        </option>
-                      ))}
-                      <option value="custom">🔗 Deep link personnalisé (saisie libre)...</option>
-                    </select>
+                      <div className="flex items-center gap-2">
+                        <LinkIcon className="w-4 h-4 text-emerald-500" />
+                        <span className="text-xs font-bold text-foreground">Lien direct</span>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground mt-1 line-clamp-2">
+                        Redirige immédiatement vers l&apos;écran ou le lien externe.
+                      </p>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setActionType('BOTTOM_SHEET')}
+                      className={`p-3 rounded-lg border text-left transition-all ${
+                        actionType === 'BOTTOM_SHEET'
+                          ? 'border-indigo-500 bg-indigo-500/10 shadow-sm'
+                          : 'border-border bg-background hover:bg-muted/40'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <PanelBottomOpen className="w-4 h-4 text-indigo-400" />
+                        <span className="text-xs font-bold text-foreground">Tiroir bas (Long)</span>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground mt-1 line-clamp-2">
+                        Modale glissant du bas avec image, texte long défilable et CTA.
+                      </p>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setActionType('CENTER_MODAL')}
+                      className={`p-3 rounded-lg border text-left transition-all ${
+                        actionType === 'CENTER_MODAL'
+                          ? 'border-amber-500 bg-amber-500/10 shadow-sm'
+                          : 'border-border bg-background hover:bg-muted/40'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <MessageSquare className="w-4 h-4 text-amber-400" />
+                        <span className="text-xs font-bold text-foreground">Modale centrée (Court)</span>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground mt-1 line-clamp-2">
+                        Dialogue centré élégant avec image pour annonces succinctes.
+                      </p>
+                    </button>
                   </div>
 
+                  {/* Champs spécifiques aux modales d'information */}
+                  {actionType !== 'DEEP_LINK' && (
+                    <div className="pt-3 border-t border-border/80 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                          {actionType === 'BOTTOM_SHEET' ? (
+                            <PanelBottomOpen className="w-3.5 h-3.5 text-indigo-400" />
+                          ) : (
+                            <MessageSquare className="w-3.5 h-3.5 text-amber-400" />
+                          )}
+                          Contenu de la modale native ({actionType === 'BOTTOM_SHEET' ? 'Tiroir bas' : 'Dialogue centré'})
+                        </span>
+                        <span className="text-[10px] text-muted-foreground">
+                          {actionType === 'BOTTOM_SHEET' ? 'Pour histoires & textes longs' : 'Pour messages courts & alertes'}
+                        </span>
+                      </div>
+
+                      {/* Textes de la modale FR & MG */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-xs font-semibold text-muted-foreground block mb-1">
+                            Texte du modal (Français) *
+                          </label>
+                          <textarea
+                            rows={actionType === 'BOTTOM_SHEET' ? 4 : 2}
+                            value={modalBodyFr}
+                            onChange={(e) => setModalBodyFr(e.target.value)}
+                            placeholder={
+                              actionType === 'BOTTOM_SHEET'
+                                ? "Rédigez ici le contenu complet, explications détaillées, histoire ou règles du jeu..."
+                                : "Texte court et percutant de l'annonce..."
+                            }
+                            className="w-full text-sm px-3 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs font-semibold text-muted-foreground block mb-1">
+                            Texte du modal (Malgache)
+                          </label>
+                          <textarea
+                            rows={actionType === 'BOTTOM_SHEET' ? 4 : 2}
+                            value={modalBodyMg}
+                            onChange={(e) => setModalBodyMg(e.target.value)}
+                            placeholder={
+                              actionType === 'BOTTOM_SHEET'
+                                ? "Soraty eto ny tantara, fanazavana feno na fepetra..."
+                                : "Hafatra fohy sy manaitra..."
+                            }
+                            className="w-full text-sm px-3 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Image spécifique au modal & CTA modal */}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <div>
+                          <label className="text-xs font-semibold text-muted-foreground block mb-1">
+                            Image de la modale (optionnel)
+                          </label>
+                          <input
+                            type="url"
+                            value={modalImageUrl}
+                            onChange={(e) => setModalImageUrl(e.target.value)}
+                            placeholder="Laisser vide = image de la bannière"
+                            className="w-full text-sm px-3 py-2 rounded-lg border border-border bg-background font-mono text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs font-semibold text-muted-foreground block mb-1">
+                            Bouton d&apos;action (FR)
+                          </label>
+                          <input
+                            type="text"
+                            value={modalCtaLabelFr}
+                            onChange={(e) => setModalCtaLabelFr(e.target.value)}
+                            placeholder="ex: Continuer, J'ai compris"
+                            className="w-full text-sm px-3 py-2 rounded-lg border border-border bg-background text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs font-semibold text-muted-foreground block mb-1">
+                            Bouton d&apos;action (MG)
+                          </label>
+                          <input
+                            type="text"
+                            value={modalCtaLabelMg}
+                            onChange={(e) => setModalCtaLabelMg(e.target.value)}
+                            placeholder="ex: Tohizo, Azoko"
+                            className="w-full text-sm px-3 py-2 rounded-lg border border-border bg-background text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="text-xs font-semibold text-muted-foreground block mb-1">
+                          Lien de redirection du bouton modal (optionnel)
+                        </label>
+                        <input
+                          type="text"
+                          value={modalCtaLink}
+                          onChange={(e) => setModalCtaLink(e.target.value)}
+                          placeholder="ex: /(screens)/subscription (ferme la modale et ouvre le lien)"
+                          className="w-full text-sm px-3 py-2 rounded-lg border border-border bg-background font-mono text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* 6. Destination / Deep Link avec liste directe cliquable */}
+                <div className="p-4 rounded-xl border border-border bg-muted/20 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <LinkIcon className="w-4 h-4 text-emerald-500" />
+                      <span className="text-xs font-bold uppercase tracking-wider text-foreground">
+                        {actionType === 'DEEP_LINK'
+                          ? 'Destination directe (Deep Link)'
+                          : 'Lien secondaire ou de secours'}
+                      </span>
+                    </div>
+                    <span className="text-[11px] text-muted-foreground">
+                      Cliquez directement sur une suggestion ci-dessous
+                    </span>
+                  </div>
+
+                  {/* Barre de recherche rapide de deep link */}
+                  <div className="relative">
+                    <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                    <input
+                      type="text"
+                      value={deepLinkSearch}
+                      onChange={(e) => setDeepLinkSearch(e.target.value)}
+                      placeholder="Filtrer parmi les destinations disponibles..."
+                      className="w-full text-xs pl-8 pr-3 py-1.5 rounded-lg border border-border bg-background focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                    />
+                  </div>
+
+                  {/* Liste directe des deep links cliquables */}
+                  <div className="max-h-36 overflow-y-auto pr-1 space-y-1.5 border border-border/60 rounded-lg p-2 bg-background/50">
+                    {DEFAULT_DEEP_LINK_OPTIONS.filter((opt) =>
+                      !deepLinkSearch
+                        ? true
+                        : opt.label.toLowerCase().includes(deepLinkSearch.toLowerCase()) ||
+                          opt.category.toLowerCase().includes(deepLinkSearch.toLowerCase()) ||
+                          opt.value.toLowerCase().includes(deepLinkSearch.toLowerCase())
+                    ).map((opt) => {
+                      const isSelected = deepLink === opt.value;
+                      return (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          onClick={() => handleSelectDeepLinkDirect(opt.value)}
+                          className={`w-full flex items-center justify-between p-2 rounded text-left transition-colors text-xs ${
+                            isSelected
+                              ? 'bg-emerald-500/15 border border-emerald-500/40 text-foreground font-semibold'
+                              : 'hover:bg-muted text-muted-foreground border border-transparent'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2 truncate">
+                            <span className="text-[10px] px-1.5 py-0.2 rounded bg-muted border font-mono">
+                              {opt.category}
+                            </span>
+                            <span className="truncate">{opt.label}</span>
+                          </div>
+                          <code className="text-[10.5px] font-mono text-emerald-500 flex-shrink-0 ml-2">
+                            {opt.value}
+                          </code>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Champ de saisie manuelle */}
                   <div>
                     <label className="text-xs font-medium text-muted-foreground block mb-1">
-                      Chemin Expo Router ou URL complète
+                      Chemin Expo Router ou URL complète (saisie libre)
                     </label>
                     <input
                       type="text"

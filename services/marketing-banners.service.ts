@@ -15,6 +15,13 @@ export interface MarketingBanner {
   accentColor: string;
   orderIndex: number;
   isActive: boolean;
+  actionType: 'DEEP_LINK' | 'BOTTOM_SHEET' | 'CENTER_MODAL';
+  modalBodyFr?: string | null;
+  modalBodyMg?: string | null;
+  modalImageUrl?: string | null;
+  modalCtaLabelFr?: string | null;
+  modalCtaLabelMg?: string | null;
+  modalCtaLink?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -33,6 +40,13 @@ export interface CreateMarketingBannerInput {
   accentColor?: string;
   orderIndex?: number;
   isActive?: boolean;
+  actionType?: 'DEEP_LINK' | 'BOTTOM_SHEET' | 'CENTER_MODAL';
+  modalBodyFr?: string;
+  modalBodyMg?: string;
+  modalImageUrl?: string;
+  modalCtaLabelFr?: string;
+  modalCtaLabelMg?: string;
+  modalCtaLink?: string;
 }
 
 export type UpdateMarketingBannerInput = Partial<CreateMarketingBannerInput>;
