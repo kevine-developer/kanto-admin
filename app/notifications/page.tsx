@@ -3,6 +3,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { AdminShell } from '@/components/layout/AdminShell';
 import { fetchApi } from '@/lib/api-client';
+import { Button } from '@/components/ui/Button';
+import { Input, Textarea, Select } from '@/components/ui/Input';
 import {
   Bell,
   Plus,
@@ -192,10 +194,7 @@ export default function NotificationsAdminPage() {
       setNotifications(data || []);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Erreur lors du chargement des notifications.';
-      setMessage({
-        type: 'error',
-        text: msg,
-      });
+      setMessage({ type: 'error', text: msg });
     } finally {
       setIsLoading(false);
     }
@@ -204,53 +203,29 @@ export default function NotificationsAdminPage() {
   useEffect(() => {
     let isMounted = true;
     fetchApi<NotificationItem[]>('/admin/notifications')
-      .then((data) => {
-        if (isMounted) setNotifications(data || []);
-      })
+      .then((data) => { if (isMounted) setNotifications(data || []); })
       .catch((err: unknown) => {
         if (!isMounted) return;
         const msg = err instanceof Error ? err.message : 'Erreur lors du chargement des notifications.';
-        setMessage({
-          type: 'error',
-          text: msg,
-        });
+        setMessage({ type: 'error', text: msg });
       })
-      .finally(() => {
-        if (isMounted) setIsLoading(false);
-      });
-
-    return () => {
-      isMounted = false;
-    };
+      .finally(() => { if (isMounted) setIsLoading(false); });
+    return () => { isMounted = false; };
   }, []);
 
   const resetForm = () => {
-    setTitleMg('');
-    setTitleFr('');
-    setMessageMg('');
-    setMessageFr('');
-    setCategory('culture');
-    setBadgeText('');
-    setBadgeType('new');
-    setTargetRoute('');
-    setPreviewLanguage('mg');
-    setPreviewMode('lockscreen');
+    setTitleMg(''); setTitleFr(''); setMessageMg(''); setMessageFr('');
+    setCategory('culture'); setBadgeText(''); setBadgeType('new'); setTargetRoute('');
+    setPreviewLanguage('mg'); setPreviewMode('lockscreen');
   };
 
-  const handleOpenCreateModal = () => {
-    resetForm();
-    setIsModalOpen(true);
-  };
+  const handleOpenCreateModal = () => { resetForm(); setIsModalOpen(true); };
 
   const handleApplyPreset = (preset: CulturalPreset) => {
-    setTitleMg(preset.titleMg);
-    setTitleFr(preset.titleFr);
-    setMessageMg(preset.messageMg);
-    setMessageFr(preset.messageFr);
-    setCategory(preset.category);
-    setBadgeText(preset.badgeText);
-    setBadgeType(preset.badgeType);
-    setTargetRoute(preset.targetRoute);
+    setTitleMg(preset.titleMg); setTitleFr(preset.titleFr);
+    setMessageMg(preset.messageMg); setMessageFr(preset.messageFr);
+    setCategory(preset.category); setBadgeText(preset.badgeText);
+    setBadgeType(preset.badgeType); setTargetRoute(preset.targetRoute);
   };
 
   const handleTestPush = async () => {
@@ -258,15 +233,9 @@ export default function NotificationsAdminPage() {
       setIsTestingPush(true);
       const res = await fetchApi<{ success: boolean; message: string; sentCount?: number }>(
         '/admin/notifications/test-push',
-        {
-          method: 'POST',
-          body: JSON.stringify({}),
-        },
+        { method: 'POST', body: JSON.stringify({}) },
       );
-      setMessage({
-        type: res.success ? 'success' : 'error',
-        text: res.message || 'Test push exécuté avec succès.',
-      });
+      setMessage({ type: res.success ? 'success' : 'error', text: res.message || 'Test push exécuté avec succès.' });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Erreur lors du test de notification push.';
       setMessage({ type: 'error', text: msg });
@@ -281,28 +250,22 @@ export default function NotificationsAdminPage() {
       setMessage({ type: 'error', text: 'Le titre et le message en malgache sont requis.' });
       return;
     }
-
     try {
       setIsSubmitting(true);
       const catObj = CATEGORIES.find((c) => c.id === category);
-
       await fetchApi('/admin/notifications', {
         method: 'POST',
         body: JSON.stringify({
-          titleMg: titleMg.trim(),
-          titleFr: titleFr.trim() || undefined,
-          messageMg: messageMg.trim(),
-          messageFr: messageFr.trim() || undefined,
+          titleMg: titleMg.trim(), titleFr: titleFr.trim() || undefined,
+          messageMg: messageMg.trim(), messageFr: messageFr.trim() || undefined,
           category,
-          badgeText: badgeText.trim() || undefined,
-          badgeType,
+          badgeText: badgeText.trim() || undefined, badgeType,
           iconName: category === 'game' ? 'flame-outline' : category === 'civic' ? 'scale-outline' : 'bulb-outline',
           iconColor: catObj?.color || '#C0392B',
           targetRoute: targetRoute.trim() || undefined,
           isBroadcast: true,
         }),
       });
-
       setMessage({ type: 'success', text: 'Notification diffusée avec succès à tous les utilisateurs !' });
       setIsModalOpen(false);
       resetForm();
@@ -332,200 +295,175 @@ export default function NotificationsAdminPage() {
 
   return (
     <AdminShell>
-      <div className="space-y-6">
-        {/* En-tête */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[var(--sidebar-border)] pb-5">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-red-500/10 text-red-500 flex items-center justify-center border border-red-500/20">
-              <Bell size={20} />
+      <div className="space-y-6 max-w-6xl">
+
+        {/* ── En-tête ── */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5">
+            <div className="w-11 h-11 rounded-2xl bg-red-500/10 text-red-500 flex items-center justify-center border border-red-500/15 shadow-sm">
+              <Bell size={22} />
             </div>
             <div>
-              <h1 className="text-xl font-bold font-heritage tracking-tight text-[var(--foreground)]">
-                Notifications &amp; Alertes
+              <h1 className="text-xl font-bold font-heritage tracking-tight" style={{ color: 'var(--foreground)' }}>
+                Notifications & Alertes
               </h1>
-              <p className="text-xs text-[var(--muted)]">
+              <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
                 Diffuser des annonces, actualités culturelles et alertes push à tous les utilisateurs
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
-            <button
+            <Button
+              variant="outline"
+              size="sm"
               onClick={handleTestPush}
               disabled={isTestingPush}
-              title="Envoyer une notification push test vers les appareils enregistrés"
-              className="px-3 py-2 text-xs font-medium rounded-lg border border-[var(--sidebar-border)] text-[var(--foreground)] hover:bg-[var(--sidebar-border)]/20 transition-colors flex items-center gap-1.5"
+              leftIcon={isTestingPush ? <Loader2 size={13} className="animate-spin text-amber-500" /> : <Radio size={13} className="text-amber-500" />}
             >
-              {isTestingPush ? (
-                <Loader2 size={13} className="animate-spin text-amber-500" />
-              ) : (
-                <Radio size={13} className="text-amber-500" />
-              )}
-              <span>Tester le Push</span>
-            </button>
-
-            <button
+              Tester le Push
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
               onClick={loadNotifications}
               disabled={isLoading}
-              className="px-3 py-2 text-xs font-medium rounded-lg border border-[var(--sidebar-border)] text-[var(--foreground)] hover:bg-[var(--sidebar-border)]/20 transition-colors flex items-center gap-1.5"
+              leftIcon={<RotateCcw size={13} className={isLoading ? 'animate-spin' : ''} />}
             >
-              <RotateCcw size={13} className={isLoading ? 'animate-spin' : ''} />
-              <span>Actualiser</span>
-            </button>
-
-            <button
+              Actualiser
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
               onClick={handleOpenCreateModal}
-              className="px-4 py-2 text-xs font-medium rounded-lg bg-[var(--primary)] text-white hover:opacity-90 transition-opacity flex items-center gap-2 shadow-sm"
+              leftIcon={<Plus size={14} />}
             >
-              <Plus size={14} />
               Diffuser une notification
-            </button>
+            </Button>
           </div>
         </div>
 
-        {/* Message d'alerte */}
+        {/* ── Alerte feedback ── */}
         {message && (
           <div
-            className={`p-3 rounded-lg border text-xs flex items-center justify-between gap-3 ${
+            className={`p-3.5 rounded-xl border text-xs flex items-center justify-between gap-3 shadow-sm ${
               message.type === 'success'
-                ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500'
-                : 'bg-red-500/10 border-red-500/20 text-red-500'
+                ? 'bg-emerald-500/8 border-emerald-500/20 text-emerald-600 dark:text-emerald-400'
+                : 'bg-red-500/8 border-red-500/20 text-red-600 dark:text-red-400'
             }`}
           >
-            <div className="flex items-center gap-2">
-              {message.type === 'success' ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
+            <div className="flex items-center gap-2 font-medium">
+              {message.type === 'success' ? <CheckCircle2 size={15} /> : <AlertCircle size={15} />}
               <span>{message.text}</span>
             </div>
-            <button onClick={() => setMessage(null)} className="opacity-70 hover:opacity-100">
+            <button onClick={() => setMessage(null)} className="opacity-60 hover:opacity-100 transition-opacity shrink-0">
               <X size={14} />
             </button>
           </div>
         )}
 
-        {/* Statistiques rapides */}
+        {/* ── Stats rapides ── */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <div className="p-3.5 rounded-xl border border-[var(--sidebar-border)] bg-[var(--card-bg)]">
-            <div className="text-xs text-[var(--muted)] font-medium">Total envoyées</div>
-            <div className="text-2xl font-bold mt-1 text-[var(--foreground)] font-heritage">
-              {notifications.length}
+          {[
+            { label: 'Total envoyées', value: notifications.length, color: 'var(--accent)' },
+            { label: 'Culture & Angano', value: notifications.filter((n) => n.category === 'culture').length, color: '#C0392B' },
+            { label: 'Jeux & Défis', value: notifications.filter((n) => n.category === 'game').length, color: '#E67E22' },
+            { label: 'Civique & Fady', value: notifications.filter((n) => n.category === 'civic').length, color: '#4A6741' },
+          ].map((stat) => (
+            <div key={stat.label} className="kanto-stat-mini relative overflow-hidden">
+              <div className="absolute top-0 left-0 right-0 h-0.5 rounded-full" style={{ background: stat.color }} />
+              <div className="text-[11px] font-medium mt-1" style={{ color: 'var(--text-muted)' }}>{stat.label}</div>
+              <div className="text-2xl font-bold mt-1 font-heritage" style={{ color: stat.color }}>{stat.value}</div>
             </div>
-          </div>
-          <div className="p-3.5 rounded-xl border border-[var(--sidebar-border)] bg-[var(--card-bg)]">
-            <div className="text-xs text-[var(--muted)] font-medium">Culture &amp; Angano</div>
-            <div className="text-2xl font-bold mt-1 text-red-500 font-heritage">
-              {notifications.filter((n) => n.category === 'culture').length}
-            </div>
-          </div>
-          <div className="p-3.5 rounded-xl border border-[var(--sidebar-border)] bg-[var(--card-bg)]">
-            <div className="text-xs text-[var(--muted)] font-medium">Jeux &amp; Défis</div>
-            <div className="text-2xl font-bold mt-1 text-amber-500 font-heritage">
-              {notifications.filter((n) => n.category === 'game').length}
-            </div>
-          </div>
-          <div className="p-3.5 rounded-xl border border-[var(--sidebar-border)] bg-[var(--card-bg)]">
-            <div className="text-xs text-[var(--muted)] font-medium">Civique &amp; Fady</div>
-            <div className="text-2xl font-bold mt-1 text-emerald-500 font-heritage">
-              {notifications.filter((n) => n.category === 'civic').length}
-            </div>
-          </div>
+          ))}
         </div>
 
-        {/* Tableau des notifications */}
-        <div className="rounded-xl border border-[var(--sidebar-border)] bg-[var(--card-bg)] overflow-hidden">
-          <div className="px-4 py-3 border-b border-[var(--sidebar-border)] flex items-center justify-between">
-            <h2 className="text-xs font-semibold uppercase tracking-wider text-[var(--foreground)]">
-              Historique des diffusions ({notifications.length})
+        {/* ── Tableau des notifications ── */}
+        <div className="kanto-card rounded-2xl overflow-hidden">
+          <div className="px-5 py-3.5 border-b flex items-center justify-between" style={{ borderColor: 'var(--card-border)' }}>
+            <h2 className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
+              Historique des diffusions
+              <span className="ml-2 px-2 py-0.5 rounded-full text-[10px] font-semibold" style={{ background: 'var(--accent-light)', color: 'var(--accent-text)' }}>
+                {notifications.length}
+              </span>
             </h2>
           </div>
 
           {isLoading ? (
-            <div className="py-16 flex flex-col items-center justify-center gap-3 text-[var(--muted)]">
-              <Loader2 size={24} className="animate-spin" />
-              <span className="text-xs">Chargement des notifications...</span>
+            <div className="py-20 flex flex-col items-center justify-center gap-3" style={{ color: 'var(--text-muted)' }}>
+              <Loader2 size={22} className="animate-spin" />
+              <span className="text-xs font-medium">Chargement des notifications...</span>
             </div>
           ) : notifications.length === 0 ? (
-            <div className="py-16 text-center text-[var(--muted)] text-xs">
-              Aucune notification diffusée pour le moment.
+            <div className="py-20 text-center" style={{ color: 'var(--text-muted)' }}>
+              <Bell size={32} className="mx-auto mb-3 opacity-20" />
+              <p className="text-sm font-medium">Aucune notification diffusée</p>
+              <p className="text-xs mt-1 opacity-70">Créez votre première notification en cliquant sur &quot;Diffuser&quot;</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs border-collapse">
+              <table className="kanto-table">
                 <thead>
-                  <tr className="border-b border-[var(--sidebar-border)] bg-[var(--sidebar-border)]/10 text-[var(--muted)] font-medium">
-                    <th className="py-3 px-4">Catégorie</th>
-                    <th className="py-3 px-4">Titre Malgache / Français</th>
-                    <th className="py-3 px-4">Message diffusé</th>
-                    <th className="py-3 px-4">Lien &amp; Badge</th>
-                    <th className="py-3 px-4">Date de diffusion</th>
-                    <th className="py-3 px-4 text-right">Actions</th>
+                  <tr>
+                    <th>Catégorie</th>
+                    <th>Titre MG / FR</th>
+                    <th>Message diffusé</th>
+                    <th>Badge & Route</th>
+                    <th>Date</th>
+                    <th className="text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[var(--sidebar-border)]">
+                <tbody>
                   {notifications.map((item) => {
                     const catObj = CATEGORIES.find((c) => c.id === item.category) || CATEGORIES[0];
                     const IconComp = catObj.icon;
                     const dateFormatted = new Date(item.createdAt).toLocaleString('fr-FR', {
-                      day: '2-digit',
-                      month: 'short',
-                      year: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit',
+                      day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
                     });
-
                     return (
-                      <tr key={item.id} className="hover:bg-[var(--sidebar-border)]/10 transition-colors">
-                        <td className="py-3 px-4 align-top">
-                          <span
-                            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-medium border ${catObj.bg}`}
-                          >
-                            <IconComp size={12} />
+                      <tr key={item.id}>
+                        <td>
+                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold border ${catObj.bg}`}>
+                            <IconComp size={11} />
                             {catObj.label.split('&')[0].trim()}
                           </span>
                         </td>
-
-                        <td className="py-3 px-4 align-top max-w-[200px]">
-                          <div className="font-semibold text-[var(--foreground)]">{item.titleMg}</div>
+                        <td className="max-w-[180px]">
+                          <div className="font-semibold text-xs truncate" style={{ color: 'var(--foreground)' }}>{item.titleMg}</div>
                           {item.titleFr && (
-                            <div className="text-[11px] text-[var(--muted)] italic mt-0.5">{item.titleFr}</div>
+                            <div className="text-[11px] italic mt-0.5 truncate" style={{ color: 'var(--text-muted)' }}>{item.titleFr}</div>
                           )}
                         </td>
-
-                        <td className="py-3 px-4 align-top max-w-[320px]">
-                          <div className="text-[var(--foreground)] line-clamp-2">{item.messageMg}</div>
+                        <td className="max-w-[280px]">
+                          <div className="text-xs line-clamp-2" style={{ color: 'var(--foreground)' }}>{item.messageMg}</div>
                           {item.messageFr && (
-                            <div className="text-[11px] text-[var(--muted)] line-clamp-1 italic mt-0.5">
-                              {item.messageFr}
-                            </div>
+                            <div className="text-[11px] italic line-clamp-1 mt-0.5" style={{ color: 'var(--text-muted)' }}>{item.messageFr}</div>
                           )}
                         </td>
-
-                        <td className="py-3 px-4 align-top">
+                        <td>
                           <div className="flex flex-col gap-1 items-start">
                             {item.badgeText && (
-                              <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-[var(--sidebar-border)]/40 text-[var(--foreground)]">
+                              <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold" style={{ background: 'var(--accent-light)', color: 'var(--accent-text)', border: '1px solid var(--accent-border)' }}>
                                 {item.badgeText}
                               </span>
                             )}
                             {item.targetRoute && (
-                              <span className="text-[10px] text-[var(--muted)] font-mono flex items-center gap-1">
-                                <ExternalLink size={10} />
-                                {item.targetRoute}
+                              <span className="text-[10px] font-mono flex items-center gap-1" style={{ color: 'var(--text-subtle)' }}>
+                                <ExternalLink size={9} />{item.targetRoute}
                               </span>
                             )}
                           </div>
                         </td>
-
-                        <td className="py-3 px-4 align-top text-[var(--muted)] whitespace-nowrap">
-                          {dateFormatted}
+                        <td>
+                          <span className="text-[11px] whitespace-nowrap" style={{ color: 'var(--text-muted)' }}>{dateFormatted}</span>
                         </td>
-
-                        <td className="py-3 px-4 align-top text-right">
+                        <td className="text-right">
                           <button
                             onClick={() => handleDelete(item.id)}
                             className="p-1.5 rounded-lg text-red-500 hover:bg-red-500/10 transition-colors inline-flex items-center justify-center"
                             title="Supprimer la notification"
                           >
-                            <Trash2 size={14} />
+                            <Trash2 size={13} />
                           </button>
                         </td>
                       </tr>
@@ -536,44 +474,51 @@ export default function NotificationsAdminPage() {
             </div>
           )}
         </div>
+      </div>
 
-        {/* Modal de Diffusion */}
-        {isModalOpen && (
-          <div className="fixed inset-0 z-50 overflow-y-auto flex items-start justify-center p-4 pt-6 sm:pt-10 md:pt-12 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
-            <div className="w-full max-w-3xl rounded-2xl border border-[var(--sidebar-border)] bg-[var(--card-bg)] shadow-2xl overflow-hidden flex flex-col max-h-[calc(100vh-3rem)] sm:max-h-[calc(100vh-5.5rem)] animate-in fade-in slide-in-from-top-3 duration-150">
-              {/* Header modal */}
-              <div className="px-6 py-4 border-b border-[var(--sidebar-border)] flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-lg bg-red-500/10 text-red-500 flex items-center justify-center border border-red-500/20">
-                    <Send size={16} />
-                  </div>
-                  <div>
-                    <h3 className="text-base font-bold font-heritage text-[var(--foreground)]">
-                      Diffuser une nouvelle notification
-                    </h3>
-                    <p className="text-xs text-[var(--muted)]">
-                      L&apos;annonce sera diffusée via notification push Expo et publiée dans le centre de notifications de l&apos;application
-                    </p>
-                  </div>
+      {/* ── Modal de diffusion ── */}
+      {isModalOpen && (
+        <div className="kanto-modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setIsModalOpen(false); }}>
+          <div className="kanto-modal-content max-w-3xl max-h-[calc(100vh-3rem)]" style={{ marginTop: '1.5rem' }}>
+
+            {/* Header modal */}
+            <div className="px-6 py-4 border-b flex items-center justify-between shrink-0" style={{ borderColor: 'var(--card-border)' }}>
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-red-500/10 text-red-500 flex items-center justify-center border border-red-500/15">
+                  <Send size={17} />
                 </div>
-                <button
-                  onClick={() => setIsModalOpen(false)}
-                  className="p-1.5 rounded-lg text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--sidebar-border)]/20 transition-colors"
-                >
-                  <X size={18} />
-                </button>
+                <div>
+                  <h3 className="text-sm font-bold font-heritage" style={{ color: 'var(--foreground)' }}>
+                    Diffuser une nouvelle notification
+                  </h3>
+                  <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                    Annonce push Expo + centre de notifications de l&apos;application
+                  </p>
+                </div>
               </div>
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors"
+                style={{ color: 'var(--text-muted)' }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = 'var(--card-hover)'; (e.currentTarget as HTMLButtonElement).style.color = 'var(--foreground)'; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)'; }}
+              >
+                <X size={16} />
+              </button>
+            </div>
 
-              {/* Contenu du formulaire */}
-              <form onSubmit={handleSubmit} className="overflow-y-auto p-6 space-y-5">
-                {/* Modèles culturels prédéfinis (Presets) */}
-                <div className="p-3.5 rounded-xl border border-[var(--sidebar-border)] bg-[var(--sidebar-border)]/10 space-y-2">
+            {/* Corps du formulaire */}
+            <form onSubmit={handleSubmit} className="overflow-y-auto flex-1">
+              <div className="p-6 space-y-5">
+
+                {/* Modèles prédéfinis */}
+                <div className="p-4 rounded-xl border space-y-3" style={{ borderColor: 'var(--card-border)', background: 'var(--background)' }}>
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-[var(--foreground)] flex items-center gap-1.5">
-                      <Layers size={13} className="text-[var(--primary)]" />
-                      Modèles culturels prédéfinis (remplissage en 1 clic) :
+                    <span className="text-xs font-semibold flex items-center gap-1.5" style={{ color: 'var(--foreground)' }}>
+                      <Layers size={13} style={{ color: 'var(--accent)' }} />
+                      Modèles culturels prédéfinis
                     </span>
-                    <span className="text-[10px] text-[var(--muted)]">Cliquez pour appliquer</span>
+                    <span className="text-[10px]" style={{ color: 'var(--text-subtle)' }}>Cliquez pour appliquer</span>
                   </div>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                     {CULTURAL_PRESETS.map((preset) => (
@@ -581,19 +526,20 @@ export default function NotificationsAdminPage() {
                         key={preset.id}
                         type="button"
                         onClick={() => handleApplyPreset(preset)}
-                        className="px-2.5 py-2 rounded-lg border border-[var(--sidebar-border)] bg-[var(--card-bg)] hover:border-[var(--primary)] text-left transition-all group"
+                        className="px-3 py-2.5 rounded-xl border text-left transition-all group"
+                        style={{ borderColor: 'var(--card-border)', background: 'var(--card)' }}
+                        onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--accent)'; (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 0 0 1px var(--accent)'; }}
+                        onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--card-border)'; (e.currentTarget as HTMLButtonElement).style.boxShadow = 'none'; }}
                       >
                         <div className="flex items-center justify-between gap-1 mb-0.5">
-                          <span className="text-[10px] font-semibold text-[var(--foreground)] group-hover:text-[var(--primary)] truncate">
+                          <span className="text-[11px] font-semibold truncate" style={{ color: 'var(--foreground)' }}>
                             {preset.name}
                           </span>
-                          <span className="text-[9px] px-1.5 py-0.2 rounded bg-[var(--sidebar-border)]/40 text-[var(--muted)] shrink-0">
+                          <span className="text-[9px] px-1.5 py-0.5 rounded font-medium shrink-0" style={{ background: 'var(--accent-light)', color: 'var(--accent-text)' }}>
                             {preset.tag}
                           </span>
                         </div>
-                        <div className="text-[10px] text-[var(--muted)] truncate">
-                          {preset.titleMg}
-                        </div>
+                        <div className="text-[10px] truncate" style={{ color: 'var(--text-subtle)' }}>{preset.titleMg}</div>
                       </button>
                     ))}
                   </div>
@@ -601,8 +547,8 @@ export default function NotificationsAdminPage() {
 
                 {/* Catégorie */}
                 <div>
-                  <label className="block text-xs font-semibold text-[var(--foreground)] mb-2">
-                    Catégorie de la notification
+                  <label className="block text-xs font-semibold mb-2" style={{ color: 'var(--foreground)' }}>
+                    Catégorie
                   </label>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                     {CATEGORIES.map((c) => {
@@ -614,12 +560,16 @@ export default function NotificationsAdminPage() {
                           type="button"
                           onClick={() => setCategory(c.id)}
                           className={`p-2.5 rounded-xl border text-xs font-medium flex items-center gap-2 transition-all ${
-                            isSelected
-                              ? 'border-[var(--primary)] bg-[var(--primary)]/10 text-[var(--primary)] font-bold shadow-xs'
-                              : 'border-[var(--sidebar-border)] hover:bg-[var(--sidebar-border)]/15 text-[var(--muted)]'
+                            isSelected ? 'font-bold' : ''
                           }`}
+                          style={{
+                            borderColor: isSelected ? 'var(--accent)' : 'var(--card-border)',
+                            background: isSelected ? 'var(--accent-light)' : 'var(--card)',
+                            color: isSelected ? 'var(--accent-text)' : 'var(--text-muted)',
+                            boxShadow: isSelected ? '0 0 0 1px var(--accent)' : 'none',
+                          }}
                         >
-                          <IconComp size={15} style={{ color: c.color }} />
+                          <IconComp size={14} style={{ color: c.color }} />
                           <span className="truncate">{c.label}</span>
                         </button>
                       );
@@ -629,259 +579,131 @@ export default function NotificationsAdminPage() {
 
                 {/* Titres bilingues */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-[var(--foreground)] mb-1.5">
-                      Titre en malgache <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={titleMg}
-                      onChange={(e) => setTitleMg(e.target.value)}
-                      placeholder="Ex: Ohabolana anio..."
-                      required
-                      className="w-full px-3 py-2 text-xs rounded-lg border border-[var(--sidebar-border)] bg-[var(--background)] text-[var(--foreground)] focus:outline-hidden focus:ring-1 focus:ring-[var(--primary)]"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-[var(--foreground)] mb-1.5">
-                      Titre en français <span className="text-xs text-[var(--muted)]">(optionnel)</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={titleFr}
-                      onChange={(e) => setTitleFr(e.target.value)}
-                      placeholder="Ex: Proverbe du jour..."
-                      className="w-full px-3 py-2 text-xs rounded-lg border border-[var(--sidebar-border)] bg-[var(--background)] text-[var(--foreground)] focus:outline-hidden focus:ring-1 focus:ring-[var(--primary)]"
-                    />
-                  </div>
+                  <Input
+                    label="Titre en malgache *"
+                    value={titleMg}
+                    onChange={(e) => setTitleMg(e.target.value)}
+                    placeholder="Ex: Ohabolana anio..."
+                    required
+                  />
+                  <Input
+                    label="Titre en français"
+                    value={titleFr}
+                    onChange={(e) => setTitleFr(e.target.value)}
+                    placeholder="Ex: Proverbe du jour..."
+                    helperText="Optionnel"
+                  />
                 </div>
 
                 {/* Messages bilingues */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-[var(--foreground)] mb-1.5">
-                      Message en malgache <span className="text-red-500">*</span>
-                    </label>
-                    <textarea
-                      rows={3}
-                      value={messageMg}
-                      onChange={(e) => setMessageMg(e.target.value)}
-                      placeholder="Soraty eto ny hafatra fampahafantarana..."
-                      required
-                      className="w-full px-3 py-2 text-xs rounded-lg border border-[var(--sidebar-border)] bg-[var(--background)] text-[var(--foreground)] focus:outline-hidden focus:ring-1 focus:ring-[var(--primary)]"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-[var(--foreground)] mb-1.5">
-                      Message en français <span className="text-xs text-[var(--muted)]">(optionnel)</span>
-                    </label>
-                    <textarea
-                      rows={3}
-                      value={messageFr}
-                      onChange={(e) => setMessageFr(e.target.value)}
-                      placeholder="Texte explicatif pour les lecteurs francophones..."
-                      className="w-full px-3 py-2 text-xs rounded-lg border border-[var(--sidebar-border)] bg-[var(--background)] text-[var(--foreground)] focus:outline-hidden focus:ring-1 focus:ring-[var(--primary)]"
-                    />
-                  </div>
+                  <Textarea
+                    label="Message en malgache *"
+                    value={messageMg}
+                    onChange={(e) => setMessageMg(e.target.value)}
+                    placeholder="Soraty eto ny hafatra fampahafantarana..."
+                    required
+                    rows={3}
+                  />
+                  <Textarea
+                    label="Message en français"
+                    value={messageFr}
+                    onChange={(e) => setMessageFr(e.target.value)}
+                    placeholder="Texte explicatif pour les lecteurs francophones..."
+                    rows={3}
+                    helperText="Optionnel"
+                  />
                 </div>
 
-                {/* Badges & Routes */}
+                {/* Badge & Route */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-[var(--foreground)] mb-1.5">
-                      Texte du Badge
-                    </label>
-                    <input
-                      type="text"
-                      value={badgeText}
-                      onChange={(e) => setBadgeText(e.target.value)}
-                      placeholder="Ex: Ohabolana, Fanamby..."
-                      className="w-full px-3 py-2 text-xs rounded-lg border border-[var(--sidebar-border)] bg-[var(--background)] text-[var(--foreground)] focus:outline-hidden focus:ring-1 focus:ring-[var(--primary)]"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-[var(--foreground)] mb-1.5">
-                      Type de Badge
-                    </label>
-                    <select
-                      value={badgeType}
-                      onChange={(e) => setBadgeType(e.target.value)}
-                      className="w-full px-3 py-2 text-xs rounded-lg border border-[var(--sidebar-border)] bg-[var(--background)] text-[var(--foreground)] focus:outline-hidden focus:ring-1 focus:ring-[var(--primary)]"
-                    >
-                      {BADGE_TYPES.map((b) => (
-                        <option key={b.id} value={b.id}>
-                          {b.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-[var(--foreground)] mb-1.5">
-                      Redirection / Route
-                    </label>
-                    <select
-                      value={targetRoute}
-                      onChange={(e) => setTargetRoute(e.target.value)}
-                      className="w-full px-3 py-2 text-xs rounded-lg border border-[var(--sidebar-border)] bg-[var(--background)] text-[var(--foreground)] focus:outline-hidden focus:ring-1 focus:ring-[var(--primary)]"
-                    >
-                      {PRESET_ROUTES.map((r, i) => (
-                        <option key={i} value={r.value}>
-                          {r.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                  <Input
+                    label="Texte du Badge"
+                    value={badgeText}
+                    onChange={(e) => setBadgeText(e.target.value)}
+                    placeholder="Ex: Ohabolana, Fanamby..."
+                  />
+                  <Select
+                    label="Type de Badge"
+                    value={badgeType}
+                    onChange={(e) => setBadgeType(e.target.value)}
+                    options={BADGE_TYPES.map((b) => ({ label: b.label, value: b.id }))}
+                  />
+                  <Select
+                    label="Redirection / Route"
+                    value={targetRoute}
+                    onChange={(e) => setTargetRoute(e.target.value)}
+                    options={PRESET_ROUTES.map((r) => ({ label: r.label, value: r.value }))}
+                  />
                 </div>
 
-                {/* Aperçu en direct Smartphone (Live Smartphone Preview) */}
-                <div className="p-4 rounded-xl border border-[var(--sidebar-border)] bg-[var(--background)] space-y-3">
+                {/* Aperçu mobile */}
+                <div className="p-4 rounded-xl border space-y-3" style={{ borderColor: 'var(--card-border)', background: 'var(--background)' }}>
                   <div className="flex items-center justify-between flex-wrap gap-2">
-                    <div className="text-[11px] font-semibold text-[var(--muted)] uppercase tracking-wider flex items-center gap-1.5">
-                      <Smartphone size={14} className="text-[var(--primary)]" />
-                      Prévisualisation mobile en direct
+                    <div className="text-[11px] font-semibold uppercase tracking-wider flex items-center gap-1.5" style={{ color: 'var(--text-muted)' }}>
+                      <Smartphone size={13} style={{ color: 'var(--accent)' }} />
+                      Prévisualisation mobile
                     </div>
-
-                    <div className="flex items-center gap-3">
-                      {/* Switch mode aperçu */}
-                      <div className="inline-flex rounded-lg border border-[var(--sidebar-border)] p-0.5 bg-[var(--card-bg)] text-[10px]">
-                        <button
-                          type="button"
-                          onClick={() => setPreviewMode('lockscreen')}
-                          className={`px-2 py-0.5 rounded-md font-medium transition-colors ${
-                            previewMode === 'lockscreen'
-                              ? 'bg-[var(--primary)] text-white'
-                              : 'text-[var(--muted)] hover:text-[var(--foreground)]'
-                          }`}
-                        >
-                          Push Écran
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setPreviewMode('inapp')}
-                          className={`px-2 py-0.5 rounded-md font-medium transition-colors ${
-                            previewMode === 'inapp'
-                              ? 'bg-[var(--primary)] text-white'
-                              : 'text-[var(--muted)] hover:text-[var(--foreground)]'
-                          }`}
-                        >
-                          Carte In-App
-                        </button>
+                    <div className="flex items-center gap-2">
+                      <div className="kanto-toggle-group">
+                        {(['lockscreen', 'inapp'] as const).map((mode) => (
+                          <button key={mode} type="button" onClick={() => setPreviewMode(mode)} className={`kanto-toggle-pill ${previewMode === mode ? 'active' : ''}`}>
+                            {mode === 'lockscreen' ? 'Push Écran' : 'Carte In-App'}
+                          </button>
+                        ))}
                       </div>
-
-                      {/* Switch langue aperçu */}
-                      <div className="inline-flex rounded-lg border border-[var(--sidebar-border)] p-0.5 bg-[var(--card-bg)] text-[10px]">
-                        <button
-                          type="button"
-                          onClick={() => setPreviewLanguage('mg')}
-                          className={`px-2 py-0.5 rounded-md font-medium transition-colors ${
-                            previewLanguage === 'mg'
-                              ? 'bg-[var(--primary)] text-white'
-                              : 'text-[var(--muted)] hover:text-[var(--foreground)]'
-                          }`}
-                        >
-                          Malgache
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setPreviewLanguage('fr')}
-                          className={`px-2 py-0.5 rounded-md font-medium transition-colors ${
-                            previewLanguage === 'fr'
-                              ? 'bg-[var(--primary)] text-white'
-                              : 'text-[var(--muted)] hover:text-[var(--foreground)]'
-                          }`}
-                        >
-                          Français
-                        </button>
+                      <div className="kanto-toggle-group">
+                        {(['mg', 'fr'] as const).map((lang) => (
+                          <button key={lang} type="button" onClick={() => setPreviewLanguage(lang)} className={`kanto-toggle-pill ${previewLanguage === lang ? 'active' : ''}`}>
+                            {lang === 'mg' ? 'MG' : 'FR'}
+                          </button>
+                        ))}
                       </div>
                     </div>
                   </div>
 
                   {previewMode === 'lockscreen' ? (
-                    /* Rendu Smartphone Lockscreen */
-                    <div className="max-w-md mx-auto rounded-2xl border border-zinc-700/60 bg-gradient-to-b from-zinc-950 via-zinc-900 to-zinc-950 p-4 shadow-xl text-zinc-100">
-                      {/* Barre d'état smartphone */}
+                    <div className="max-w-sm mx-auto rounded-2xl border border-zinc-700/50 bg-gradient-to-b from-zinc-900 to-zinc-950 p-4 shadow-xl text-zinc-100">
                       <div className="flex items-center justify-between text-[11px] text-zinc-400 mb-3 px-1">
                         <span className="font-semibold">09:41</span>
                         <div className="w-16 h-3.5 rounded-full bg-zinc-800 border border-zinc-700 mx-auto" />
                         <span className="text-[10px]">100%</span>
                       </div>
-
-                      {/* Date & Heure Lockscreen discrète */}
                       <div className="text-center my-3">
-                        <div className="text-xs text-zinc-400">
-                          {previewLanguage === 'mg' ? 'Talata 22 Septambra' : 'Mardi 22 Septembre'}
-                        </div>
-                        <div className="text-3xl font-light tracking-tight text-zinc-100">
-                          09:41
-                        </div>
+                        <div className="text-xs text-zinc-400">{previewLanguage === 'mg' ? 'Talata 22 Septambra' : 'Mardi 22 Septembre'}</div>
+                        <div className="text-3xl font-light tracking-tight text-zinc-100 mt-1">09:41</div>
                       </div>
-
-                      {/* Bannière de notification Push système */}
                       <div className="rounded-xl border border-white/10 bg-white/10 backdrop-blur-md p-3 shadow-lg">
-                        <div className="flex items-center justify-between mb-1.5">
+                        <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center gap-1.5">
-                            <div className="w-4 h-4 rounded bg-[#8B2519] text-white flex items-center justify-center text-[8px] font-bold">
-                              K
-                            </div>
-                            <span className="text-[10px] font-semibold text-zinc-200 uppercase tracking-wider">
-                              KANTO
-                            </span>
+                            <div className="w-4 h-4 rounded bg-[#8B2519] text-white flex items-center justify-center text-[8px] font-bold">K</div>
+                            <span className="text-[10px] font-semibold text-zinc-200 uppercase tracking-wider">KANTO</span>
                           </div>
-                          <span className="text-[9px] text-zinc-400">
-                            {previewLanguage === 'mg' ? 'Vao haingana' : 'À l’instant'}
-                          </span>
+                          <span className="text-[9px] text-zinc-400">{previewLanguage === 'mg' ? 'Vao haingana' : "À l'instant"}</span>
                         </div>
-
-                        <div className="font-semibold text-xs text-white">
-                          {activeTitle}
-                        </div>
-                        <div className="text-[11px] text-zinc-300 mt-0.5 line-clamp-2 leading-relaxed">
-                          {activeMessage}
-                        </div>
-
+                        <div className="font-semibold text-xs text-white">{activeTitle}</div>
+                        <div className="text-[11px] text-zinc-300 mt-0.5 line-clamp-2 leading-relaxed">{activeMessage}</div>
                         {badgeText && (
-                          <div className="mt-2 flex items-center gap-1.5">
-                            <span className="text-[9px] px-1.5 py-0.2 rounded bg-white/15 text-zinc-200 font-medium">
-                              {badgeText}
-                            </span>
+                          <div className="mt-2">
+                            <span className="text-[9px] px-1.5 py-0.5 rounded bg-white/15 text-zinc-200 font-medium">{badgeText}</span>
                           </div>
                         )}
                       </div>
                     </div>
                   ) : (
-                    /* Rendu Carte In-App Kanto */
-                    <div className="p-3.5 rounded-xl border border-[var(--sidebar-border)] bg-[var(--card-bg)] flex items-start gap-3 shadow-xs">
-                      <div
-                        className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
-                        style={{ backgroundColor: `${currentCat.color}15` }}
-                      >
-                        {(() => {
-                          const CatIcon = currentCat.icon;
-                          return <CatIcon size={18} color={currentCat.color} />;
-                        })()}
+                    <div className="max-w-sm mx-auto p-3.5 rounded-xl border flex items-start gap-3" style={{ borderColor: 'var(--card-border)', background: 'var(--card)' }}>
+                      <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: `${currentCat.color}18` }}>
+                        {(() => { const CatIcon = currentCat.icon; return <CatIcon size={18} color={currentCat.color} />; })()}
                       </div>
-
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between gap-2">
-                          <div className="font-bold text-xs text-[var(--foreground)] truncate">
-                            {activeTitle}
-                          </div>
-                          <span className="text-[10px] text-[var(--muted)] shrink-0">
-                            {previewLanguage === 'mg' ? 'Vao haingana' : 'À l’instant'}
-                          </span>
+                          <div className="font-bold text-xs truncate" style={{ color: 'var(--foreground)' }}>{activeTitle}</div>
+                          <span className="text-[10px] shrink-0" style={{ color: 'var(--text-muted)' }}>{previewLanguage === 'mg' ? 'Vao haingana' : "À l'instant"}</span>
                         </div>
-
-                        <div className="text-xs text-[var(--foreground)]/80 mt-1 line-clamp-2">
-                          {activeMessage}
-                        </div>
-
+                        <div className="text-xs mt-1 line-clamp-2" style={{ color: 'var(--text-muted)' }}>{activeMessage}</div>
                         {badgeText && (
                           <div className="mt-2">
-                            <span className="inline-block px-2 py-0.5 rounded text-[10px] font-semibold bg-red-500/10 text-red-500 border border-red-500/20">
+                            <span className="inline-block px-2 py-0.5 rounded text-[10px] font-semibold" style={{ background: 'var(--accent-light)', color: 'var(--accent-text)', border: '1px solid var(--accent-border)' }}>
                               {badgeText}
                             </span>
                           </div>
@@ -890,39 +712,27 @@ export default function NotificationsAdminPage() {
                     </div>
                   )}
                 </div>
+              </div>
 
-                {/* Boutons actions modal */}
-                <div className="pt-3 border-t border-[var(--sidebar-border)] flex items-center justify-end gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setIsModalOpen(false)}
-                    className="px-4 py-2 text-xs font-medium rounded-lg border border-[var(--sidebar-border)] text-[var(--foreground)] hover:bg-[var(--sidebar-border)]/20 transition-colors"
-                  >
-                    Annuler
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="px-5 py-2 text-xs font-medium rounded-lg bg-[var(--primary)] text-white hover:opacity-90 transition-opacity flex items-center gap-2 shadow-sm disabled:opacity-50"
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <Loader2 size={14} className="animate-spin" />
-                        Diffusion en cours...
-                      </>
-                    ) : (
-                      <>
-                        <Send size={14} />
-                        Diffuser maintenant
-                      </>
-                    )}
-                  </button>
-                </div>
-              </form>
-            </div>
+              {/* Footer modal */}
+              <div className="px-6 py-4 border-t flex items-center justify-end gap-3 shrink-0" style={{ borderColor: 'var(--card-border)', background: 'var(--background)' }}>
+                <Button variant="outline" type="button" size="md" onClick={() => setIsModalOpen(false)}>
+                  Annuler
+                </Button>
+                <Button
+                  variant="primary"
+                  type="submit"
+                  size="md"
+                  isLoading={isSubmitting}
+                  leftIcon={<Send size={14} />}
+                >
+                  {isSubmitting ? 'Diffusion...' : 'Diffuser maintenant'}
+                </Button>
+              </div>
+            </form>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </AdminShell>
   );
 }
