@@ -67,11 +67,15 @@ export default function ContesAdminPage() {
     }
   };
 
-  const handleGenerateAudio = async (id: string, lang: 'mg' | 'fr' | 'all') => {
+  const handleGenerateAudio = async (
+    id: string,
+    lang: 'mg' | 'fr' | 'all',
+    voiceId?: string
+  ) => {
     setGeneratingId(id);
     setGeneratingLang(lang);
     try {
-      await generateAudio(id, lang, false);
+      await generateAudio(id, lang, true, voiceId);
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Erreur';
       alert(`Erreur synthèse TTS : ${msg}`);

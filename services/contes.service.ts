@@ -96,7 +96,8 @@ export const contesService = {
   async generateAudio(
     id: string,
     lang: 'mg' | 'fr' | 'all',
-    force: boolean = false
+    force: boolean = false,
+    voiceId?: string
   ): Promise<{
     id?: string;
     slug?: string;
@@ -109,13 +110,13 @@ export const contesService = {
     if (lang === 'all') {
       return fetchApi(`/contes/${id}/generate-audio-both`, {
         method: 'POST',
-        body: JSON.stringify({ force }),
+        body: JSON.stringify({ force, voiceId }),
       });
     }
 
     return fetchApi(`/contes/${id}/generate-audio`, {
       method: 'POST',
-      body: JSON.stringify({ language: lang, force }),
+      body: JSON.stringify({ language: lang, force, voiceId }),
     });
   },
 };
