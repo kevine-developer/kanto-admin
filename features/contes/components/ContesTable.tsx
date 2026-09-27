@@ -17,7 +17,7 @@ interface ContesTableProps {
   isLoading: boolean;
   generatingId: string | null;
   generatingLang: 'mg' | 'fr' | 'all' | null;
-  onGenerateAudio: (id: string, lang: 'mg' | 'fr' | 'all') => void;
+  onGenerateAudio: (id: string, lang: 'mg' | 'fr' | 'all', voiceId?: string) => void;
   onSelect: (conte: ConteItem) => void;
   onEdit: (conte: ConteItem) => void;
   onDelete: (id: string) => void;
@@ -98,7 +98,7 @@ export function ContesTable({
                 {/* Audio Malagasy */}
                 <td className="py-3 px-3">
                   {conte.audioUrlMg ? (
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5">
                       <AudioPlayerInline
                         url={conte.audioUrlMg}
                         lang="MG"
@@ -106,10 +106,10 @@ export function ContesTable({
                         className="py-1 px-2"
                       />
                       <button
-                        onClick={() => onGenerateAudio(conte.id, 'mg')}
+                        onClick={() => onGenerateAudio(conte.id, 'mg', 'Charon')}
                         disabled={isGenMg}
                         className="p-1 rounded text-[var(--text-subtle)] hover:text-[var(--foreground)] transition cursor-pointer"
-                        title="Régénérer l'audio MG"
+                        title="Régénérer avec la voix Sage Malagasy (Charon - sans accent)"
                       >
                         {isGenMg ? (
                           <Loader2 size={12} className="animate-spin text-[var(--accent)]" />
@@ -117,25 +117,44 @@ export function ContesTable({
                           <RotateCcw size={12} />
                         )}
                       </button>
+                      <button
+                        onClick={() => onGenerateAudio(conte.id, 'mg', 'Aoede')}
+                        disabled={isGenMg}
+                        className="px-1.5 py-0.5 rounded text-[10px] border border-[var(--card-border)] bg-[var(--card)] hover:bg-[var(--card-hover)] text-[var(--text-subtle)] hover:text-[var(--foreground)] transition cursor-pointer"
+                        title="Régénérer avec la voix Conteuse Renibe (Aoede - sans accent)"
+                      >
+                        Voix ♀
+                      </button>
                     </div>
                   ) : (
-                    <button
-                      onClick={() => onGenerateAudio(conte.id, 'mg')}
-                      disabled={isGenMg}
-                      className="px-2 py-1 rounded-md border border-[var(--card-border)] bg-[var(--card)] hover:bg-[var(--card-hover)] text-[var(--text-muted)] text-[11px] font-medium transition cursor-pointer flex items-center gap-1.5"
-                    >
-                      {isGenMg ? (
-                        <>
-                          <Loader2 size={12} className="animate-spin text-[var(--accent)]" />
-                          <span>Synthèse TTS...</span>
-                        </>
-                      ) : (
-                        <>
-                          <Headphones size={12} className="text-emerald-600" />
-                          <span>Générer Audio MG</span>
-                        </>
-                      )}
-                    </button>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => onGenerateAudio(conte.id, 'mg', 'Charon')}
+                        disabled={isGenMg}
+                        className="px-2 py-1 rounded-md border border-[var(--card-border)] bg-[var(--card)] hover:bg-[var(--card-hover)] text-[var(--text-muted)] text-[11px] font-medium transition cursor-pointer flex items-center gap-1.5"
+                        title="Générer avec la voix de Sage Malagasy (Charon) - Phonétique authentique"
+                      >
+                        {isGenMg ? (
+                          <>
+                            <Loader2 size={12} className="animate-spin text-[var(--accent)]" />
+                            <span>Synthèse TTS...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Headphones size={12} className="text-emerald-600" />
+                            <span>Générer Sage (♂)</span>
+                          </>
+                        )}
+                      </button>
+                      <button
+                        onClick={() => onGenerateAudio(conte.id, 'mg', 'Aoede')}
+                        disabled={isGenMg}
+                        className="px-1.5 py-1 rounded-md border border-[var(--card-border)] bg-[var(--card)] hover:bg-[var(--card-hover)] text-[var(--text-muted)] text-[11px] font-medium transition cursor-pointer"
+                        title="Générer avec la voix de Conteuse / Renibe (Aoede)"
+                      >
+                        Voix ♀
+                      </button>
+                    </div>
                   )}
                 </td>
 

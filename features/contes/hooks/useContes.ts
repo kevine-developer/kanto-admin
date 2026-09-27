@@ -46,8 +46,13 @@ export function useContes() {
     setContes((prev) => prev.filter((c) => c.id !== id));
   };
 
-  const generateAudio = async (id: string, lang: 'mg' | 'fr' | 'all', force: boolean) => {
-    const res = await contesService.generateAudio(id, lang, force);
+  const generateAudio = async (
+    id: string,
+    lang: 'mg' | 'fr' | 'all',
+    force: boolean,
+    voiceId?: string
+  ) => {
+    const res = await contesService.generateAudio(id, lang, force, voiceId);
     if (res && (res.audioUrlMg !== undefined || res.audioUrlFr !== undefined)) {
       setContes((prev) =>
         prev.map((c) =>
