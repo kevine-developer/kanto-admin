@@ -24,6 +24,15 @@ export interface ContributionItem {
   downvotesCount: number;
   viewsCount?: number;
   commentsCount?: number;
+  duplicateScore?: number | null;
+  duplicateOfId?: string | null;
+  duplicateTypeOf?: string | null;
+  duplicateTargetTitle?: string | null;
+  isDuplicateConfirmed?: boolean;
+  markedForDeletionAt?: string | null;
+  disputeStatus?: 'NONE' | 'PENDING' | 'ACCEPTED' | 'REJECTED';
+  disputeMessage?: string | null;
+  disputedAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }
