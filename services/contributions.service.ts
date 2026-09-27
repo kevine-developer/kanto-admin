@@ -120,6 +120,39 @@ export const contributionsService = {
   },
 
   /**
+   * Confirme qu'une contribution est un doublon, enclenchant le compte à rebours de 24h et la notification à l'auteur.
+   * @param id - Identifiant de la contribution
+   * @throws {Error} En cas d'erreur de requête
+   */
+  async confirmDuplicate(id: string): Promise<ContributionItem> {
+    return fetchApi<ContributionItem>(`/contributions/${id}/confirm-duplicate`, {
+      method: 'PATCH',
+    });
+  },
+
+  /**
+   * Résout une réclamation / contestation formulée par l'auteur d'une contribution signalée comme doublon.
+   * @param id - Identifiant de la contribution
+   * @param approve - true pour accepter la réclamation et restaurer, false pour rejeter et maintenir la suppression sous 24h
+   * @param note - Motif / justification de la décision
+   */
+  async resolveDispute(id: string, approve: boolean, note?: string): Promise<ContributionItem> {
+    return fetchApi<ContributionItem>(`/contributions/${id}/resolve-dispute`, {
+      method: 'PATCH',
+      body: JSON.stringify({ approve, note }),
+    });
+  },
+
+  /**
+   * Déclenche manuellement la purge des doublons expirés (au-delà de 24h sans contestation pendante).
+   */
+  async purgeExpiredDuplicates(): Promise<{ count: number }> {
+    return fetchApi<{ count: number }>(`/contributions/admin/purge-duplicates`, {
+      method: 'POST',
+    });
+  },
+
+  /**
    * Supprime définitivement une contribution du système.
    * @param id - Identifiant de la contribution à supprimer
    * @throws {Error} En cas d'échec de la suppression

@@ -31,9 +31,10 @@ import {
   Quote,
   Target,
   Info,
+  Copy,
 } from 'lucide-react';
 
-type TabType = 'pending' | 'reports';
+type TabType = 'pending' | 'duplicates' | 'reports';
 
 const CATEGORY_CONFIG: Record<
   ContributionCategory,
@@ -196,9 +197,91 @@ export default function AdminContributionsPage() {
     }
   };
 
+  // Action : Confirmer qu'une contribution est un doublon (24h)
+  const handleConfirmDuplicate = async (item: ContributionItem) => {
+    if (
+      !confirm(
+        `Confirmer que cette contribution est un doublon ?\n\n- Une bannière "Doublon identifié" et un compte à rebours de 24h seront affichés.\n- L'auteur recevra une notification lui permettant de déposer une réclamation.\n- Les commentaires seront immédiatement bloqués.\n- À expiration des 24h sans réclamation, elle sera automatiquement supprimée.`
+      )
+    ) {
+      return;
+    }
+
+    try {
+      setIsProcessing(item.id);
+      const updated = await contributionsService.confirmDuplicate(item.id);
+      setFeedback({
+        type: 'info',
+        text: `Doublon confirmé pour « ${item.title || item.content.slice(0, 30)} ». Le compte à rebours de 24h a démarré.`,
+      });
+      setContributions((prev) =>
+        prev.map((c) =>
+          c.id === item.id
+            ? { ...c, ...updated, isDuplicateConfirmed: true, markedForDeletionAt: updated.markedForDeletionAt }
+            : c
+        )
+      );
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Erreur lors de la confirmation du doublon';
+      setFeedback({ type: 'error', text: msg });
+    } finally {
+      setIsProcessing(null);
+    }
+  };
+
+  // Action : Traiter une réclamation d'auteur de contribution
+  const handleResolveDispute = async (item: ContributionItem, approve: boolean) => {
+    const defaultNote = approve
+      ? 'Réclamation acceptée par la modération'
+      : 'Doublon confirmé après nouvel examen';
+    const note = prompt(
+      approve
+        ? 'Accepter la réclamation et restaurer la contribution ?\nNote pour l’auteur :'
+        : 'Rejeter la réclamation et relancer le délai de 24h avant suppression ?\nNote pour l’auteur :',
+      defaultNote
+    );
+    if (note === null) return;
+
+    try {
+      setIsProcessing(item.id);
+      const updated = await contributionsService.resolveDispute(item.id, approve, note);
+      setFeedback({
+        type: approve ? 'success' : 'info',
+        text: approve
+          ? `Réclamation acceptée. La contribution a été rétablie.`
+          : `Réclamation rejetée. Le compte à rebours final de 24h a été réactivé.`,
+      });
+      setContributions((prev) =>
+        prev.map((c) => (c.id === item.id ? { ...c, ...updated } : c))
+      );
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Erreur lors du traitement de la contestation';
+      setFeedback({ type: 'error', text: msg });
+    } finally {
+      setIsProcessing(null);
+    }
+  };
+
+  // Nombre de doublons / alertes de similarité / contestations
+  const duplicateAlertsCount = useMemo(() => {
+    return contributions.filter(
+      (c) =>
+        (c.duplicateScore && c.duplicateScore >= 0.65) ||
+        c.isDuplicateConfirmed ||
+        c.disputeStatus === 'PENDING'
+    ).length;
+  }, [contributions]);
+
   // Filtrage
   const filteredContributions = useMemo(() => {
     return contributions.filter((item) => {
+      if (activeTab === 'duplicates') {
+        const isDupCandidate =
+          (item.duplicateScore && item.duplicateScore >= 0.65) ||
+          item.isDuplicateConfirmed ||
+          item.disputeStatus === 'PENDING';
+        if (!isDupCandidate) return false;
+      }
       const matchCat =
         selectedCategory === 'ALL' || item.category === selectedCategory;
       const q = searchQuery.toLowerCase().trim();
@@ -212,7 +295,7 @@ export default function AdminContributionsPage() {
         item.userName?.toLowerCase().includes(q);
       return matchCat && matchQuery;
     });
-  }, [contributions, selectedCategory, searchQuery]);
+  }, [contributions, selectedCategory, searchQuery, activeTab]);
 
   // Objectif hebdomadaire (cible 10)
   const weeklyTarget = stats.weeklyTarget || 10;
@@ -345,6 +428,23 @@ export default function AdminContributionsPage() {
           </button>
 
           <button
+            onClick={() => setActiveTab('duplicates')}
+            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer ${
+              activeTab === 'duplicates'
+                ? 'bg-amber-600 text-white font-semibold'
+                : 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--card-hover)]'
+            }`}
+          >
+            <Copy size={14} />
+            <span>Doublons & Litiges</span>
+            {duplicateAlertsCount > 0 && (
+              <span className="px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-amber-500 text-white font-bold">
+                {duplicateAlertsCount}
+              </span>
+            )}
+          </button>
+
+          <button
             onClick={() => setActiveTab('reports')}
             className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer ${
               activeTab === 'reports'
@@ -363,9 +463,9 @@ export default function AdminContributionsPage() {
         </div>
 
         {/* ───────────────────────────────────────────────────────────── */}
-        {/* ONGLET 1 : CONTRIBUTIONS EN ATTENTE                           */}
+        {/* ONGLET 1 & 2 : CONTRIBUTIONS & DOUBLONS                       */}
         {/* ───────────────────────────────────────────────────────────── */}
-        {activeTab === 'pending' && (
+        {(activeTab === 'pending' || activeTab === 'duplicates') && (
           <div className="space-y-4">
             {/* Barre d'outils : Recherche et Filtres par Catégorie */}
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-[var(--card)] p-3 rounded-xl border border-[var(--card-border)]">
@@ -487,6 +587,70 @@ export default function AdminContributionsPage() {
                         </div>
                       </div>
 
+                      {/* Alertes Doublons & Litiges */}
+                      {item.isDuplicateConfirmed && (
+                        <div className="p-2.5 rounded-lg bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-rose-800 dark:text-rose-200 text-xs flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <AlertTriangle size={15} className="shrink-0 text-rose-600" />
+                            <div>
+                              <span className="font-semibold">Doublon confirmé — Suppression auto : </span>
+                              <span className="font-mono">
+                                {item.markedForDeletionAt
+                                  ? new Date(item.markedForDeletionAt).toLocaleString('fr-FR')
+                                  : 'Suspendue par réclamation'}
+                              </span>
+                              <div className="text-[11px] text-rose-600 dark:text-rose-400">
+                                Commentaires bloqués côté application. Compte à rebours 24h actif.
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {Boolean(item.duplicateScore && item.duplicateScore >= 0.65 && !item.isDuplicateConfirmed) && (
+                        <div className="p-2.5 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900 text-amber-900 dark:text-amber-200 text-xs flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <AlertTriangle size={15} className="shrink-0 text-amber-600" />
+                            <div>
+                              <span className="font-semibold">
+                                Similarité détectée : {Math.round((item.duplicateScore || 0) * 100)}%{' '}
+                              </span>
+                              <span>
+                                avec {item.duplicateTypeOf || 'catalogue'} « {item.duplicateTargetTitle || item.duplicateOfId || ''} »
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {item.disputeStatus === 'PENDING' && (
+                        <div className="p-3 rounded-lg bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800 text-purple-950 dark:text-purple-200 text-xs space-y-2">
+                          <div className="flex items-center gap-2 font-semibold text-purple-700 dark:text-purple-300">
+                            <ShieldAlert size={15} />
+                            <span>Réclamation du contributeur (Suppression 24h gelée) :</span>
+                          </div>
+                          <p className="italic bg-white dark:bg-neutral-900 p-2 rounded border border-purple-100 dark:border-purple-900/50">
+                            « {item.disputeMessage} »
+                          </p>
+                          <div className="flex items-center gap-2 pt-1">
+                            <button
+                              onClick={() => void handleResolveDispute(item, true)}
+                              disabled={isBusy}
+                              className="px-2.5 py-1 rounded bg-emerald-700 hover:bg-emerald-800 text-white font-medium text-xs transition cursor-pointer"
+                            >
+                              Accepter réclamation (Rétablir)
+                            </button>
+                            <button
+                              onClick={() => void handleResolveDispute(item, false)}
+                              disabled={isBusy}
+                              className="px-2.5 py-1 rounded border border-rose-300 text-rose-700 dark:text-rose-300 hover:bg-rose-50 text-xs transition cursor-pointer"
+                            >
+                              Rejeter (Délai 24h final)
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
                       {/* Contenu principal */}
                       <div className="space-y-1.5">
                         {item.title && (
@@ -556,7 +720,7 @@ export default function AdminContributionsPage() {
                         </div>
 
                         {/* Boutons d'action modérateur */}
-                        <div className="flex items-center gap-2 self-end sm:self-auto">
+                        <div className="flex items-center gap-2 self-end sm:self-auto flex-wrap">
                           <button
                             onClick={() => handleDeleteContribution(item)}
                             disabled={isBusy}
@@ -565,6 +729,18 @@ export default function AdminContributionsPage() {
                           >
                             <Trash2 size={14} />
                           </button>
+
+                          {!item.isDuplicateConfirmed && (
+                            <button
+                              onClick={() => void handleConfirmDuplicate(item)}
+                              disabled={isBusy}
+                              title="Marquer comme doublon (active le compte à rebours 24h et bloque les commentaires)"
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 hover:bg-amber-100 text-xs font-medium transition cursor-pointer disabled:opacity-50"
+                            >
+                              <AlertTriangle size={13} />
+                              <span>Doublon (24h)</span>
+                            </button>
+                          )}
 
                           <button
                             onClick={() => void handleValidate(item, false)}
