@@ -26,6 +26,7 @@ import {
   Landmark,
   Images,
   Sparkles,
+  FileText,
 } from 'lucide-react';
 
 interface AuthUser {
@@ -76,6 +77,7 @@ const NAV_GROUPS: { label: string; items: { href: string; icon: React.ElementTyp
     label: 'Comptes & Système',
     items: [
       { href: '/users',         icon: Users,      label: 'Utilisateurs & Rôles' },
+      { href: '/cgu',           icon: FileText,   label: 'CGU & Juridique' },
       { href: '/notifications', icon: Bell,       label: 'Notifications Push' },
       { href: '/settings',      icon: Settings2,  label: 'Paramètres' },
     ],
