@@ -10,6 +10,7 @@ export interface ModuleLockItem {
   bgImageUrl?: string | null;
   isLocked: boolean;
   lockReason?: string | null;
+  isVisible: boolean;
   minTier?: string | null;
   updatedAt: string;
   createdAt: string;
@@ -19,6 +20,8 @@ export interface LocksStats {
   total: number;
   locked: number;
   active: number;
+  visible?: number;
+  hidden?: number;
 }
 
 export interface LocksResponse {
@@ -35,6 +38,7 @@ export interface CreateModuleDto {
   bgImageUrl?: string | null;
   isLocked?: boolean;
   lockReason?: string | null;
+  isVisible?: boolean;
 }
 
 export interface UpdateModuleDto {
@@ -45,4 +49,5 @@ export interface UpdateModuleDto {
   bgImageUrl?: string | null;
   isLocked?: boolean;
   lockReason?: string | null;
+  isVisible?: boolean;
 }

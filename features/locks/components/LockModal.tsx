@@ -31,6 +31,9 @@ export function LockModal({
   const [formBgImageUrl, setFormBgImageUrl] = useState(editingModule?.bgImageUrl || '');
   const [formIsLocked, setFormIsLocked] = useState(editingModule?.isLocked || false);
   const [formLockReason, setFormLockReason] = useState(editingModule?.lockReason || '');
+  const [formIsVisible, setFormIsVisible] = useState(
+    editingModule ? editingModule.isVisible !== false : true
+  );
   const [isSaving, setIsSaving] = useState(false);
 
   const handleNameFrChange = (value: string) => {
@@ -70,6 +73,7 @@ export function LockModal({
             bgImageUrl: formBgImageUrl.trim() || null,
             isLocked: formIsLocked,
             lockReason: formLockReason.trim() || null,
+            isVisible: formIsVisible,
           },
           true
         );
@@ -84,6 +88,7 @@ export function LockModal({
             bgImageUrl: formBgImageUrl.trim() || null,
             isLocked: formIsLocked,
             lockReason: formLockReason.trim() || null,
+            isVisible: formIsVisible,
           },
           false
         );
@@ -207,6 +212,24 @@ export function LockModal({
             onChange={setFormBgImageUrl}
             subfolder="backgrounds"
           />
+        </div>
+
+        {/* Visibilité dans l'application mobile */}
+        <div className="p-3 rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] space-y-1.5">
+          <label className="flex items-center gap-2 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={formIsVisible}
+              onChange={(e) => setFormIsVisible(e.target.checked)}
+              className="rounded border-[var(--input-border)] text-emerald-600 focus:ring-emerald-500 w-3.5 h-3.5 cursor-pointer"
+            />
+            <span className="text-xs font-semibold text-[var(--foreground)]">
+              Visible dans l&apos;application mobile (Catalogue &amp; Accueil)
+            </span>
+          </label>
+          <p className="text-[11px] text-[var(--text-muted)] pl-5.5 leading-relaxed">
+            Si cette case est décochée, ce module sera totalement masqué de l&apos;application mobile pour tous les utilisateurs (indépendamment de son état de verrouillage).
+          </p>
         </div>
 
         {/* Verrouillage initial */}

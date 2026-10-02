@@ -36,6 +36,16 @@ export const locksService = {
     });
   },
 
+  async toggleVisibility(key: string, isVisible: boolean): Promise<ModuleLockItem> {
+    return fetchApi<ModuleLockItem>(
+      `/admin/locks/${encodeURIComponent(key)}/toggle-visibility`,
+      {
+        method: 'PATCH',
+        body: JSON.stringify({ isVisible }),
+      }
+    );
+  },
+
   async deleteModule(key: string): Promise<void> {
     await fetchApi(`/admin/locks/${encodeURIComponent(key)}`, {
       method: 'DELETE',

@@ -63,6 +63,34 @@ export function useLocks() {
     }
   };
 
+  // Bascule optimiste de visibilité (afficher / masquer dans l'application)
+  const toggleVisibility = async (module: ModuleLockItem) => {
+    const currentVis = module.isVisible !== false;
+    const nextVisibility = !currentVis;
+    setUpdatingKey(module.key);
+
+    // Mise à jour optimiste
+    setModules((prev) =>
+      prev.map((m) =>
+        m.key === module.key ? { ...m, isVisible: nextVisibility } : m
+      )
+    );
+
+    try {
+      await locksService.toggleVisibility(module.key, nextVisibility);
+    } catch (err) {
+      // Rollback en cas d'erreur
+      setModules((prev) =>
+        prev.map((m) =>
+          m.key === module.key ? { ...m, isVisible: module.isVisible } : m
+        )
+      );
+      throw err;
+    } finally {
+      setUpdatingKey(null);
+    }
+  };
+
   const deleteModule = async (key: string) => {
     await locksService.deleteModule(key);
     setModules((prev) => prev.filter((m) => m.key !== key));
@@ -77,6 +105,7 @@ export function useLocks() {
     error,
     loadLocks,
     toggleLock,
+    toggleVisibility,
     deleteModule,
   };
 }
