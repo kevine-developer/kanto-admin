@@ -22,12 +22,13 @@ export default function LocksAdminPage() {
     updatingKey,
     loadLocks,
     toggleLock,
+    toggleVisibility,
     deleteModule,
   } = useLocks();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedType, setSelectedType] = useState<
-    'ALL' | 'GAME' | 'CATEGORY' | 'LOCKED'
+    'ALL' | 'GAME' | 'CATEGORY' | 'LOCKED' | 'HIDDEN'
   >('ALL');
 
   // Modale Ajout / Modification
@@ -80,6 +81,8 @@ export default function LocksAdminPage() {
         ? true
         : selectedType === 'LOCKED'
         ? m.isLocked
+        : selectedType === 'HIDDEN'
+        ? m.isVisible === false
         : m.type === selectedType;
 
     const q = searchQuery.toLowerCase().trim();
@@ -94,6 +97,7 @@ export default function LocksAdminPage() {
 
   const gamesCount = modules.filter((m) => m.type === 'GAME').length;
   const categoriesCount = modules.filter((m) => m.type === 'CATEGORY').length;
+  const hiddenCount = modules.filter((m) => m.isVisible === false).length;
 
   return (
     <AdminShell>
@@ -185,6 +189,7 @@ export default function LocksAdminPage() {
               { id: 'GAME' as const, label: `Jeux (${gamesCount})` },
               { id: 'CATEGORY' as const, label: `Catégories (${categoriesCount})` },
               { id: 'LOCKED' as const, label: `Verrouillés (${stats.locked})` },
+              { id: 'HIDDEN' as const, label: `Masqués (${hiddenCount})` },
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -219,6 +224,7 @@ export default function LocksAdminPage() {
             isLoading={isLoading}
             updatingKey={updatingKey}
             onToggleLock={toggleLock}
+            onToggleVisibility={toggleVisibility}
             onEdit={handleOpenEditModal}
             onDelete={setDeletingModule}
           />

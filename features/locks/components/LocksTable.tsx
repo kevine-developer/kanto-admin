@@ -3,13 +3,24 @@
 import React from 'react';
 import { ModuleLockItem } from '@/types/lock';
 import { resolveMediaUrl } from '@/lib/utils/media';
-import { Gamepad2, BookOpen, Lock, Check, Loader2, Edit3, Trash2 } from 'lucide-react';
+import {
+  Gamepad2,
+  BookOpen,
+  Lock,
+  Check,
+  Loader2,
+  Edit3,
+  Trash2,
+  Eye,
+  EyeOff,
+} from 'lucide-react';
 
 interface LocksTableProps {
   modules: ModuleLockItem[];
   isLoading: boolean;
   updatingKey: string | null;
   onToggleLock: (item: ModuleLockItem) => Promise<void>;
+  onToggleVisibility?: (item: ModuleLockItem) => Promise<void>;
   onEdit: (item: ModuleLockItem) => void;
   onDelete: (item: ModuleLockItem) => void;
 }
@@ -19,6 +30,7 @@ export function LocksTable({
   isLoading,
   updatingKey,
   onToggleLock,
+  onToggleVisibility,
   onEdit,
   onDelete,
 }: LocksTableProps) {
@@ -47,6 +59,7 @@ export function LocksTable({
             <th className="py-2.5 px-3 w-24 text-center">Visuel</th>
             <th className="py-2.5 px-3">Nom &amp; Clé</th>
             <th className="py-2.5 px-3 w-28">Type</th>
+            <th className="py-2.5 px-3 w-28 text-center">Visibilité (App)</th>
             <th className="py-2.5 px-3 w-32 text-center">Disponibilité</th>
             <th className="py-2.5 px-3">Statut / Motif</th>
             <th className="py-2.5 px-3 w-24 text-right">Actions</th>
@@ -61,7 +74,7 @@ export function LocksTable({
                 key={item.id || item.key}
                 className={`hover:bg-[var(--card-hover)]/30 transition-colors ${
                   item.isLocked ? 'bg-rose-50/20 dark:bg-rose-950/10' : ''
-                }`}
+                } ${item.isVisible === false ? 'opacity-70 bg-neutral-50/40 dark:bg-neutral-900/20' : ''}`}
               >
                 {/* Photo de présentation au format vignette 16:10 */}
                 <td className="py-2 px-3 text-center">
@@ -134,6 +147,48 @@ export function LocksTable({
                     <span className="inline-flex items-center gap-1 text-[10px] font-mono text-sky-700 dark:text-sky-300 bg-sky-50 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-800 px-1.5 py-0.5 rounded">
                       <BookOpen className="w-2.5 h-2.5" />
                       SOKAJY
+                    </span>
+                  )}
+                </td>
+
+                {/* Switch de visibilité (Afficher / Masquer dans l'app) */}
+                <td className="py-2.5 px-3 text-center">
+                  {onToggleVisibility ? (
+                    <button
+                      onClick={() => onToggleVisibility(item)}
+                      disabled={isProcessing}
+                      title={
+                        item.isVisible !== false
+                          ? "Visible dans l'application mobile (Cliquer pour masquer)"
+                          : "Masqué dans l'application mobile (Cliquer pour afficher)"
+                      }
+                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium transition cursor-pointer border shadow-2xs ${
+                        item.isVisible !== false
+                          ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50'
+                          : 'bg-neutral-100 dark:bg-neutral-800 border-neutral-300 dark:border-neutral-700 text-neutral-500 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700'
+                      }`}
+                    >
+                      {item.isVisible !== false ? (
+                        <>
+                          <Eye className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                          <span>Visible</span>
+                        </>
+                      ) : (
+                        <>
+                          <EyeOff className="w-3.5 h-3.5 text-neutral-400" />
+                          <span>Masqué</span>
+                        </>
+                      )}
+                    </button>
+                  ) : (
+                    <span
+                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono ${
+                        item.isVisible !== false
+                          ? 'text-emerald-600 bg-emerald-50'
+                          : 'text-neutral-500 bg-neutral-100'
+                      }`}
+                    >
+                      {item.isVisible !== false ? 'Visible' : 'Masqué'}
                     </span>
                   )}
                 </td>
