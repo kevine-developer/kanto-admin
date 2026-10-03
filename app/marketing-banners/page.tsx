@@ -61,7 +61,6 @@ export default function MarketingBannersAdminPage() {
   const [ctaMg, setCtaMg] = useState('Hizaha');
   const [imageUrl, setImageUrl] = useState('');
   const [deepLink, setDeepLink] = useState('/(screens)/subscription');
-  const [selectedDeepLinkPreset, setSelectedDeepLinkPreset] = useState('/(screens)/subscription');
   const [accentColor, setAccentColor] = useState('#F59E0B');
   const [isActive, setIsActive] = useState(true);
 
@@ -107,7 +106,6 @@ export default function MarketingBannersAdminPage() {
     setCtaMg('Hizaha');
     setImageUrl('');
     setDeepLink('/(screens)/subscription');
-    setSelectedDeepLinkPreset('/(screens)/subscription');
     setAccentColor('#F59E0B');
     setIsActive(true);
     setActionType('DEEP_LINK');
@@ -137,10 +135,6 @@ export default function MarketingBannersAdminPage() {
     setCtaMg(banner.ctaMg);
     setImageUrl(banner.imageUrl);
     setDeepLink(banner.deepLink);
-    
-    const presetFound = DEFAULT_DEEP_LINK_OPTIONS.find((opt) => opt.value === banner.deepLink);
-    setSelectedDeepLinkPreset(presetFound ? presetFound.value : 'custom');
-    
     setAccentColor(banner.accentColor || '#F59E0B');
     setIsActive(banner.isActive);
     setActionType(banner.actionType || 'DEEP_LINK');
@@ -154,16 +148,8 @@ export default function MarketingBannersAdminPage() {
     setIsModalOpen(true);
   };
 
-  const handleDeepLinkPresetChange = (val: string) => {
-    setSelectedDeepLinkPreset(val);
-    if (val !== 'custom') {
-      setDeepLink(val);
-    }
-  };
-
   const handleSelectDeepLinkDirect = (val: string) => {
     setDeepLink(val);
-    setSelectedDeepLinkPreset(val);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {

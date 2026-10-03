@@ -24,6 +24,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/progression':   'Progression & XP',
   '/notifications': 'Notifications Push',
   '/users':         'Utilisateurs & Rôles',
+  '/beta-testers':  'Bêta-Testeurs Google Play',
   '/settings':      'Paramètres & Configuration',
 };
 
