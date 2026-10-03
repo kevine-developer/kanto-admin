@@ -22,8 +22,6 @@ import {
   Trash2,
   Check,
   Smartphone,
-  ExternalLink,
-  Mail,
   Loader2,
   X,
   Play,
@@ -592,7 +590,7 @@ export default function BetaTestersPage() {
                 </div>
                 <div>
                   <h3 className="font-bold text-white text-base">
-                    Envoyer l'accès Google Play
+                    Envoyer l&apos;accès Google Play
                   </h3>
                   <p className="text-xs text-slate-400">
                     Destinataire : {inviteModalTester.email}
@@ -610,7 +608,7 @@ export default function BetaTestersPage() {
             <div className="p-6 space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                  Lien Web d'invitation (Closed Testing)
+                  Lien Web d&apos;invitation (Closed Testing)
                 </label>
                 <input
                   type="text"
@@ -638,7 +636,7 @@ export default function BetaTestersPage() {
               <div className="bg-emerald-950/30 border border-emerald-800/40 rounded-xl p-3.5 text-xs text-emerald-300 flex items-start gap-2.5">
                 <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
                 <div>
-                  L'email officiel sera envoyé via <strong>Resend</strong> avec le guide en 2 étapes illustré (acceptation du test + téléchargement sur le Play Store).
+                  L&apos;email officiel sera envoyé via <strong>Resend</strong> avec le guide en 2 étapes illustré (acceptation du test + téléchargement sur le Play Store).
                 </div>
               </div>
             </div>
@@ -678,7 +676,7 @@ export default function BetaTestersPage() {
           <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl">
             <div className="px-6 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/60">
               <h3 className="font-bold text-white text-base">
-                Envoi groupé d'invitations ({stats.approved} testeurs)
+                Envoi groupé d&apos;invitations ({stats.approved} testeurs)
               </h3>
               <button
                 onClick={() => setIsBulkInviteModalOpen(false)}
@@ -690,7 +688,7 @@ export default function BetaTestersPage() {
 
             <div className="p-6 space-y-4">
               <p className="text-sm text-slate-300">
-                Vous êtes sur le point d'envoyer l'e-mail officiel d'invitation Google Play à l'ensemble des{' '}
+                Vous êtes sur le point d&apos;envoyer l&apos;e-mail officiel d&apos;invitation Google Play à l&apos;ensemble des{' '}
                 <strong className="text-emerald-400">{stats.approved} testeurs actuellement approuvés</strong>.
               </p>
 
@@ -707,7 +705,7 @@ export default function BetaTestersPage() {
               </div>
 
               <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 text-xs text-amber-300">
-                ⚠️ Assurez-vous d'avoir d'abord ajouté ces adresses email dans votre liste de testeurs sur la <strong>Google Play Console</strong> afin qu'ils puissent y accéder dès réception du mail.
+                ⚠️ Assurez-vous d&apos;avoir d&apos;abord ajouté ces adresses email dans votre liste de testeurs sur la <strong>Google Play Console</strong> afin qu&apos;ils puissent y accéder dès réception du mail.
               </div>
             </div>
 
