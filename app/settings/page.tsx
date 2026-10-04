@@ -38,6 +38,8 @@ import {
   Check,
   ChevronDown,
   ChevronUp,
+  X,
+  Smartphone,
 } from 'lucide-react';
 
 interface AuthUser {
@@ -47,6 +49,44 @@ interface AuthUser {
   role?: string;
   createdAt?: string;
 }
+
+const EMAIL_TEMPLATES = [
+  {
+    id: 'beta_invitation',
+    label: 'Google Play — Invitation Bêta (2 étapes distinctes)',
+    desc: 'Lien 1 Web obligatoire + Lien 2 Play Store direct, avec le badge exclusif Google Play',
+  },
+  {
+    id: 'beta_registration',
+    label: 'Google Play — Confirmation de candidature',
+    desc: 'Récapitulatif compte, modèle appareil et prochaines étapes de validation',
+  },
+  {
+    id: 'password_reset',
+    label: 'Sécurité — Réinitialisation de mot de passe',
+    desc: 'Bouton terracotta sécurisé, délai 1 heure et lien de secours',
+  },
+  {
+    id: 'welcome',
+    label: 'Bienvenue — Accueil nouvel utilisateur',
+    desc: 'Présentation des piliers patrimoniaux (Angano, Kabary, Tantara, Lalao)',
+  },
+  {
+    id: 'verification',
+    label: 'Activation — Confirmation d’adresse email',
+    desc: 'Lien d’activation de compte valable 24h avec bouton vert Tanimbary',
+  },
+  {
+    id: 'feedback',
+    label: 'Support — Signalement / Avis utilisateur',
+    desc: 'Format de transmission du feedback utilisateur vers la boîte administrateur',
+  },
+  {
+    id: 'system',
+    label: 'Supervision — Test de configuration Resend',
+    desc: 'Vérification de la délivrabilité et des métadonnées du serveur',
+  },
+];
 
 /**
  * Page de configuration générale et paramètres de l'administration Kanto.
@@ -68,27 +108,51 @@ export default function SettingsPage() {
     message?: string;
   }>({ tested: false, success: false });
 
-  // État du test d'envoi d'email
+  // État du test d'envoi d'email & prévisualisation
   const [testEmailAddress, setTestEmailAddress] = useState('');
+  const [selectedTemplate, setSelectedTemplate] = useState('beta_invitation');
   const [isSendingTestEmail, setIsSendingTestEmail] = useState(false);
+  const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
+  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
+  const [previewDevice, setPreviewDevice] = useState<'desktop' | 'mobile'>('desktop');
+  const [previewData, setPreviewData] = useState<{
+    subject: string;
+    html: string;
+    text: string;
+    template: string;
+  } | null>(null);
 
-  const handleSendTestEmail = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const email = testEmailAddress.trim();
+  const handleSendTestEmail = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const email = testEmailAddress.trim() || user?.email || '';
     if (!email || !email.includes('@')) {
       toast.error('Veuillez saisir une adresse email valide');
       return;
     }
     try {
       setIsSendingTestEmail(true);
-      await systemService.sendTestEmail(email);
-      toast.success(`Email de test envoyé avec succès à ${email} !`);
-      setTestEmailAddress('');
+      const res = await systemService.sendTestEmail(email, selectedTemplate);
+      toast.success(res.message || `Email envoyé avec succès à ${email} !`);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Échec d\'envoi de l\'email';
+      const msg = err instanceof Error ? err.message : "Échec d'envoi de l'email";
       toast.error(msg);
     } finally {
       setIsSendingTestEmail(false);
+    }
+  };
+
+  const handlePreviewEmail = async () => {
+    try {
+      setIsPreviewLoading(true);
+      const email = testEmailAddress.trim() || user?.email || 'admin@kanto.mg';
+      const data = await systemService.previewEmail(email, selectedTemplate);
+      setPreviewData(data);
+      setIsPreviewModalOpen(true);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Échec de chargement de la prévisualisation';
+      toast.error(msg);
+    } finally {
+      setIsPreviewLoading(false);
     }
   };
 
@@ -741,44 +805,106 @@ export default function SettingsPage() {
               </div>
             </div>
 
-            {/* Service Email Resend */}
-            <div className="p-3.5 rounded-xl border border-[var(--card-border)] bg-[var(--input-bg)] flex items-start gap-3 sm:col-span-2">
-              <div className="p-2 rounded-lg bg-[var(--card)] border border-[var(--card-border)] text-emerald-500 shrink-0">
-                <Mail size={16} />
+            {/* Service Email Resend & Console de Test */}
+            <div className="p-4 rounded-xl border border-[var(--card-border)] bg-[var(--input-bg)] flex flex-col gap-3.5 sm:col-span-2">
+              <div className="flex items-start gap-3">
+                <div className="p-2 rounded-lg bg-[var(--card)] border border-[var(--card-border)] text-emerald-500 shrink-0">
+                  <Mail size={16} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-1">
+                    <div className="text-xs font-bold text-[var(--foreground)]">
+                      Service Email (Resend) &amp; Console de Test
+                    </div>
+                    <span className="text-[10px] font-mono font-medium text-emerald-600 dark:text-emerald-400">
+                      Charte Kanto Active
+                    </span>
+                  </div>
+                  <div className="text-[11px] text-[var(--text-muted)] mt-0.5">
+                    Testez la délivrabilité et visualisez en direct tous les modèles d&apos;e-mails de l&apos;application sans emoji.
+                  </div>
+                </div>
               </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between gap-1">
-                  <div className="text-xs font-bold text-[var(--foreground)]">Service Email (Resend)</div>
-                  <span className="text-[10px] font-mono font-medium text-emerald-600 dark:text-emerald-400">
-                    Actif
-                  </span>
+
+              {/* Formulaire complet de test et prévisualisation */}
+              <div className="p-3.5 rounded-lg border border-[var(--card-border)] bg-[var(--card)] space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {/* Choix du modèle */}
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-semibold text-[var(--foreground)] flex items-center justify-between">
+                      <span>Modèle d&apos;e-mail à tester</span>
+                      <span className="text-[10px] text-[var(--accent)] font-normal">7 modèles prêts</span>
+                    </label>
+                    <select
+                      value={selectedTemplate}
+                      onChange={(e) => setSelectedTemplate(e.target.value)}
+                      className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] text-[var(--foreground)] focus:outline-hidden focus:border-[var(--accent)] cursor-pointer"
+                    >
+                      {EMAIL_TEMPLATES.map((tmpl) => (
+                        <option key={tmpl.id} value={tmpl.id}>
+                          {tmpl.label}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-[10px] text-[var(--text-subtle)] truncate">
+                      {EMAIL_TEMPLATES.find((t) => t.id === selectedTemplate)?.desc}
+                    </p>
+                  </div>
+
+                  {/* Adresse destinataire */}
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-semibold text-[var(--foreground)] flex items-center justify-between">
+                      <span>Adresse de destination</span>
+                      {user?.email && (
+                        <button
+                          type="button"
+                          onClick={() => setTestEmailAddress(user.email || '')}
+                          className="text-[10px] text-[var(--accent)] hover:underline cursor-pointer"
+                        >
+                          Mon email ({user.email})
+                        </button>
+                      )}
+                    </label>
+                    <input
+                      type="email"
+                      value={testEmailAddress}
+                      onChange={(e) => setTestEmailAddress(e.target.value)}
+                      placeholder={user?.email || 'admin@kanto.mg'}
+                      className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] text-[var(--foreground)] placeholder:text-[var(--text-subtle)] focus:outline-hidden focus:border-[var(--accent)]"
+                    />
+                  </div>
                 </div>
-                <div className="text-[11px] text-[var(--text-muted)] mt-0.5">
-                  Envoi des emails transactionnels (réinitialisation de mot de passe, bienvenue et alertes).
-                </div>
-                {/* Formulaire de test */}
-                <form onSubmit={handleSendTestEmail} className="mt-2.5 flex flex-col sm:flex-row items-center gap-2">
-                  <input
-                    type="email"
-                    required
-                    value={testEmailAddress}
-                    onChange={(e) => setTestEmailAddress(e.target.value)}
-                    placeholder="Entrez votre email pour tester la réception..."
-                    className="w-full sm:flex-1 px-3 py-1.5 text-xs rounded-lg border border-[var(--card-border)] bg-[var(--card)] text-[var(--foreground)] placeholder:text-[var(--text-subtle)] focus:outline-hidden focus:ring-1 focus:ring-[var(--accent)]"
-                  />
+
+                {/* Actions */}
+                <div className="flex flex-wrap items-center justify-end gap-2 pt-1 border-t border-[var(--card-border)]">
                   <button
-                    type="submit"
+                    type="button"
+                    onClick={handlePreviewEmail}
+                    disabled={isPreviewLoading}
+                    className="px-3 py-1.5 rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] hover:bg-[var(--card-hover)] text-[var(--foreground)] text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer shadow-xs disabled:opacity-50"
+                  >
+                    {isPreviewLoading ? (
+                      <Loader2 size={13} className="animate-spin text-[var(--accent)]" />
+                    ) : (
+                      <Eye size={13} className="text-[var(--accent)]" />
+                    )}
+                    <span>Aperçu en direct</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleSendTestEmail()}
                     disabled={isSendingTestEmail}
-                    className="w-full sm:w-auto px-3 py-1.5 rounded-lg bg-[var(--accent)] text-white text-xs font-semibold hover:opacity-90 transition disabled:opacity-50 flex items-center justify-center gap-1.5 shrink-0 cursor-pointer shadow-xs"
+                    className="px-3.5 py-1.5 rounded-lg bg-[var(--accent)] text-white text-xs font-semibold hover:opacity-90 transition disabled:opacity-50 flex items-center gap-1.5 cursor-pointer shadow-xs"
                   >
                     {isSendingTestEmail ? (
-                      <Loader2 size={12} className="animate-spin" />
+                      <Loader2 size={13} className="animate-spin" />
                     ) : (
-                      <Send size={12} />
+                      <Send size={13} />
                     )}
-                    <span>{isSendingTestEmail ? 'Envoi...' : 'Envoyer un test'}</span>
+                    <span>{isSendingTestEmail ? 'Envoi en cours...' : 'Envoyer l’email réel'}</span>
                   </button>
-                </form>
+                </div>
               </div>
             </div>
           </div>
@@ -846,6 +972,116 @@ export default function SettingsPage() {
           Kanto Conservatoire Malagasy • Admin Console v1.0.0 • Architecture Next.js &amp; NestJS
         </div>
       </div>
+
+      {/* ── MODALE D'APERÇU D'EMAIL KANTO EN DIRECT ───────────────── */}
+      {isPreviewModalOpen && previewData && (
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5 animate-in fade-in duration-200">
+          <div className="w-full max-w-4xl h-[92vh] bg-[var(--card)] border border-[var(--card-border)] rounded-2xl flex flex-col shadow-2xl overflow-hidden">
+            {/* Header de la modale */}
+            <div className="px-5 py-3.5 border-b border-[var(--card-border)] bg-[var(--input-bg)] flex items-center justify-between shrink-0">
+              <div className="min-w-0 pr-3">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <span className="text-xs font-bold text-[var(--foreground)] truncate">
+                    Aperçu HTML — {previewData.subject}
+                  </span>
+                </div>
+                <div className="text-[11px] text-[var(--text-muted)] truncate mt-0.5 font-mono">
+                  Modèle : {previewData.template} • Destinataire simulé : {testEmailAddress.trim() || user?.email || 'admin@kanto.mg'}
+                </div>
+              </div>
+
+              {/* Contrôles vue Desktop / Mobile & Fermeture */}
+              <div className="flex items-center gap-2 shrink-0">
+                <div className="flex items-center p-0.5 rounded-lg border border-[var(--card-border)] bg-[var(--card)] text-xs">
+                  <button
+                    type="button"
+                    onClick={() => setPreviewDevice('desktop')}
+                    className={`px-2.5 py-1 rounded-md flex items-center gap-1.5 transition cursor-pointer font-medium ${
+                      previewDevice === 'desktop'
+                        ? 'bg-[var(--accent)] text-white'
+                        : 'text-[var(--text-muted)] hover:text-[var(--foreground)]'
+                    }`}
+                  >
+                    <Laptop size={13} />
+                    <span className="hidden sm:inline">Desktop</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPreviewDevice('mobile')}
+                    className={`px-2.5 py-1 rounded-md flex items-center gap-1.5 transition cursor-pointer font-medium ${
+                      previewDevice === 'mobile'
+                        ? 'bg-[var(--accent)] text-white'
+                        : 'text-[var(--text-muted)] hover:text-[var(--foreground)]'
+                    }`}
+                  >
+                    <Smartphone size={13} />
+                    <span className="hidden sm:inline">Mobile (375px)</span>
+                  </button>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setIsPreviewModalOpen(false)}
+                  className="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--card-hover)] transition cursor-pointer"
+                  aria-label="Fermer"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+            </div>
+
+            {/* Corps : iframe isolée et responsive */}
+            <div className="flex-1 bg-[#EAE8E3] dark:bg-[#1E1E1C] overflow-y-auto p-4 flex justify-center items-start">
+              <div
+                className="transition-all duration-300 shadow-xl rounded-xl overflow-hidden bg-white"
+                style={{
+                  width: previewDevice === 'mobile' ? '375px' : '600px',
+                  maxWidth: '100%',
+                  minHeight: '650px',
+                }}
+              >
+                <iframe
+                  title="Prévisualisation Email"
+                  srcDoc={previewData.html}
+                  className="w-full h-[75vh] border-0"
+                  sandbox="allow-same-origin allow-popups"
+                />
+              </div>
+            </div>
+
+            {/* Pied de la modale avec action d'envoi direct */}
+            <div className="px-5 py-3 border-t border-[var(--card-border)] bg-[var(--card)] flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
+              <div className="text-[11px] text-[var(--text-muted)] text-center sm:text-left">
+                Design Kanto officiel : Zéro emoji • Typographie Plus Jakarta Sans • Badge Google Play Bêta exclusif
+              </div>
+
+              <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                <button
+                  type="button"
+                  onClick={() => setIsPreviewModalOpen(false)}
+                  className="px-3 py-1.5 rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] hover:bg-[var(--card-hover)] text-[var(--foreground)] text-xs font-semibold cursor-pointer"
+                >
+                  Fermer
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsPreviewModalOpen(false);
+                    handleSendTestEmail();
+                  }}
+                  disabled={isSendingTestEmail}
+                  className="px-3.5 py-1.5 rounded-lg bg-[var(--accent)] text-white text-xs font-semibold hover:opacity-90 transition disabled:opacity-50 flex items-center gap-1.5 cursor-pointer shadow-xs"
+                >
+                  <Send size={13} />
+                  <span>Envoyer cet e-mail réel</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </AdminShell>
   );
 }

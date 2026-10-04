@@ -40,10 +40,29 @@ export const systemService = {
   },
 
   // ─── Diagnostic & Test Email ────────────────────────────────────────────────
-  async sendTestEmail(to: string): Promise<{ success: boolean; message: string }> {
+  async sendTestEmail(
+    to: string,
+    template = 'system',
+  ): Promise<{ success: boolean; message: string }> {
     return fetchApi('/admin/system/test-email', {
       method: 'POST',
-      body: JSON.stringify({ to }),
+      body: JSON.stringify({ to, template }),
+    });
+  },
+
+  async previewEmail(
+    to?: string,
+    template = 'system',
+  ): Promise<{
+    success: boolean;
+    template: string;
+    subject: string;
+    html: string;
+    text: string;
+  }> {
+    return fetchApi('/admin/system/preview-email', {
+      method: 'POST',
+      body: JSON.stringify({ to, template }),
     });
   },
 };
