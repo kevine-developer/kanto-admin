@@ -102,37 +102,8 @@ export default function CitationsAdminPage() {
   }, [page, search, toast]);
 
   useEffect(() => {
-    let isMounted = true;
-    const params = new URLSearchParams({
-      page: String(page),
-      limit: '15',
-    });
-    if (search.trim()) params.append('search', search.trim());
-
-    fetchApi<{
-      data: CitationItem[];
-      meta: { total: number; totalPages: number };
-    }>(`/citations?${params.toString()}`)
-      .then((res) => {
-        if (!isMounted) return;
-        setCitations(res.data || []);
-        setTotalPages(res.meta?.totalPages || 1);
-        setTotalCount(res.meta?.total || 0);
-      })
-      .catch((err: unknown) => {
-        if (!isMounted) return;
-        console.error('Erreur chargement citations :', err);
-        const msg = err instanceof Error ? err.message : 'Erreur lors du chargement des citations';
-        toast.error(msg);
-      })
-      .finally(() => {
-        if (isMounted) setIsLoading(false);
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, [page, search, toast]);
+    void loadCitations();
+  }, [loadCitations]);
 
   const openCreateModal = () => {
     setEditingId(null);

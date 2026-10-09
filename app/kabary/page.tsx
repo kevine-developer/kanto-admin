@@ -117,35 +117,8 @@ export default function KabaryAdminPage() {
   }, [page, search]);
 
   useEffect(() => {
-    let isMounted = true;
-    const params = new URLSearchParams({
-      page: String(page),
-      limit: '10',
-    });
-    if (search.trim()) params.append('search', search.trim());
-
-    fetchApi<{
-      data: KabaryItem[];
-      meta: { total: number; totalPages: number };
-    }>(`/kabary?${params.toString()}`)
-      .then((res) => {
-        if (!isMounted) return;
-        setKabaries(res.data || []);
-        setTotalPages(res.meta?.totalPages || 1);
-        setTotalCount(res.meta?.total || 0);
-      })
-      .catch((err) => {
-        if (!isMounted) return;
-        console.error('Erreur chargement kabary :', err);
-      })
-      .finally(() => {
-        if (isMounted) setIsLoading(false);
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, [page, search]);
+    void loadKabary();
+  }, [loadKabary]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();

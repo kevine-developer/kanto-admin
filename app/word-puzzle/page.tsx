@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { AdminShell } from '@/components/layout/AdminShell';
+import { PageHeader } from '@/components/layout/PageHeader';
 import { ConfirmModal, LoadingState } from '@/components/ui';
 import { useToast } from '@/lib/hooks/useToast';
 import { fetchApi } from '@/lib/api-client';
@@ -16,6 +17,7 @@ import {
   Eye,
   X,
   Shuffle,
+  Puzzle,
 } from 'lucide-react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -140,8 +142,8 @@ export default function WordPuzzleAdminPage() {
       setIsLoading(true);
       const data = await fetchApi<WordPuzzleLevel[]>('/admin/word-puzzle/levels');
       setLevels(data);
-      if (data.length > 0 && (!selectedLevelId || !data.some((l) => l.id === selectedLevelId))) {
-        setSelectedLevelId(data[0].id);
+      if (data.length > 0) {
+        setSelectedLevelId((prev) => (prev && data.some((l) => l.id === prev) ? prev : data[0].id));
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Erreur de chargement';
@@ -149,7 +151,7 @@ export default function WordPuzzleAdminPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [selectedLevelId, toast]);
+  }, [toast]);
 
   const loadLevelDetail = useCallback(async (id: string) => {
     try {
@@ -339,22 +341,29 @@ export default function WordPuzzleAdminPage() {
 
   return (
     <AdminShell>
-      {/* En-tête page */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-lg font-semibold text-[var(--foreground)]">Remise en Ordre</h1>
-          <p className="text-xs text-[var(--text-subtle)] mt-0.5">
-            {levels.length} niveau{levels.length !== 1 ? 'x' : ''} · Banque de phrases par niveau · 10 phrases tirées au sort par partie
-          </p>
-        </div>
-        <button
-          onClick={openCreateLevel}
-          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-[var(--accent)] text-[var(--accent-foreground)] text-xs font-medium hover:opacity-90 transition"
-        >
-          <Plus className="w-3.5 h-3.5" />
-          Nouveau niveau
-        </button>
-      </div>
+      {/* En-tête standardisé */}
+      <PageHeader
+        title="Remets dans l'ordre"
+        description="Banque de phrases par niveau · 10 phrases tirées au sort par partie"
+        icon={Puzzle}
+        badge={
+          <span
+            className="text-xs px-2 py-0.5 rounded font-mono font-medium"
+            style={{
+              background: 'var(--card)',
+              border: '1px solid var(--card-border)',
+              color: 'var(--text-muted)',
+            }}
+          >
+            {levels.length} niveau{levels.length !== 1 ? 'x' : ''}
+          </span>
+        }
+        primaryAction={{
+          label: 'Nouveau niveau',
+          icon: <Plus className="w-3.5 h-3.5" />,
+          onClick: openCreateLevel,
+        }}
+      />
 
       {/* Layout deux colonnes */}
       <div className="grid grid-cols-1 md:grid-cols-[280px_1fr] gap-4 items-start">

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { AdminShell } from '@/components/layout/AdminShell';
+import { PageHeader } from '@/components/layout/PageHeader';
 import { ConfirmModal, Field } from '@/components/ui';
 import { useToast } from '@/lib/hooks/useToast';
 import { fetchApi } from '@/lib/api-client';
@@ -19,6 +20,7 @@ import {
   BookOpen,
   Eye,
   Check,
+  CheckCheck,
 } from 'lucide-react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -123,36 +125,8 @@ export default function TrueFalseAdminPage() {
   }, [page, search, selectedTheme, selectedDifficulty, toast]);
 
   useEffect(() => {
-    let isMounted = true;
-    const params = new URLSearchParams({ page: page.toString(), limit: '15' });
-    if (search.trim()) params.set('search', search.trim());
-    if (selectedTheme !== 'ALL') params.set('theme', selectedTheme);
-    if (selectedDifficulty !== 'ALL') params.set('difficulty', selectedDifficulty);
-
-    fetchApi<{
-      items: TrueFalseQuestion[];
-      total: number;
-      totalPages: number;
-    }>(`/admin/true-false?${params.toString()}`)
-      .then((res) => {
-        if (!isMounted) return;
-        setQuestions(res.items || []);
-        setTotalCount(res.total || 0);
-        setTotalPages(res.totalPages || 1);
-      })
-      .catch((err: unknown) => {
-        if (!isMounted) return;
-        const msg = err instanceof Error ? err.message : 'Impossible de charger les questions';
-        toast.error(msg);
-      })
-      .finally(() => {
-        if (isMounted) setIsLoading(false);
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, [page, search, selectedTheme, selectedDifficulty, toast]);
+    void loadQuestions();
+  }, [loadQuestions]);
 
   // Helpers Modal
   const openCreate = () => {
@@ -235,22 +209,29 @@ export default function TrueFalseAdminPage() {
     <AdminShell>
       <div className="w-full space-y-4 pb-8">
 
-        {/* En-tête */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-lg font-semibold text-[var(--foreground)]">Vrai ou Faux</h1>
-            <p className="text-xs text-[var(--text-subtle)] mt-0.5">
-              {totalCount} affirmation{totalCount !== 1 ? 's' : ''} · Marina sa Diso
-            </p>
-          </div>
-          <button
-            onClick={openCreate}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-[var(--accent)] text-[var(--accent-foreground)] text-xs font-medium hover:opacity-90 transition"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            Nouvelle question
-          </button>
-        </div>
+        {/* En-tête standardisé */}
+        <PageHeader
+          title="Vrai ou Faux"
+          description="Affirmations bilingues malgaches · Marina sa Diso"
+          icon={CheckCheck}
+          badge={
+            <span
+              className="text-xs px-2 py-0.5 rounded font-mono font-medium"
+              style={{
+                background: 'var(--card)',
+                border: '1px solid var(--card-border)',
+                color: 'var(--text-muted)',
+              }}
+            >
+              {totalCount} affirmation{totalCount !== 1 ? 's' : ''}
+            </span>
+          }
+          primaryAction={{
+            label: 'Nouvelle question',
+            icon: <Plus className="w-3.5 h-3.5" />,
+            onClick: openCreate,
+          }}
+        />
 
         {/* Filtres */}
         <div className="flex flex-col sm:flex-row gap-2">

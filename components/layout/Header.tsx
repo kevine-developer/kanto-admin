@@ -1,8 +1,7 @@
 'use client';
 
-import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Settings2, Sun, Moon, PanelLeft } from 'lucide-react';
+import { Sun, Moon, PanelLeft } from 'lucide-react';
 import { useTheme } from '@/lib/theme-context';
 
 // Mapping pathname → titre de page
@@ -44,9 +43,7 @@ function resolveTitle(pathname: string): string {
 export function Header() {
   const { toggleTheme, resolvedTheme } = useTheme();
   const pathname = usePathname();
-
   const pageTitle = resolveTitle(pathname);
-  const isSettings = pathname === '/settings';
 
   return (
     <header
@@ -101,19 +98,6 @@ export function Header() {
             : <Moon size={15} style={{ color: 'var(--accent)' }} />
           }
         </button>
-
-        {/* Paramètres (Lien vers la page /settings) */}
-        <Link
-          href="/settings"
-          title="Paramètres de l'application"
-          className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors cursor-pointer ${
-            isSettings
-              ? 'bg-[var(--card-hover)] text-[var(--foreground)]'
-              : 'hover:bg-[var(--card-hover)] text-[var(--text-subtle)] hover:text-[var(--foreground)]'
-          }`}
-        >
-          <Settings2 size={15} className={isSettings ? 'text-[var(--accent)]' : ''} />
-        </Link>
       </div>
     </header>
   );

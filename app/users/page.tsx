@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { AdminShell } from '@/components/layout/AdminShell';
+import { PageHeader } from '@/components/layout/PageHeader';
 import { systemService } from '@/services/system.service';
 import { UserAccount } from '@/types';
 import {
@@ -373,19 +374,12 @@ export default function UsersAdminPage() {
   return (
     <AdminShell>
       <div className="w-full space-y-5 pb-10">
-        {/* En-tête de page */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border pb-4">
-          <div>
-            <h1 className="text-lg font-bold text-foreground tracking-tight flex items-center gap-2">
-              <UsersIcon className="w-5 h-5 text-primary" />
-              <span>Gestion des Utilisateurs & Privilèges</span>
-            </h1>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Supervision des comptes membres, rôles d&apos;administration et sécurité.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2">
+        {/* En-tête de page standardisé */}
+        <PageHeader
+          title="Gestion des Utilisateurs & Privilèges"
+          description="Supervision des comptes membres, rôles d'administration et sécurité."
+          icon={UsersIcon}
+          actions={
             <button
               onClick={() => void loadUsers()}
               disabled={isLoading}
@@ -395,8 +389,8 @@ export default function UsersAdminPage() {
               <RotateCcw size={13} className={isLoading ? 'animate-spin' : ''} />
               <span>Actualiser</span>
             </button>
-          </div>
-        </div>
+          }
+        />
 
         {/* Feedback Alert */}
         {feedback && (

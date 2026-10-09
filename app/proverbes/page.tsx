@@ -110,39 +110,8 @@ export default function ProverbesAdminPage() {
   }, [page, category, difficulty, search, toast]);
 
   useEffect(() => {
-    let isMounted = true;
-    const params = new URLSearchParams({
-      page: String(page),
-      limit: '10',
-    });
-    if (category !== 'ALL') params.append('category', category);
-    if (difficulty !== 'ALL') params.append('difficulty', difficulty);
-    if (search.trim()) params.append('search', search.trim());
-
-    fetchApi<{
-      data: MalagasyItem[];
-      meta: { total: number; totalPages: number };
-    }>(`/items?${params.toString()}`)
-      .then((res) => {
-        if (!isMounted) return;
-        setItems(res.data || []);
-        setTotalPages(res.meta?.totalPages || 1);
-        setTotalCount(res.meta?.total || 0);
-      })
-      .catch((err: unknown) => {
-        if (!isMounted) return;
-        console.error('Erreur chargement proverbes :', err);
-        const msg = err instanceof Error ? err.message : 'Erreur lors du chargement des proverbes';
-        toast.error(msg);
-      })
-      .finally(() => {
-        if (isMounted) setIsLoading(false);
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, [page, category, difficulty, search, toast]);
+    void loadItems();
+  }, [loadItems]);
 
   const openCreateModal = () => {
     setEditingId(null);
