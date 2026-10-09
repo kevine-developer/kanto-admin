@@ -32,6 +32,9 @@ import {
   Target,
   Info,
   Copy,
+  History,
+  FileEdit,
+  Flag,
 } from 'lucide-react';
 
 type TabType = 'pending' | 'duplicates' | 'reports';
@@ -87,6 +90,25 @@ export default function AdminContributionsPage() {
   const [isProcessing, setIsProcessing] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
+  const [moderationFilter, setModerationFilter] = useState<'ALL' | 'FLAGGED' | 'CLEAN'>('ALL');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'PENDING_REVIEW' | 'CHANGES_REQUESTED'>('ALL');
+
+  // Modal de décision administrative (Rejet ou Demande de modifications avec motif)
+  const [actionModal, setActionModal] = useState<{
+    isOpen: boolean;
+    item: ContributionItem | null;
+    type: 'REJECT' | 'REQUEST_CHANGES';
+    reason: string;
+  } | null>(null);
+
+  // Modal d'historique d'audit
+  const [auditModal, setAuditModal] = useState<{
+    isOpen: boolean;
+    item: ContributionItem | null;
+    logs: any[];
+    isLoading: boolean;
+  } | null>(null);
+
   const [feedback, setFeedback] = useState<{
     type: 'success' | 'error' | 'info';
     text: string;
@@ -120,32 +142,78 @@ export default function AdminContributionsPage() {
     void loadData();
   }, [loadData]);
 
-  // Action : Valider une contribution
-  const handleValidate = async (item: ContributionItem, approve: boolean) => {
-    const actionLabel = approve ? 'approuver et publier' : 'rejeter';
-    if (!confirm(`Voulez-vous vraiment ${actionLabel} cette contribution de "${item.userName || 'un membre'}" ?`)) {
+  // Action : Valider une contribution (Approbation)
+  const handleApprove = async (item: ContributionItem) => {
+    if (!confirm(`Confirmez-vous l'approbation et l'intégration au catalogue officiel de la proposition de "${item.userName || 'un membre'}" ? (+50 XP attribués)`)) {
       return;
     }
 
     try {
       setIsProcessing(item.id);
-      await contributionsService.validate(item.id, approve);
+      await contributionsService.validate(item.id, true);
       setFeedback({
         type: 'success',
-        text: approve
-          ? `La contribution « ${item.title || item.content.slice(0, 30)} » a été validée et intégrée au catalogue officiel.`
-          : `La contribution a été rejetée.`,
+        text: `La contribution « ${item.title || item.content.slice(0, 30)} » a été approuvée et publiée.`,
       });
-      // Retirer localement
       setContributions((prev) => prev.filter((c) => c.id !== item.id));
-      // Recharger stats
       const newStats = await contributionsService.getStats();
       setStats(newStats);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Erreur lors de la validation';
+      const msg = err instanceof Error ? err.message : 'Erreur lors de l approbation';
       setFeedback({ type: 'error', text: msg });
     } finally {
       setIsProcessing(null);
+    }
+  };
+
+  // Action : Soumettre une décision de rejet ou demande de modifications
+  const handleSubmitDecision = async () => {
+    if (!actionModal || !actionModal.item) return;
+    if (!actionModal.reason.trim()) {
+      alert('Veuillez spécifier un motif ou des consignes pour le contributeur.');
+      return;
+    }
+
+    const item = actionModal.item;
+    const isRequestChanges = actionModal.type === 'REQUEST_CHANGES';
+
+    try {
+      setIsProcessing(item.id);
+      await contributionsService.validate(
+        item.id,
+        false,
+        actionModal.reason.trim(),
+        isRequestChanges
+      );
+
+      setFeedback({
+        type: isRequestChanges ? 'info' : 'success',
+        text: isRequestChanges
+          ? `Des modifications ont été demandées à l'auteur pour « ${item.title || item.content.slice(0, 30)} ».`
+          : `La proposition a été rejetée. Le motif a été transmis à l'auteur.`,
+      });
+
+      setContributions((prev) => prev.filter((c) => c.id !== item.id));
+      setActionModal(null);
+      const newStats = await contributionsService.getStats();
+      setStats(newStats);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Erreur lors de l enregistrement de la décision';
+      setFeedback({ type: 'error', text: msg });
+    } finally {
+      setIsProcessing(null);
+    }
+  };
+
+  // Action : Ouvrir la vue de l'historique d'audit
+  const handleOpenAuditModal = async (item: ContributionItem) => {
+    setAuditModal({ isOpen: true, item, logs: [], isLoading: true });
+    try {
+      const logs = await contributionsService.getAuditLogs(item.id);
+      setAuditModal((prev) => (prev ? { ...prev, logs, isLoading: false } : null));
+    } catch (e) {
+      console.error(e);
+      setAuditModal((prev) => (prev ? { ...prev, isLoading: false } : null));
     }
   };
 
@@ -282,6 +350,20 @@ export default function AdminContributionsPage() {
           item.disputeStatus === 'PENDING';
         if (!isDupCandidate) return false;
       }
+
+      // Filtre de statut
+      if (statusFilter !== 'ALL' && item.status !== statusFilter) {
+        return false;
+      }
+
+      // Filtre d'alerte modération
+      if (moderationFilter === 'FLAGGED' && !item.moderationFlagged) {
+        return false;
+      }
+      if (moderationFilter === 'CLEAN' && item.moderationFlagged) {
+        return false;
+      }
+
       const matchCat =
         selectedCategory === 'ALL' || item.category === selectedCategory;
       const q = searchQuery.toLowerCase().trim();
@@ -295,7 +377,12 @@ export default function AdminContributionsPage() {
         item.userName?.toLowerCase().includes(q);
       return matchCat && matchQuery;
     });
-  }, [contributions, selectedCategory, searchQuery, activeTab]);
+  }, [contributions, selectedCategory, searchQuery, activeTab, statusFilter, moderationFilter]);
+
+  // Nombre de contributions signalées par la modération automatique
+  const moderationAlertsCount = useMemo(() => {
+    return contributions.filter((c) => c.moderationFlagged).length;
+  }, [contributions]);
 
   // Objectif hebdomadaire (cible 10)
   const weeklyTarget = stats.weeklyTarget || 10;
@@ -467,46 +554,122 @@ export default function AdminContributionsPage() {
         {/* ───────────────────────────────────────────────────────────── */}
         {(activeTab === 'pending' || activeTab === 'duplicates') && (
           <div className="space-y-4">
-            {/* Barre d'outils : Recherche et Filtres par Catégorie */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-[var(--card)] p-3 rounded-xl border border-[var(--card-border)]">
-              {/* Recherche */}
-              <div className="relative flex-1">
-                <Search
-                  size={14}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-subtle)]"
-                />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Rechercher par titre, extrait ou auteur..."
-                  className="w-full pl-9 pr-3 py-1.5 text-xs rounded-lg bg-[var(--background)] border border-[var(--card-border)] text-[var(--foreground)] placeholder-[var(--text-subtle)] focus:outline-none focus:border-[var(--accent)]"
-                />
+            {/* Barre d'outils : Recherche, Catégories, Statut et Alerte Modération */}
+            <div className="flex flex-col gap-3 bg-[var(--card)] p-3 rounded-xl border border-[var(--card-border)]">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                {/* Recherche */}
+                <div className="relative flex-1">
+                  <Search
+                    size={14}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-subtle)]"
+                  />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Rechercher par titre, extrait ou auteur..."
+                    className="w-full pl-9 pr-3 py-1.5 text-xs rounded-lg bg-[var(--background)] border border-[var(--card-border)] text-[var(--foreground)] placeholder-[var(--text-subtle)] focus:outline-none focus:border-[var(--accent)]"
+                  />
+                </div>
+
+                {/* Filtres de catégorie */}
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+                  {['ALL', 'KABARY', 'PROVERBE', 'CITATION', 'CONTE'].map((cat) => {
+                    const isSelected = selectedCategory === cat;
+                    const label =
+                      cat === 'ALL'
+                        ? 'Toutes catégories'
+                        : CATEGORY_CONFIG[cat as ContributionCategory]?.label || cat;
+
+                    return (
+                      <button
+                        key={cat}
+                        onClick={() => setSelectedCategory(cat)}
+                        className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition cursor-pointer whitespace-nowrap border ${
+                          isSelected
+                            ? 'bg-[var(--accent-light)] text-[var(--accent-text)] border-[var(--accent)] font-semibold'
+                            : 'border-[var(--card-border)] text-[var(--text-muted)] hover:bg-[var(--card-hover)]'
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
-              {/* Filtres de catégorie */}
-              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
-                {['ALL', 'KABARY', 'PROVERBE', 'CITATION', 'CONTE'].map((cat) => {
-                  const isSelected = selectedCategory === cat;
-                  const label =
-                    cat === 'ALL'
-                      ? 'Toutes'
-                      : CATEGORY_CONFIG[cat as ContributionCategory]?.label || cat;
+              {/* Ligne secondaire : Filtres Modération & Statut */}
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-[var(--card-border)] text-xs">
+                {/* Alerte de modération automatique */}
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[11px] text-[var(--text-subtle)] font-medium">Modération :</span>
+                  <button
+                    onClick={() => setModerationFilter('ALL')}
+                    className={`px-2 py-0.5 rounded text-[11px] font-medium border transition cursor-pointer ${
+                      moderationFilter === 'ALL'
+                        ? 'bg-[var(--foreground)] text-[var(--background)]'
+                        : 'border-[var(--card-border)] text-[var(--text-muted)]'
+                    }`}
+                  >
+                    Toutes
+                  </button>
+                  <button
+                    onClick={() => setModerationFilter('FLAGGED')}
+                    className={`px-2 py-0.5 rounded text-[11px] font-medium border flex items-center gap-1 transition cursor-pointer ${
+                      moderationFilter === 'FLAGGED'
+                        ? 'bg-rose-600 text-white font-semibold border-rose-600'
+                        : 'border-rose-300 text-rose-700 dark:text-rose-400 hover:bg-rose-50'
+                    }`}
+                  >
+                    <Flag size={11} />
+                    <span>Signalées ({moderationAlertsCount})</span>
+                  </button>
+                  <button
+                    onClick={() => setModerationFilter('CLEAN')}
+                    className={`px-2 py-0.5 rounded text-[11px] font-medium border transition cursor-pointer ${
+                      moderationFilter === 'CLEAN'
+                        ? 'bg-emerald-600 text-white font-semibold border-emerald-600'
+                        : 'border-emerald-300 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50'
+                    }`}
+                  >
+                    Saines
+                  </button>
+                </div>
 
-                  return (
-                    <button
-                      key={cat}
-                      onClick={() => setSelectedCategory(cat)}
-                      className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition cursor-pointer whitespace-nowrap border ${
-                        isSelected
-                          ? 'bg-[var(--accent-light)] text-[var(--accent-text)] border-[var(--accent)] font-semibold'
-                          : 'border-[var(--card-border)] text-[var(--text-muted)] hover:bg-[var(--card-hover)]'
-                      }`}
-                    >
-                      {label}
-                    </button>
-                  );
-                })}
+                {/* Filtre par statut */}
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[11px] text-[var(--text-subtle)] font-medium">Statut :</span>
+                  <button
+                    onClick={() => setStatusFilter('ALL')}
+                    className={`px-2 py-0.5 rounded text-[11px] font-medium border transition cursor-pointer ${
+                      statusFilter === 'ALL'
+                        ? 'bg-[var(--accent-light)] text-[var(--accent-text)] border-[var(--accent)] font-semibold'
+                        : 'border-[var(--card-border)] text-[var(--text-muted)]'
+                    }`}
+                  >
+                    Tous
+                  </button>
+                  <button
+                    onClick={() => setStatusFilter('PENDING_REVIEW')}
+                    className={`px-2 py-0.5 rounded text-[11px] font-medium border transition cursor-pointer ${
+                      statusFilter === 'PENDING_REVIEW'
+                        ? 'bg-[var(--accent-light)] text-[var(--accent-text)] border-[var(--accent)] font-semibold'
+                        : 'border-[var(--card-border)] text-[var(--text-muted)]'
+                    }`}
+                  >
+                    En attente
+                  </button>
+                  <button
+                    onClick={() => setStatusFilter('CHANGES_REQUESTED')}
+                    className={`px-2 py-0.5 rounded text-[11px] font-medium border transition cursor-pointer ${
+                      statusFilter === 'CHANGES_REQUESTED'
+                        ? 'bg-amber-100 text-amber-900 border-amber-300 font-semibold dark:bg-amber-950/60 dark:text-amber-200'
+                        : 'border-[var(--card-border)] text-[var(--text-muted)]'
+                    }`}
+                  >
+                    Modifs demandées
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -587,6 +750,49 @@ export default function AdminContributionsPage() {
                         </div>
                       </div>
 
+                      {/* Alerte de modération automatique */}
+                      {item.moderationFlagged && (
+                        <div className="p-3 rounded-lg bg-rose-50 dark:bg-rose-950/40 border border-rose-300 dark:border-rose-800 text-rose-900 dark:text-rose-200 text-xs space-y-1.5">
+                          <div className="flex items-center gap-2 font-semibold text-rose-700 dark:text-rose-300">
+                            <Flag size={14} className="text-rose-600 shrink-0" />
+                            <span>🚩 Alerte de modération automatique — Contenu suspect détecté</span>
+                          </div>
+                          {item.moderationCategories && item.moderationCategories.length > 0 && (
+                            <div className="flex flex-wrap gap-1 items-center">
+                              <span className="text-[11px] text-rose-700 dark:text-rose-400">Catégories de risque :</span>
+                              {item.moderationCategories.map((cat) => (
+                                <span
+                                  key={cat}
+                                  className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-rose-200 dark:bg-rose-900/80 text-rose-900 dark:text-rose-100 font-bold"
+                                >
+                                  {cat}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                          {item.moderationReason && (
+                            <p className="text-[11px] text-rose-800 dark:text-rose-300 font-mono bg-white/70 dark:bg-black/30 p-1.5 rounded border border-rose-200 dark:border-rose-900/50">
+                              {item.moderationReason}
+                            </p>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Statut de modifications demandées */}
+                      {item.status === 'CHANGES_REQUESTED' && (
+                        <div className="p-2.5 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-xs space-y-1">
+                          <div className="flex items-center gap-1.5 font-semibold text-amber-800 dark:text-amber-300">
+                            <FileEdit size={13} />
+                            <span>Ajustements en attente de l&apos;auteur</span>
+                          </div>
+                          {item.adminFeedback && (
+                            <p className="text-[11px] italic text-amber-800 dark:text-amber-300">
+                              Consignes : « {item.adminFeedback} »
+                            </p>
+                          )}
+                        </div>
+                      )}
+
                       {/* Alertes Doublons & Litiges */}
                       {item.isDuplicateConfirmed && (
                         <div className="p-2.5 rounded-lg bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-rose-800 dark:text-rose-200 text-xs flex items-center justify-between gap-2">
@@ -596,8 +802,8 @@ export default function AdminContributionsPage() {
                               <span className="font-semibold">Doublon confirmé — Suppression auto : </span>
                               <span className="font-mono">
                                 {item.markedForDeletionAt
-                                  ? new Date(item.markedForDeletionAt).toLocaleString('fr-FR')
-                                  : 'Suspendue par réclamation'}
+                                   ? new Date(item.markedForDeletionAt).toLocaleString('fr-FR')
+                                   : 'Suspendue par réclamation'}
                               </span>
                               <div className="text-[11px] text-rose-600 dark:text-rose-400">
                                 Commentaires bloqués côté application. Compte à rebours 24h actif.
@@ -722,6 +928,16 @@ export default function AdminContributionsPage() {
                         {/* Boutons d'action modérateur */}
                         <div className="flex items-center gap-2 self-end sm:self-auto flex-wrap">
                           <button
+                            onClick={() => void handleOpenAuditModal(item)}
+                            disabled={isBusy}
+                            title="Consulter l'historique d'audit des décisions"
+                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-xs font-medium transition cursor-pointer"
+                          >
+                            <History size={13} />
+                            <span>Historique</span>
+                          </button>
+
+                          <button
                             onClick={() => handleDeleteContribution(item)}
                             disabled={isBusy}
                             title="Supprimer définitivement"
@@ -743,17 +959,43 @@ export default function AdminContributionsPage() {
                           )}
 
                           <button
-                            onClick={() => void handleValidate(item, false)}
+                            onClick={() =>
+                              setActionModal({
+                                isOpen: true,
+                                item,
+                                type: 'REQUEST_CHANGES',
+                                reason: '',
+                              })
+                            }
                             disabled={isBusy}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-rose-200 dark:border-rose-900 bg-rose-50 dark:bg-rose-950/30 text-rose-700 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-900/50 text-xs font-medium transition cursor-pointer disabled:opacity-50"
+                            title="Demander des ajustements à l'auteur"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 text-amber-800 dark:text-amber-300 hover:bg-amber-100 text-xs font-medium transition cursor-pointer disabled:opacity-50"
                           >
-                            <XCircle size={14} />
+                            <FileEdit size={13} />
+                            <span>Ajustements</span>
+                          </button>
+
+                          <button
+                            onClick={() =>
+                              setActionModal({
+                                isOpen: true,
+                                item,
+                                type: 'REJECT',
+                                reason: '',
+                              })
+                            }
+                            disabled={isBusy}
+                            title="Rejeter la contribution avec un motif obligatoire"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-rose-200 dark:border-rose-900 bg-rose-50 dark:bg-rose-950/30 text-rose-700 dark:text-rose-400 hover:bg-rose-100 text-xs font-medium transition cursor-pointer disabled:opacity-50"
+                          >
+                            <XCircle size={13} />
                             <span>Rejeter</span>
                           </button>
 
                           <button
-                            onClick={() => void handleValidate(item, true)}
+                            onClick={() => void handleApprove(item)}
                             disabled={isBusy}
+                            title="Approuver et intégrer au catalogue officiel (+50 XP)"
                             className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold shadow-xs transition cursor-pointer disabled:opacity-50"
                           >
                             <CheckCircle2 size={14} />
@@ -844,6 +1086,180 @@ export default function AdminContributionsPage() {
                 })}
               </div>
             )}
+          </div>
+        )}
+        {/* ───────────────────────────────────────────────────────────── */}
+        {/* MODAL DE DÉCISION (REJET OU DEMANDE DE MODIFICATIONS)          */}
+        {/* ───────────────────────────────────────────────────────────── */}
+        {actionModal?.isOpen && actionModal.item && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+            <div className="w-full max-w-md rounded-2xl bg-[var(--card)] border border-[var(--card-border)] shadow-2xl p-5 space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-bold text-[var(--foreground)] flex items-center gap-2">
+                  {actionModal.type === 'REQUEST_CHANGES' ? (
+                    <>
+                      <FileEdit size={16} className="text-amber-600" />
+                      <span>Demander des ajustements à l&apos;auteur</span>
+                    </>
+                  ) : (
+                    <>
+                      <XCircle size={16} className="text-rose-600" />
+                      <span>Rejeter la contribution</span>
+                    </>
+                  )}
+                </h3>
+                <button
+                  onClick={() => setActionModal(null)}
+                  className="p-1 rounded-md text-[var(--text-subtle)] hover:text-[var(--foreground)] cursor-pointer"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="text-xs text-[var(--text-muted)] space-y-1">
+                <p>
+                  Contribution :{' '}
+                  <strong className="text-[var(--foreground)]">
+                    « {actionModal.item.title || actionModal.item.content.slice(0, 40)} »
+                  </strong>
+                </p>
+                <p>
+                  Auteur :{' '}
+                  <strong className="text-[var(--foreground)]">
+                    {actionModal.item.userName || 'Membre'}
+                  </strong>
+                </p>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-[var(--foreground)] block">
+                  {actionModal.type === 'REQUEST_CHANGES'
+                    ? 'Consignes & ajustements attendus :'
+                    : 'Motif du rejet (transmis à l’auteur) :'}
+                </label>
+                <textarea
+                  value={actionModal.reason}
+                  onChange={(e) =>
+                    setActionModal((prev) =>
+                      prev ? { ...prev, reason: e.target.value } : null
+                    )
+                  }
+                  rows={4}
+                  placeholder={
+                    actionModal.type === 'REQUEST_CHANGES'
+                      ? 'Ex: Veuillez préciser le dialecte ou reformuler la traduction pour plus de clarté...'
+                      : 'Ex: Contenu non conforme aux règles de la communauté ou propos inappropriés...'
+                  }
+                  className="w-full p-2.5 text-xs rounded-lg bg-[var(--background)] border border-[var(--card-border)] text-[var(--foreground)] placeholder-[var(--text-subtle)] focus:outline-none focus:border-[var(--accent)] resize-none"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-[var(--card-border)]">
+                <button
+                  onClick={() => setActionModal(null)}
+                  className="px-3 py-1.5 rounded-lg border border-[var(--card-border)] text-xs text-[var(--text-muted)] hover:bg-[var(--card-hover)] cursor-pointer"
+                >
+                  Annuler
+                </button>
+                <button
+                  onClick={() => void handleSubmitDecision()}
+                  disabled={!actionModal.reason.trim() || isProcessing === actionModal.item.id}
+                  className={`px-4 py-1.5 rounded-lg text-xs font-semibold text-white shadow-xs transition cursor-pointer disabled:opacity-50 ${
+                    actionModal.type === 'REQUEST_CHANGES'
+                      ? 'bg-amber-600 hover:bg-amber-700'
+                      : 'bg-rose-600 hover:bg-rose-700'
+                  }`}
+                >
+                  {isProcessing === actionModal.item.id
+                    ? 'Enregistrement...'
+                    : actionModal.type === 'REQUEST_CHANGES'
+                    ? 'Envoyer les consignes'
+                    : 'Confirmer le rejet'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ───────────────────────────────────────────────────────────── */}
+        {/* MODAL D'HISTORIQUE D'AUDIT                                    */}
+        {/* ───────────────────────────────────────────────────────────── */}
+        {auditModal?.isOpen && auditModal.item && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+            <div className="w-full max-w-lg rounded-2xl bg-[var(--card)] border border-[var(--card-border)] shadow-2xl p-5 space-y-4 max-h-[85vh] flex flex-col">
+              <div className="flex items-center justify-between pb-2 border-b border-[var(--card-border)]">
+                <h3 className="text-sm font-bold text-[var(--foreground)] flex items-center gap-2">
+                  <History size={16} className="text-blue-600" />
+                  <span>Historique des décisions & Audit</span>
+                </h3>
+                <button
+                  onClick={() => setAuditModal(null)}
+                  className="p-1 rounded-md text-[var(--text-subtle)] hover:text-[var(--foreground)] cursor-pointer"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="text-xs text-[var(--text-muted)]">
+                Contribution :{' '}
+                <strong className="text-[var(--foreground)]">
+                  « {auditModal.item.title || auditModal.item.content.slice(0, 45)} »
+                </strong>
+              </div>
+
+              <div className="flex-1 overflow-y-auto space-y-3 pr-1">
+                {auditModal.isLoading ? (
+                  <div className="py-12 text-center text-xs text-[var(--text-muted)] flex items-center justify-center gap-2">
+                    <RefreshCw size={15} className="animate-spin" />
+                    <span>Chargement de l&apos;historique...</span>
+                  </div>
+                ) : auditModal.logs.length === 0 ? (
+                  <div className="py-8 text-center text-xs text-[var(--text-muted)]">
+                    Aucun événement d&apos;audit archivé pour cette contribution.
+                  </div>
+                ) : (
+                  auditModal.logs.map((log) => (
+                    <div
+                      key={log.id}
+                      className="p-3 rounded-xl bg-[var(--background)] border border-[var(--card-border)] space-y-1.5 text-xs"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-bold text-[var(--foreground)] uppercase text-[11px] font-mono">
+                          {log.action}
+                        </span>
+                        <span className="text-[10px] text-[var(--text-subtle)] font-mono">
+                          {new Date(log.createdAt).toLocaleString('fr-FR')}
+                        </span>
+                      </div>
+
+                      <div className="text-[11px] text-[var(--text-muted)] flex items-center gap-2">
+                        <span>Acteur : <strong className="text-[var(--foreground)]">{log.userRole || 'SYSTEM'}</strong></span>
+                        {log.fromStatus && log.toStatus && (
+                          <span>
+                            ({log.fromStatus} → <strong className="text-[var(--foreground)]">{log.toStatus}</strong>)
+                          </span>
+                        )}
+                      </div>
+
+                      {log.reason && (
+                        <p className="text-[11px] bg-[var(--card)] p-2 rounded border border-[var(--card-border)] italic text-[var(--foreground)]">
+                          « {log.reason} »
+                        </p>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+
+              <div className="pt-2 border-t border-[var(--card-border)] flex justify-end">
+                <button
+                  onClick={() => setAuditModal(null)}
+                  className="px-4 py-1.5 rounded-lg border border-[var(--card-border)] text-xs text-[var(--foreground)] hover:bg-[var(--card-hover)] cursor-pointer"
+                >
+                  Fermer
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>

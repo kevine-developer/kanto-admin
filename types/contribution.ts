@@ -1,12 +1,32 @@
 export type ContributionCategory = 'KABARY' | 'PROVERBE' | 'CITATION' | 'CONTE';
 
-export type ContributionStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'ARCHIVED';
+export type ContributionStatus =
+  | 'DRAFT'
+  | 'PENDING_REVIEW'
+  | 'CHANGES_REQUESTED'
+  | 'APPROVED'
+  | 'REJECTED'
+  | 'ARCHIVED';
+
+export interface ContributionAuditLog {
+  id: string;
+  contributionId: string;
+  userId?: string | null;
+  userRole?: string | null;
+  action: string;
+  fromStatus?: ContributionStatus | null;
+  toStatus?: ContributionStatus | null;
+  reason?: string | null;
+  metadata?: any;
+  createdAt: string;
+}
 
 export interface ContributionItem {
   id: string;
   userId: string;
   userName?: string;
   userAvatar?: string;
+  userEmail?: string;
   category: ContributionCategory;
   title: string;
   titleFr?: string;
@@ -24,6 +44,17 @@ export interface ContributionItem {
   downvotesCount: number;
   viewsCount?: number;
   commentsCount?: number;
+  // Modération automatique
+  moderationFlagged?: boolean;
+  moderationCategories?: string[];
+  moderationReason?: string | null;
+  moderationDetails?: any;
+  moderatedAt?: string | null;
+  adminFeedback?: string | null;
+  adminReviewedBy?: string | null;
+  adminReviewedAt?: string | null;
+  lastNotificationSentAt?: string | null;
+  // Doublons
   duplicateScore?: number | null;
   duplicateOfId?: string | null;
   duplicateTypeOf?: string | null;
@@ -41,6 +72,8 @@ export interface ContributionStats {
   totalPending: number;
   totalApproved: number;
   totalRejected: number;
+  totalFlagged?: number;
+  totalChangesRequested?: number;
   totalReportsPending: number;
   approvedThisWeek: number;
   weeklyTarget: number;

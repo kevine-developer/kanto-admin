@@ -36,12 +36,25 @@ export const contributionsService = {
   /**
    * Récupère les contributions en attente de modération depuis le serveur.
    * Valide la structure des données retournées et propage les erreurs réseau/API.
+   * @param filters - Filtres optionnels (statut, catégorie, alerte modération, recherche)
    * @throws {Error} En cas d'échec de la requête HTTP ou de données invalides
    * @returns Liste des contributions valides en attente
    */
-  async getPending(): Promise<ContributionItem[]> {
+  async getPending(filters?: {
+    status?: string;
+    category?: string;
+    flagged?: boolean;
+    search?: string;
+  }): Promise<ContributionItem[]> {
+    const query = new URLSearchParams();
+    if (filters?.status && filters.status !== 'ALL') query.set('status', filters.status);
+    if (filters?.category && filters.category !== 'ALL') query.set('category', filters.category);
+    if (filters?.flagged !== undefined) query.set('flagged', String(filters.flagged));
+    if (filters?.search) query.set('search', filters.search);
+
+    const queryString = query.toString() ? `?${query.toString()}` : '';
     const res = await fetchApi<ContributionItem[] | { data: ContributionItem[] }>(
-      '/contributions/pending'
+      `/contributions/pending${queryString}`
     );
     const list = Array.isArray(res)
       ? res
@@ -54,6 +67,13 @@ export const contributionsService = {
     }
 
     return list.filter(isValidContribution);
+  },
+
+  /**
+   * Récupère l'historique d'audit des décisions pour une contribution.
+   */
+  async getAuditLogs(id: string): Promise<any[]> {
+    return fetchApi<any[]>(`/contributions/${id}/audit-logs`);
   },
 
   /**
@@ -78,7 +98,7 @@ export const contributionsService = {
    */
   async getReports(): Promise<ContentReport[]> {
     const res = await fetchApi<ContentReport[] | { data: ContentReport[] }>(
-      '/contributions/admin/reports'
+      `/contributions/admin/reports`
     );
     const list = Array.isArray(res)
       ? res
@@ -94,16 +114,28 @@ export const contributionsService = {
   },
 
   /**
-   * Valide ou rejette une contribution en attente.
+   * Valide, rejette ou demande des modifications pour une contribution en attente.
    * @param id - Identifiant unique de la contribution
-   * @param approve - true pour approuver et publier, false pour rejeter
+   * @param approve - true pour approuver et publier, false pour rejeter/demander modifs
+   * @param reason - Motif de rejet ou consignes de modification
+   * @param requestChanges - true si des modifications sont demandées au contributeur
    * @throws {Error} En cas d'échec de la mise à jour sur le serveur
    * @returns La contribution mise à jour avec son nouveau statut
    */
-  async validate(id: string, approve: boolean): Promise<ContributionItem> {
+  async validate(
+    id: string,
+    approve: boolean,
+    reason?: string,
+    requestChanges?: boolean
+  ): Promise<ContributionItem> {
     return fetchApi<ContributionItem>(`/contributions/${id}/validate`, {
       method: 'PATCH',
-      body: JSON.stringify({ approve }),
+      body: JSON.stringify({
+        approve,
+        reason,
+        feedback: reason,
+        requestChanges: !!requestChanges,
+      }),
     });
   },
 
