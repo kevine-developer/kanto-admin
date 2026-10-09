@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { AdminShell } from '@/components/layout/AdminShell';
+import { PageHeader } from '@/components/layout/PageHeader';
 import { ConfirmModal, LoadingState, Field } from '@/components/ui';
 import { useToast } from '@/lib/hooks/useToast';
 import { fetchApi } from '@/lib/api-client';
@@ -17,6 +18,7 @@ import {
   X,
   Shuffle,
   Layers,
+  HelpCircle,
 } from 'lucide-react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -148,49 +150,14 @@ export default function MissingWordAdminPage() {
   }, [toast]);
 
   useEffect(() => {
-    let isMounted = true;
-    fetchApi<MissingWordLevel[]>('/admin/missing-word/levels')
-      .then((data) => {
-        if (!isMounted) return;
-        setLevels(data || []);
-        if (data && data.length > 0) {
-          setSelectedLevelId((prev) => (prev && data.some((l) => l.id === prev) ? prev : data[0].id));
-        }
-      })
-      .catch((err: unknown) => {
-        if (!isMounted) return;
-        const msg = err instanceof Error ? err.message : 'Erreur de chargement';
-        toast.error(msg);
-      })
-      .finally(() => {
-        if (isMounted) setIsLoading(false);
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, [toast]);
+    void loadLevels();
+  }, [loadLevels]);
 
   useEffect(() => {
-    if (!selectedLevelId) return;
-    let isMounted = true;
-    fetchApi<MissingWordLevel>(`/admin/missing-word/levels/${selectedLevelId}`)
-      .then((data) => {
-        if (isMounted) setSelectedLevel(data);
-      })
-      .catch((err: unknown) => {
-        if (!isMounted) return;
-        const msg = err instanceof Error ? err.message : 'Erreur de chargement du niveau';
-        toast.error(msg);
-      })
-      .finally(() => {
-        if (isMounted) setIsPanelLoading(false);
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, [selectedLevelId, toast]);
+    if (selectedLevelId) {
+      void loadLevelDetail(selectedLevelId);
+    }
+  }, [selectedLevelId, loadLevelDetail]);
 
   // Initialisation du seed si la base est vide
   const handleSeed = async () => {
@@ -438,34 +405,41 @@ export default function MissingWordAdminPage() {
 
   return (
     <AdminShell>
-      {/* En-tête page */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-lg font-semibold text-[var(--foreground)]">Mot Manquant</h1>
-          <p className="text-xs text-[var(--text-subtle)] mt-0.5">
-            {levels.length} niveau{levels.length !== 1 ? 'x' : ''} · Banque de questions par niveau · 10 questions tirées au sort par partie
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          {levels.length === 0 && (
+      {/* En-tête standardisé */}
+      <PageHeader
+        title="Mot Manquant"
+        description="Banque de questions par niveau · 10 questions tirées au sort par partie"
+        icon={HelpCircle}
+        badge={
+          <span
+            className="text-xs px-2 py-0.5 rounded font-mono font-medium"
+            style={{
+              background: 'var(--card)',
+              border: '1px solid var(--card-border)',
+              color: 'var(--text-muted)',
+            }}
+          >
+            {levels.length} niveau{levels.length !== 1 ? 'x' : ''}
+          </span>
+        }
+        actions={
+          levels.length === 0 ? (
             <button
               onClick={handleSeed}
               disabled={isSeeding}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg border border-[var(--card-border)] bg-[var(--card)] text-xs font-medium hover:bg-[var(--accent)] transition disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[var(--card-border)] bg-[var(--card)] text-xs font-medium hover:bg-[var(--card-hover)] transition disabled:opacity-50 cursor-pointer"
             >
               {isSeeding ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Layers className="w-3.5 h-3.5 text-amber-500" />}
-              Initialiser 50 questions
+              <span>Initialiser 50 questions</span>
             </button>
-          )}
-          <button
-            onClick={openCreateLevel}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-[var(--accent)] text-[var(--accent-foreground)] text-xs font-medium hover:opacity-90 transition"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            Nouveau niveau
-          </button>
-        </div>
-      </div>
+          ) : undefined
+        }
+        primaryAction={{
+          label: 'Nouveau niveau',
+          icon: <Plus className="w-3.5 h-3.5" />,
+          onClick: openCreateLevel,
+        }}
+      />
 
       {/* Layout deux colonnes */}
       <div className="grid grid-cols-1 md:grid-cols-[280px_1fr] gap-4 items-start">

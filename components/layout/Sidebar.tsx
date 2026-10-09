@@ -81,7 +81,6 @@ const NAV_GROUPS: { label: string; items: { href: string; icon: React.ElementTyp
       { href: '/beta-testers',  icon: Smartphone, label: 'Bêta-Testeurs Play' },
       { href: '/cgu',           icon: FileText,   label: 'CGU & Juridique' },
       { href: '/notifications', icon: Bell,       label: 'Notifications Push' },
-      { href: '/settings',      icon: Settings2,  label: 'Paramètres' },
     ],
   },
 ];

@@ -3,6 +3,7 @@ import {
   ContributionItem,
   ContributionStats,
   ContentReport,
+  ContributionAuditLog,
 } from '@/types/contribution';
 
 /**
@@ -72,8 +73,8 @@ export const contributionsService = {
   /**
    * Récupère l'historique d'audit des décisions pour une contribution.
    */
-  async getAuditLogs(id: string): Promise<any[]> {
-    return fetchApi<any[]>(`/contributions/${id}/audit-logs`);
+  async getAuditLogs(id: string): Promise<ContributionAuditLog[]> {
+    return fetchApi<ContributionAuditLog[]>(`/contributions/${id}/audit-logs`);
   },
 
   /**

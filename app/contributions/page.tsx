@@ -10,6 +10,7 @@ import {
   ContributionStats,
   ContentReport,
   ContributionCategory,
+  ContributionAuditLog,
 } from '@/types/contribution';
 import {
   HeartHandshake,
@@ -105,7 +106,7 @@ export default function AdminContributionsPage() {
   const [auditModal, setAuditModal] = useState<{
     isOpen: boolean;
     item: ContributionItem | null;
-    logs: any[];
+    logs: ContributionAuditLog[];
     isLoading: boolean;
   } | null>(null);
 
@@ -394,23 +395,22 @@ export default function AdminContributionsPage() {
   return (
     <AdminShell>
       <div className="w-full space-y-6 pb-8">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <PageHeader
-            title="Modération & Contributions"
-            description="Supervision du flux communautaire, analyse des votes et validation vers le catalogue officiel."
-            icon={HeartHandshake}
-          />
-
-          <button
-            onClick={() => void loadData()}
-            disabled={isLoading}
-            className="self-start sm:self-auto inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[var(--card-border)] bg-[var(--card)] hover:bg-[var(--card-hover)] text-xs font-medium text-[var(--foreground)] transition cursor-pointer disabled:opacity-50"
-          >
-            <RefreshCw size={13} className={isLoading ? 'animate-spin' : ''} />
-            <span>Actualiser</span>
-          </button>
-        </div>
+        {/* Header standardisé */}
+        <PageHeader
+          title="Modération & Contributions"
+          description="Supervision du flux communautaire, analyse des votes et validation vers le catalogue officiel."
+          icon={HeartHandshake}
+          actions={
+            <button
+              onClick={() => void loadData()}
+              disabled={isLoading}
+              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[var(--card-border)] bg-[var(--card)] hover:bg-[var(--card-hover)] text-xs font-medium text-[var(--foreground)] transition cursor-pointer disabled:opacity-50"
+            >
+              <RefreshCw size={13} className={isLoading ? 'animate-spin' : ''} />
+              <span>Actualiser</span>
+            </button>
+          }
+        />
 
         {/* Feedback Alert */}
         {feedback && (

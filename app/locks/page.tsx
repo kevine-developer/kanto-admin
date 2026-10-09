@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { AdminShell } from '@/components/layout/AdminShell';
+import { PageHeader } from '@/components/layout/PageHeader';
 import { ConfirmModal } from '@/components/ui';
 import { useLocks, LockModal, LocksTable } from '@/features/locks';
 import { ModuleLockItem, CreateModuleDto, UpdateModuleDto } from '@/types/lock';
@@ -12,6 +13,7 @@ import {
   Search,
   RefreshCw,
   Plus,
+  Layers,
 } from 'lucide-react';
 
 export default function LocksAdminPage() {
@@ -102,42 +104,40 @@ export default function LocksAdminPage() {
   return (
     <AdminShell>
       <div className="w-full space-y-4 pb-8">
-        {/* En-tête de la page sobre & actions principales */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[var(--card-border)] pb-3">
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-base font-semibold text-[var(--foreground)] tracking-tight">
-                Visuels &amp; Disponibilité (Jeux &amp; Catégories)
-              </h1>
-              <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-                Photos &amp; Accès
-              </span>
-            </div>
-            <p className="text-xs text-[var(--text-muted)] mt-0.5">
-              Gérez les photos de présentation (Cloudinary), les titres bilingues et la disponibilité de chaque jeu et catégorie culturelle.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2 self-start sm:self-center">
+        {/* En-tête standardisé */}
+        <PageHeader
+          title="Visuels & Disponibilité"
+          description="Photos de présentation, titres bilingues et disponibilité des jeux et catégories."
+          icon={Layers}
+          badge={
+            <span
+              className="text-xs px-2 py-0.5 rounded font-mono font-medium"
+              style={{
+                background: 'var(--card)',
+                border: '1px solid var(--card-border)',
+                color: 'var(--text-muted)',
+              }}
+            >
+              {modules.length} module{modules.length !== 1 ? 's' : ''}
+            </span>
+          }
+          actions={
             <button
               onClick={loadLocks}
               disabled={isLoading}
-              className="p-1.5 rounded-md border border-[var(--card-border)] bg-[var(--card)] text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--card-hover)] transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-medium"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[var(--card-border)] bg-[var(--card)] text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--card-hover)] transition-colors cursor-pointer text-xs font-medium"
               title="Rafraîchir les données"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
-              <span className="hidden sm:inline">Actualiser</span>
+              <span>Actualiser</span>
             </button>
-
-            <button
-              onClick={handleOpenCreateModal}
-              className="px-3 py-1.5 rounded-md bg-[var(--foreground)] text-[var(--background)] hover:opacity-90 transition cursor-pointer flex items-center gap-1.5 text-xs font-medium shadow-xs"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Nouveau module</span>
-            </button>
-          </div>
-        </div>
+          }
+          primaryAction={{
+            label: 'Nouveau module',
+            icon: <Plus className="w-3.5 h-3.5" />,
+            onClick: handleOpenCreateModal,
+          }}
+        />
 
         {/* Métriques compactes */}
         <div className="grid grid-cols-4 gap-2.5">

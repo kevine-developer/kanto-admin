@@ -79,8 +79,8 @@ export default function MarketingBannersAdminPage() {
       setIsLoading(true);
       const data = await marketingBannersService.getBanners();
       setBanners(data);
-      if (data.length > 0 && !selectedPreviewBanner) {
-        setSelectedPreviewBanner(data[0]);
+      if (data.length > 0) {
+        setSelectedPreviewBanner((prev) => prev ?? data[0]);
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Erreur lors du chargement des bannières.';
@@ -88,7 +88,7 @@ export default function MarketingBannersAdminPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [selectedPreviewBanner, toast]);
+  }, [toast]);
 
   useEffect(() => {
     loadBanners();

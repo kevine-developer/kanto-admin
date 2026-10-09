@@ -17,7 +17,7 @@ export interface ContributionAuditLog {
   fromStatus?: ContributionStatus | null;
   toStatus?: ContributionStatus | null;
   reason?: string | null;
-  metadata?: any;
+  metadata?: Record<string, unknown> | null;
   createdAt: string;
 }
 
@@ -48,7 +48,7 @@ export interface ContributionItem {
   moderationFlagged?: boolean;
   moderationCategories?: string[];
   moderationReason?: string | null;
-  moderationDetails?: any;
+  moderationDetails?: Record<string, unknown> | null;
   moderatedAt?: string | null;
   adminFeedback?: string | null;
   adminReviewedBy?: string | null;

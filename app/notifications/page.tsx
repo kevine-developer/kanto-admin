@@ -219,17 +219,8 @@ export default function NotificationsAdminPage() {
   }, []);
 
   useEffect(() => {
-    let isMounted = true;
-    fetchApi<NotificationItem[]>('/admin/notifications')
-      .then((data) => { if (isMounted) setNotifications(data || []); })
-      .catch((err: unknown) => {
-        if (!isMounted) return;
-        const msg = err instanceof Error ? err.message : 'Erreur lors du chargement des notifications.';
-        setMessage({ type: 'error', text: msg });
-      })
-      .finally(() => { if (isMounted) setIsLoading(false); });
-    return () => { isMounted = false; };
-  }, []);
+    void loadNotifications();
+  }, [loadNotifications]);
 
   const resetForm = () => {
     setTitleMg(''); setTitleFr(''); setMessageMg(''); setMessageFr('');
