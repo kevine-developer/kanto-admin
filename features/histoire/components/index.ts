@@ -1,4 +1,5 @@
 export * from './BanknoteCardList';
+export * from './BanknoteModal';
 export * from './CivicLessonCardList';
 export * from './HistoireFilterBar';
 export * from './HistoireModal';

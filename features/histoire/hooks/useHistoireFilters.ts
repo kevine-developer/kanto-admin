@@ -9,7 +9,8 @@ export type BanknoteSeriesFilter =
   | 'SERIE_2017'
   | 'SERIE_2003'
   | 'SERIE_FMG'
-  | 'COLONIAL';
+  | 'COLONIAL'
+  | string;
 
 interface UseHistoireFiltersProps {
   data: HistoireAllData;
@@ -42,11 +43,35 @@ export function useHistoireFilters({ data }: UseHistoireFiltersProps) {
     );
 
     const banknotes = data.banknotes.filter((b) => {
+      const seriesLower = (b.series || '').toLowerCase();
+      const idLower = (b.id || '').toLowerCase();
+      const periodLower = (b.period || '').toLowerCase();
+
       const isColonial =
         b.series === 'COLONIAL' ||
-        b.id.toLowerCase().includes('colonial') ||
-        b.period.includes('1925') ||
-        b.period.includes('1950');
+        b.series === 'MDG105' ||
+        b.series === 'MDG100' ||
+        b.series === 'MDG150' ||
+        idLower.includes('colonial') ||
+        periodLower.includes('1917') ||
+        periodLower.includes('1925') ||
+        periodLower.includes('1926') ||
+        periodLower.includes('1950');
+
+      const isFmgEra =
+        b.series === 'SERIE_FMG' ||
+        b.series === 'MDG200' ||
+        b.series === 'MDG250' ||
+        b.series === 'MDG300' ||
+        b.series === 'MDG400' ||
+        b.series === 'MDG450';
+
+      const isAriaryTransition =
+        b.series === 'SERIE_2003' ||
+        b.series === 'MDG460' ||
+        b.series === 'MDG465' ||
+        b.series === 'MDG470' ||
+        b.series === 'MDG475';
 
       const matchesQuery =
         !q ||
@@ -54,16 +79,20 @@ export function useHistoireFilters({ data }: UseHistoireFiltersProps) {
         b.titleMg.toLowerCase().includes(q) ||
         String(b.valueAriary).includes(q) ||
         String(b.valueFmg).includes(q) ||
-        b.series.toLowerCase().includes(q) ||
-        b.period.toLowerCase().includes(q);
+        seriesLower.includes(q) ||
+        periodLower.includes(q);
 
       let matchesSeries = true;
       if (banknoteSeriesFilter === 'COLONIAL') {
         matchesSeries = isColonial;
       } else if (banknoteSeriesFilter === 'SERIE_FMG') {
-        matchesSeries = b.series === 'SERIE_FMG' && !isColonial;
+        matchesSeries = isFmgEra && !isColonial;
+      } else if (banknoteSeriesFilter === 'SERIE_2003') {
+        matchesSeries = isAriaryTransition;
       } else if (banknoteSeriesFilter !== 'ALL') {
-        matchesSeries = b.series === banknoteSeriesFilter;
+        matchesSeries =
+          b.series === banknoteSeriesFilter ||
+          idLower.includes(banknoteSeriesFilter.toLowerCase());
       }
 
       return matchesQuery && matchesSeries;

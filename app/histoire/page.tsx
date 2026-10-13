@@ -9,6 +9,8 @@ import { LoadingState, ConfirmModal } from '@/components/ui';
 import { useToast } from '@/lib/hooks/useToast';
 import { historyService } from '@/services/history.service';
 
+import type { BanknoteItem } from '@/types/history';
+
 import {
   VALID_TAB_KEYS,
   type TabKey,
@@ -19,6 +21,7 @@ import {
   HistoireTabBar,
   HistoireFilterBar,
   HistoireModal,
+  BanknoteModal,
   PresidentCardList,
   NationalEmblemTable,
   ProvinceCardList,
@@ -238,21 +241,30 @@ function HistoireAdminContent() {
           </div>
         )}
 
-        {/* Modale CRUD unifiée */}
-        <HistoireModal
-          isOpen={modal.isModalOpen}
-          onClose={modal.close}
-          activeTab={activeTab}
-          editingItem={modal.editingItem}
-          formValues={modal.formValues}
-          setFormValues={modal.setFormValues}
-          isSubmitting={modal.isSubmitting}
-          onSubmit={handleSave}
-          addSymbol={modal.addSymbol}
-          updateSymbol={modal.updateSymbol}
-          removeSymbol={modal.removeSymbol}
-          applyColorPreset={modal.applyColorPreset}
-        />
+        {/* Modale CRUD unifiée : BanknoteModal dédiée pour les billets, HistoireModal pour les autres */}
+        {activeTab === 'banknotes' ? (
+          <BanknoteModal
+            isOpen={modal.isModalOpen}
+            onClose={modal.close}
+            editingItem={modal.editingItem as BanknoteItem | null}
+            onSuccess={loadAll}
+          />
+        ) : (
+          <HistoireModal
+            isOpen={modal.isModalOpen}
+            onClose={modal.close}
+            activeTab={activeTab}
+            editingItem={modal.editingItem}
+            formValues={modal.formValues}
+            setFormValues={modal.setFormValues}
+            isSubmitting={modal.isSubmitting}
+            onSubmit={handleSave}
+            addSymbol={modal.addSymbol}
+            updateSymbol={modal.updateSymbol}
+            removeSymbol={modal.removeSymbol}
+            applyColorPreset={modal.applyColorPreset}
+          />
+        )}
 
         {/* Modale de confirmation de suppression */}
         <ConfirmModal
