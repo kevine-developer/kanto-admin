@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 import { Modal, Field, Input, ImageUploadDropzone } from '@/components/ui';
 import { useToast } from '@/lib/hooks/useToast';
-import { resolveMediaUrl } from '@/lib/utils/media';
+import { resolveMediaUrl, slugify } from '@/lib/utils/media';
 import { historyService } from '@/services/history.service';
 import type { BanknoteItem, ContentStatus } from '@/types/history';
 import {
@@ -350,12 +350,16 @@ export function BanknoteModal({
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
 
-    const finalSlug = slug.trim() || (editingItem?.id ?? '');
-    if (!finalSlug) {
-      toast.error('Veuillez renseigner un identifiant unique (slug) pour ce billet.');
-      setActiveStep('advanced');
-      return;
-    }
+    // Déduction automatique infaillible du slug si non spécifié manuellement
+    const autoFallbackSlug = (() => {
+      const prefix = seriesKey.toLowerCase().replace('_', '-');
+      if (valueAriary > 0) return `billet-${prefix}-${valueAriary}`;
+      if (valueFmg > 0) return `billet-${prefix}-${valueFmg}f`;
+      if (effectiveTitleFr) return `billet-${prefix}-${slugify(effectiveTitleFr)}`;
+      return `billet-${prefix}-${Date.now().toString(36)}`;
+    })();
+
+    const finalSlug = slug.trim() || (editingItem?.id ?? '') || autoFallbackSlug;
 
     if (!isComingSoon && !imageUrl) {
       toast.error('Veuillez ajouter au moins la photo Recto du billet (ou cocher « Contenu à venir »).');
