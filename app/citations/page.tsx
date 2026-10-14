@@ -16,6 +16,7 @@ import {
   Trash2,
   X,
   Loader2,
+  BookOpen,
 } from 'lucide-react';
 
 interface CitationItem {
@@ -47,6 +48,9 @@ interface CitationItem {
     };
   }>;
 }
+
+const inputCls =
+  'w-full px-2.5 py-1.5 rounded-md bg-[var(--input-bg)] border border-[var(--input-border)] text-xs text-[var(--foreground)] placeholder-[var(--text-subtle)] focus:outline-none focus:border-[var(--accent)] transition';
 
 export default function CitationsAdminPage() {
   const { toast } = useToast();
@@ -147,13 +151,13 @@ export default function CitationsAdminPage() {
           method: 'PATCH',
           body: JSON.stringify(payload),
         });
-        toast.success('Citation mise à jour avec succès !');
+        toast.success('Citation mise à jour avec succès.');
       } else {
         await fetchApi('/citations', {
           method: 'POST',
           body: JSON.stringify(payload),
         });
-        toast.success('Nouvelle citation publiée avec succès !');
+        toast.success('Nouvelle citation publiée avec succès.');
       }
 
       setIsModalOpen(false);
@@ -191,8 +195,9 @@ export default function CitationsAdminPage() {
       <div className="w-full space-y-4 pb-8">
         {/* En-tête standardisé */}
         <PageHeader
-          title="Citations & Auteurs (Tenin'olon-kendry)"
-          description="Écrits des poètes, souverains et penseurs de Madagascar."
+          title="Citations & Auteurs"
+          description="Écrits des poètes, souverains et penseurs de Madagascar (Tenin'olon-kendry)."
+          badge={`${totalCount} citation${totalCount > 1 ? 's' : ''}`}
           icon={Quote}
           primaryAction={{
             label: 'Nouvelle Citation',
@@ -201,14 +206,14 @@ export default function CitationsAdminPage() {
           }}
         />
 
-        {/* Barre de recherche standardisée */}
+        {/* Barre de recherche */}
         <SearchBar
           value={search}
           onChange={(val) => {
             setSearch(val);
             setPage(1);
           }}
-          placeholder="Rechercher par auteur (Rabearivelo, Dox...), extrait de texte ou source..."
+          placeholder="Rechercher par auteur (Rabearivelo, Dox...), pensée ou source..."
           totalCount={totalCount}
         />
 
@@ -233,46 +238,50 @@ export default function CitationsAdminPage() {
                   key={item.id}
                   className="p-3.5 flex flex-col md:flex-row items-start justify-between gap-3 hover:bg-[var(--card-hover)] transition-colors"
                 >
-                  <div className="space-y-1.5 flex-1">
+                  <div className="space-y-1.5 flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-[10.5px] font-mono px-2 py-0.5 rounded bg-[var(--input-bg)] text-[var(--foreground)] border border-[var(--input-border)] flex items-center gap-1">
-                        <User size={11} className="text-[var(--accent-text)]" />
-                        <span>{item.author?.name || 'Auteur non renseigné'}</span>
+                      <span className="text-[11px] font-mono px-2 py-0.5 rounded-md bg-[var(--input-bg)] text-[var(--foreground)] border border-[var(--input-border)] flex items-center gap-1.5">
+                        <User size={11} className="text-[var(--text-subtle)]" />
+                        <span className="font-semibold">{item.author?.name || 'Auteur non renseigné'}</span>
                       </span>
-                      <span className="text-[10.5px] font-mono px-2 py-0.5 rounded bg-[var(--input-bg)] text-[var(--text-muted)] border border-[var(--input-border)]">
-                        {item.sourceName}
-                      </span>
+                      {item.sourceName && (
+                        <span className="text-[10.5px] font-mono px-2 py-0.5 rounded-md bg-[var(--input-bg)] text-[var(--text-muted)] border border-[var(--input-border)] flex items-center gap-1">
+                          <BookOpen size={10} className="text-[var(--text-subtle)]" />
+                          <span>{item.sourceName}</span>
+                        </span>
+                      )}
                     </div>
 
-                    <div className="space-y-0.5">
-                      <h3 className="text-xs font-semibold text-[var(--foreground)] leading-snug">
+                    <div className="space-y-1">
+                      <p className="text-xs font-semibold text-[var(--foreground)] leading-snug">
                         « {item.citationMg} »
-                      </h3>
-                      <div className="text-[11px] text-[var(--text-muted)] italic leading-relaxed">
+                      </p>
+                      <p className="text-[11.5px] text-[var(--text-muted)] italic leading-relaxed">
                         « {item.citationFr} »
-                      </div>
+                      </p>
                     </div>
 
                     {item.contexte && (
-                      <div className="text-xs text-neutral-600 dark:text-neutral-400 line-clamp-2 leading-relaxed">
+                      <p className="text-[11.5px] text-[var(--text-muted)] line-clamp-2 leading-relaxed">
                         {item.contexte}
-                      </div>
+                      </p>
                     )}
                   </div>
 
                   <div className="flex items-center gap-2 shrink-0 self-end md:self-center">
-                    <div className="flex items-center gap-2 text-xs text-[var(--text-subtle)] mr-1">
+                    <div className="flex items-center gap-2 text-[11px] text-[var(--text-subtle)] mr-1">
                       <span className="flex items-center gap-1">
-                        <Eye size={13} />
+                        <Eye size={12} />
                         <span>{item.viewCount}</span>
                       </span>
                       <span className="flex items-center gap-1">
-                        <Heart size={13} className="text-red-500" />
+                        <Heart size={12} className="text-rose-500" />
                         <span>{item.likesCount}</span>
                       </span>
                     </div>
 
                     <button
+                      type="button"
                       onClick={() => setSelectedCitation(item)}
                       className="px-2.5 py-1 rounded-md border border-[var(--card-border)] bg-[var(--input-bg)] hover:bg-[var(--card-hover)] text-[var(--foreground)] text-xs font-medium transition cursor-pointer"
                     >
@@ -280,6 +289,7 @@ export default function CitationsAdminPage() {
                     </button>
 
                     <button
+                      type="button"
                       onClick={() => openEditModal(item)}
                       title="Modifier cette citation"
                       className="p-1.5 rounded-md border border-[var(--card-border)] bg-[var(--input-bg)] hover:bg-[var(--card-hover)] text-[var(--text-muted)] hover:text-[var(--foreground)] transition cursor-pointer"
@@ -288,9 +298,10 @@ export default function CitationsAdminPage() {
                     </button>
 
                     <button
+                      type="button"
                       onClick={() => setDeletingItem(item)}
                       title="Supprimer cette citation"
-                      className="p-1.5 rounded-md border border-red-200 dark:border-red-900/40 bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 hover:bg-red-100 transition cursor-pointer"
+                      className="p-1.5 rounded-md border border-red-200 dark:border-red-900/40 bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/50 transition cursor-pointer"
                     >
                       <Trash2 size={13} />
                     </button>
@@ -301,7 +312,7 @@ export default function CitationsAdminPage() {
           )}
 
           {/* Pagination standardisée */}
-          <div className="p-3">
+          <div className="p-3 border-t border-[var(--card-border)]">
             <Pagination
               currentPage={page}
               totalPages={totalPages}
@@ -314,7 +325,7 @@ export default function CitationsAdminPage() {
           </div>
         </div>
 
-        {/* Modal de confirmation de suppression standardisée */}
+        {/* Modal de confirmation de suppression */}
         <ConfirmModal
           isOpen={!!deletingItem}
           onClose={() => setDeletingItem(null)}
@@ -333,13 +344,14 @@ export default function CitationsAdminPage() {
               <div className="px-4 py-3 border-b border-[var(--card-border)] flex items-center justify-between">
                 <div>
                   <h2 className="text-sm font-semibold text-[var(--foreground)] tracking-tight">
-                    {editingId ? 'Modifier la citation' : 'Ajouter une nouvelle citation'}
+                    {editingId ? 'Modifier la citation' : 'Ajouter une citation'}
                   </h2>
                   <p className="text-xs text-[var(--text-muted)] mt-0.5">
-                    {editingId ? 'Mise à jour de la citation' : 'Enregistrer une pensée d’auteur'}
+                    {editingId ? 'Mise à jour de la pensée' : 'Enregistrer une nouvelle citation malgache'}
                   </p>
                 </div>
                 <button
+                  type="button"
                   onClick={() => setIsModalOpen(false)}
                   className="p-1 rounded-md text-[var(--text-subtle)] hover:bg-[var(--card-hover)] transition cursor-pointer"
                 >
@@ -351,14 +363,14 @@ export default function CitationsAdminPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-medium text-[var(--text-muted)] mb-1">
-                      Auteur (Poète, Écrivain...)
+                      Auteur (Poète, Écrivain, Penseur...)
                     </label>
                     <input
                       type="text"
                       value={formCitation.authorName}
                       onChange={(e) => setFormCitation({ ...formCitation, authorName: e.target.value })}
                       placeholder="Ex: Jean-Joseph Rabearivelo"
-                      className="w-full px-2.5 py-1.5 rounded-md bg-[var(--input-bg)] border border-[var(--input-border)] text-xs text-[var(--foreground)] focus:outline-none focus:border-[var(--accent)]"
+                      className={inputCls}
                     />
                   </div>
 
@@ -372,7 +384,7 @@ export default function CitationsAdminPage() {
                       onChange={(e) => setFormCitation({ ...formCitation, sourceName: e.target.value })}
                       placeholder="Ex: Presque-Songes (1934)"
                       required
-                      className="w-full px-2.5 py-1.5 rounded-md bg-[var(--input-bg)] border border-[var(--input-border)] text-xs text-[var(--foreground)] focus:outline-none focus:border-[var(--accent)]"
+                      className={inputCls}
                     />
                   </div>
                 </div>
@@ -387,7 +399,7 @@ export default function CitationsAdminPage() {
                     onChange={(e) => setFormCitation({ ...formCitation, citationMg: e.target.value })}
                     placeholder="Texte original ou transcription en malgache..."
                     required
-                    className="w-full px-2.5 py-1.5 rounded-md bg-[var(--input-bg)] border border-[var(--input-border)] text-xs text-[var(--foreground)] focus:outline-none focus:border-[var(--accent)]"
+                    className={inputCls}
                   />
                 </div>
 
@@ -401,7 +413,7 @@ export default function CitationsAdminPage() {
                     onChange={(e) => setFormCitation({ ...formCitation, citationFr: e.target.value })}
                     placeholder="Traduction française de la pensée..."
                     required
-                    className="w-full px-2.5 py-1.5 rounded-md bg-[var(--input-bg)] border border-[var(--input-border)] text-xs text-[var(--foreground)] placeholder-[var(--text-subtle)] focus:outline-none focus:border-[var(--accent)] italic"
+                    className={`${inputCls} italic`}
                   />
                 </div>
 
@@ -414,7 +426,7 @@ export default function CitationsAdminPage() {
                     value={formCitation.contexte}
                     onChange={(e) => setFormCitation({ ...formCitation, contexte: e.target.value })}
                     placeholder="Circonstances de l'écriture, contexte philosophique..."
-                    className="w-full px-2.5 py-1.5 rounded-md bg-[var(--input-bg)] border border-[var(--input-border)] text-xs text-[var(--foreground)] placeholder-[var(--text-subtle)] focus:outline-none focus:border-[var(--accent)]"
+                    className={inputCls}
                   />
                 </div>
 
@@ -460,6 +472,7 @@ export default function CitationsAdminPage() {
                   </div>
                 </div>
                 <button
+                  type="button"
                   onClick={() => setSelectedCitation(null)}
                   className="p-1 rounded-md text-[var(--text-subtle)] hover:bg-[var(--card-hover)] transition cursor-pointer"
                 >
@@ -469,7 +482,7 @@ export default function CitationsAdminPage() {
 
               <div className="p-4 space-y-3 overflow-y-auto flex-1 text-xs">
                 <div className="space-y-1">
-                  <div className="text-[10px] font-mono uppercase tracking-wider text-neutral-400">
+                  <div className="text-[10px] font-mono uppercase tracking-wider text-[var(--text-subtle)]">
                     Texte Malagasy
                   </div>
                   <div className="text-xs font-semibold text-[var(--foreground)] leading-snug">
@@ -478,20 +491,20 @@ export default function CitationsAdminPage() {
                 </div>
 
                 <div className="space-y-1">
-                  <div className="text-[10px] font-mono uppercase tracking-wider text-neutral-400">
+                  <div className="text-[10px] font-mono uppercase tracking-wider text-[var(--text-subtle)]">
                     Traduction Française
                   </div>
-                  <div className="text-[11px] text-[var(--text-muted)] italic leading-relaxed">
+                  <div className="text-[11.5px] text-[var(--text-muted)] italic leading-relaxed">
                     « {selectedCitation.citationFr} »
                   </div>
                 </div>
 
                 {selectedCitation.contexte && (
                   <div className="p-3 rounded-lg bg-[var(--input-bg)] border border-[var(--input-border)] space-y-1">
-                    <div className="text-[10px] font-mono uppercase tracking-wider text-emerald-600 dark:text-emerald-400 font-medium">
+                    <div className="text-[10px] font-mono uppercase tracking-wider text-[var(--accent)] font-medium">
                       Contexte littéraire &amp; historique
                     </div>
-                    <div className="text-xs text-neutral-700 dark:text-neutral-300 leading-relaxed">
+                    <div className="text-xs text-[var(--text-muted)] leading-relaxed">
                       {selectedCitation.contexte}
                     </div>
                   </div>
@@ -500,6 +513,7 @@ export default function CitationsAdminPage() {
 
               <div className="px-4 py-2.5 border-t border-[var(--card-border)] bg-[var(--background)] flex justify-end">
                 <button
+                  type="button"
                   onClick={() => setSelectedCitation(null)}
                   className="px-3 py-1.5 rounded-md bg-[var(--foreground)] text-[var(--background)] text-xs font-medium hover:opacity-90 transition cursor-pointer"
                 >

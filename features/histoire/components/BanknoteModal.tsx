@@ -451,7 +451,7 @@ export function BanknoteModal({
           <button
             type="button"
             onClick={onClose}
-            className="px-3.5 py-2 rounded-xl text-stone-600 hover:text-stone-900 dark:text-stone-400 dark:hover:text-white font-medium text-xs transition-colors cursor-pointer"
+            className="px-3 py-1.5 rounded-md border border-[var(--card-border)] bg-[var(--card)] text-[var(--text-muted)] hover:bg-[var(--card-hover)] text-xs transition cursor-pointer"
           >
             Annuler
           </button>
@@ -465,7 +465,7 @@ export function BanknoteModal({
                   else if (activeStep === 'texts') setActiveStep('images');
                   else if (activeStep === 'advanced') setActiveStep('texts');
                 }}
-                className="px-3 py-2 rounded-xl border border-stone-200 dark:border-stone-700 text-stone-700 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-800 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                className="px-3 py-1.5 rounded-md border border-[var(--card-border)] bg-[var(--card)] text-[var(--text-muted)] hover:bg-[var(--card-hover)] text-xs font-medium flex items-center gap-1.5 transition cursor-pointer"
               >
                 <ArrowLeft size={13} />
                 <span>Précédent</span>
@@ -480,7 +480,7 @@ export function BanknoteModal({
                   else if (activeStep === 'images') setActiveStep('texts');
                   else if (activeStep === 'texts') setActiveStep('advanced');
                 }}
-                className="px-3.5 py-2 rounded-xl bg-stone-900 hover:bg-stone-800 dark:bg-stone-100 dark:hover:bg-stone-200 text-white dark:text-stone-900 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+                className="px-3.5 py-1.5 rounded-md bg-[var(--input-bg)] hover:bg-[var(--card-hover)] text-[var(--foreground)] border border-[var(--card-border)] text-xs font-medium flex items-center gap-1.5 transition cursor-pointer"
               >
                 <span>Étape suivante</span>
                 <ArrowRight size={13} />
@@ -491,9 +491,9 @@ export function BanknoteModal({
               type="button"
               onClick={() => handleSubmit()}
               disabled={isSubmitting}
-              className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer disabled:opacity-50"
+              className="px-3.5 py-1.5 rounded-md bg-[var(--foreground)] text-[var(--background)] text-xs font-medium hover:opacity-90 transition disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
             >
-              <Save size={14} />
+              <Save size={13} />
               <span>{isSubmitting ? 'Enregistrement...' : editingItem ? 'Mettre à jour' : 'Créer le billet'}</span>
             </button>
           </div>
@@ -504,16 +504,16 @@ export function BanknoteModal({
         {/* ==================================================================== */}
         {/* COLONNE GAUCHE (7/12) : FORMULAIRE PAR ÉTAPES ERGONOMIQUES           */}
         {/* ==================================================================== */}
-        <div className="lg:col-span-7 flex flex-col space-y-4">
+        <div className="lg:col-span-7 flex flex-col space-y-3">
           {/* Navigation par onglets d'étapes */}
-          <div className="flex items-center gap-1 p-1 bg-stone-100 dark:bg-stone-800/70 rounded-xl border border-stone-200 dark:border-stone-700 text-xs">
+          <div className="flex items-center gap-1 p-1 bg-[var(--input-bg)] rounded-lg border border-[var(--input-border)] text-xs">
             <button
               type="button"
               onClick={() => setActiveStep('value')}
-              className={`flex-1 py-1.5 px-2 rounded-lg font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+              className={`flex-1 py-1 px-2 rounded-md font-medium text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                 activeStep === 'value'
-                  ? 'bg-white dark:bg-stone-900 text-stone-900 dark:text-white shadow-xs'
-                  : 'text-stone-500 hover:text-stone-800 dark:hover:text-stone-200'
+                  ? 'bg-[var(--card)] text-[var(--foreground)] border border-[var(--card-border)] shadow-xs'
+                  : 'text-[var(--text-muted)] hover:text-[var(--foreground)]'
               }`}
             >
               <span>1. Émission & Valeur</span>
@@ -521,10 +521,10 @@ export function BanknoteModal({
             <button
               type="button"
               onClick={() => setActiveStep('images')}
-              className={`flex-1 py-1.5 px-2 rounded-lg font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+              className={`flex-1 py-1 px-2 rounded-md font-medium text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                 activeStep === 'images'
-                  ? 'bg-white dark:bg-stone-900 text-stone-900 dark:text-white shadow-xs'
-                  : 'text-stone-500 hover:text-stone-800 dark:hover:text-stone-200'
+                  ? 'bg-[var(--card)] text-[var(--foreground)] border border-[var(--card-border)] shadow-xs'
+                  : 'text-[var(--text-muted)] hover:text-[var(--foreground)]'
               }`}
             >
               <span>2. Visuels</span>
@@ -533,10 +533,10 @@ export function BanknoteModal({
             <button
               type="button"
               onClick={() => setActiveStep('texts')}
-              className={`flex-1 py-1.5 px-2 rounded-lg font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+              className={`flex-1 py-1 px-2 rounded-md font-medium text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                 activeStep === 'texts'
-                  ? 'bg-white dark:bg-stone-900 text-stone-900 dark:text-white shadow-xs'
-                  : 'text-stone-500 hover:text-stone-800 dark:hover:text-stone-200'
+                  ? 'bg-[var(--card)] text-[var(--foreground)] border border-[var(--card-border)] shadow-xs'
+                  : 'text-[var(--text-muted)] hover:text-[var(--foreground)]'
               }`}
             >
               <span>3. Textes & Histoire</span>
@@ -544,10 +544,10 @@ export function BanknoteModal({
             <button
               type="button"
               onClick={() => setActiveStep('advanced')}
-              className={`py-1.5 px-2 rounded-lg font-semibold flex items-center justify-center gap-1 transition-all cursor-pointer ${
+              className={`py-1 px-2 rounded-md font-medium text-xs flex items-center justify-center gap-1 transition-all cursor-pointer ${
                 activeStep === 'advanced'
-                  ? 'bg-white dark:bg-stone-900 text-stone-900 dark:text-white shadow-xs'
-                  : 'text-stone-500 hover:text-stone-800 dark:hover:text-stone-200'
+                  ? 'bg-[var(--card)] text-[var(--foreground)] border border-[var(--card-border)] shadow-xs'
+                  : 'text-[var(--text-muted)] hover:text-[var(--foreground)]'
               }`}
               title="Options avancées & Publication"
             >

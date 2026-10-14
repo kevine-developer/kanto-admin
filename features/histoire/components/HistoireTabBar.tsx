@@ -21,7 +21,7 @@ interface HistoireTabBarProps {
 const TABS: Array<{
   key: TabKey;
   label: string;
-  icon: React.ComponentType<{ size?: number }>;
+  icon: React.ComponentType<{ size?: number; className?: string }>;
   dataKey: keyof HistoireAllData;
 }> = [
   { key: 'presidents', label: 'Présidents', icon: Crown, dataKey: 'presidents' },
@@ -30,32 +30,37 @@ const TABS: Array<{
   { key: 'banknotes', label: 'Billets Malgaches', icon: BanknoteIcon, dataKey: 'banknotes' },
   { key: 'nature', label: 'Nature & Trésors', icon: TreePine, dataKey: 'natureEmblems' },
   { key: 'dates', label: 'Grandes Dates', icon: History, dataKey: 'historyDates' },
-  { key: 'lessons', label: 'Thématiques / Rubriques', icon: Layers, dataKey: 'lessons' },
+  { key: 'lessons', label: 'Rubriques & Civisme', icon: Layers, dataKey: 'lessons' },
 ];
 
 /**
- * Barre d'onglets ergonomique pour la page Histoire & Patrimoine.
- * Affiche le compteur d'éléments par onglet.
+ * Barre d'onglets ergonomique et épurée pour la page Histoire & Patrimoine.
  */
 export function HistoireTabBar({ activeTab, data, onChange }: HistoireTabBarProps) {
   return (
-    <div className="flex flex-wrap gap-2 border-b border-stone-200 dark:border-stone-800 pb-2">
+    <div className="flex items-center gap-1.5 p-1 rounded-xl border border-[var(--card-border)] bg-[var(--card)] shadow-xs overflow-x-auto pb-1 sm:pb-1">
       {TABS.map(({ key, label, icon: Icon, dataKey }) => {
         const isActive = activeTab === key;
-        const count = data[dataKey].length;
+        const count = data[dataKey]?.length || 0;
         return (
           <button
             key={key}
             onClick={() => onChange(key)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition cursor-pointer ${
               isActive
-                ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 shadow-sm font-semibold'
-                : 'text-stone-600 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800/60'
+                ? 'bg-[var(--accent)] text-white shadow-xs'
+                : 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--card-hover)]'
             }`}
           >
-            <Icon size={16} />
+            <Icon size={14} className={isActive ? 'text-white' : 'text-[var(--text-subtle)]'} />
             <span>{label}</span>
-            <span className="text-xs px-2 py-0.5 rounded-full bg-stone-200 dark:bg-stone-700 text-stone-700 dark:text-stone-300 font-mono">
+            <span
+              className={`px-1.5 py-0.2 rounded-full font-mono text-[10px] ${
+                isActive
+                  ? 'bg-white/20 text-white font-bold'
+                  : 'bg-[var(--input-bg)] text-[var(--text-muted)] border border-[var(--input-border)]'
+              }`}
+            >
               {count}
             </span>
           </button>

@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { AdminShell } from '@/components/layout/AdminShell';
 import { PageHeader } from '@/components/layout/PageHeader';
-import { StatCard } from '@/components/ui';
 import {
   progressionService,
   CULTURAL_RANKS,
@@ -17,7 +16,6 @@ import {
   Users,
   Flame,
   Search,
-  RefreshCw,
   Award,
   Crown,
   Medal,
@@ -30,14 +28,13 @@ import {
   ChevronDown,
   Filter,
   RotateCcw,
-  Check,
 } from 'lucide-react';
 
 type ActiveTab = 'leaderboard' | 'ranks';
 
 /**
  * Page d'administration de la progression, des rangs culturels et du classement des joueurs.
- * Permet la visualisation des statistiques d'XP, la consultation du leaderboard et l'ajustement manuel d'XP.
+ * Permet la supervision de l'XP, du leaderboard et l'ajustement direct des points.
  */
 export default function ProgressionAdminPage() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('leaderboard');
@@ -85,16 +82,13 @@ export default function ProgressionAdminPage() {
     }
   }, [isLevelDropdownOpen]);
 
-  // Niveau actif sélectionné
   const activeRankObj = useMemo(() => {
     return selectedLevel === 'ALL'
       ? null
       : CULTURAL_RANKS.find((r) => r.level === selectedLevel);
   }, [selectedLevel]);
 
-  const hasActiveFilters =
-    selectedLevel !== 'ALL' || searchQuery.trim().length > 0;
-
+  const hasActiveFilters = selectedLevel !== 'ALL' || searchQuery.trim().length > 0;
   const requestIdRef = useRef(0);
 
   // Chargement des données
@@ -131,7 +125,7 @@ export default function ProgressionAdminPage() {
     void loadData();
   }, [loadData]);
 
-  // Filtrage des joueurs du leaderboard
+  // Filtrage local
   const filteredPlayers = useMemo(() => {
     const q = searchQuery.toLowerCase().trim();
     if (!q) return leaderboard;
@@ -163,7 +157,7 @@ export default function ProgressionAdminPage() {
 
       setFeedback({
         type: 'success',
-        text: `Points mis à jour pour ${selectedUserForXp.name} (${delta > 0 ? `+${delta}` : delta} XP).`,
+        text: `Points mis à jour pour ${selectedUserForXp.name || 'le joueur'} (${delta > 0 ? `+${delta}` : delta} XP).`,
       });
 
       setSelectedUserForXp(null);
@@ -171,8 +165,7 @@ export default function ProgressionAdminPage() {
       setXpReasonInput('');
       void loadData();
     } catch (err: unknown) {
-      const msg =
-        err instanceof Error ? err.message : "Erreur lors de l'ajustement";
+      const msg = err instanceof Error ? err.message : "Erreur lors de l'ajustement";
       setFeedback({ type: 'error', text: msg });
     } finally {
       setIsSubmittingXp(false);
@@ -181,39 +174,38 @@ export default function ProgressionAdminPage() {
 
   return (
     <AdminShell>
-      <div className="w-full space-y-6 pb-8">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <PageHeader
-            title="Progression & Gamification"
-            description="Supervision de l'engagement des joueurs, des séries actives et de la hiérarchie des 10 Rangs Culturels Malagasy."
-            icon={Trophy}
-          />
-
-          <button
-            onClick={() => void loadData()}
-            disabled={isLoading}
-            className="self-start sm:self-auto inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[var(--card-border)] bg-[var(--card)] hover:bg-[var(--card-hover)] text-xs font-medium text-[var(--foreground)] transition cursor-pointer disabled:opacity-50"
-          >
-            <RefreshCw size={13} className={isLoading ? 'animate-spin' : ''} />
-            <span>Actualiser</span>
-          </button>
-        </div>
+      <div className="w-full space-y-4 max-w-6xl mx-auto pb-12">
+        {/* En-tête standardisé */}
+        <PageHeader
+          title="Progression & Gamification"
+          description="Supervision de l'engagement des joueurs, des séries actives et de la hiérarchie des 10 Rangs Culturels Malagasy."
+          icon={Trophy}
+          actions={
+            <button
+              onClick={() => void loadData()}
+              disabled={isLoading}
+              className="p-2 rounded-lg border border-[var(--card-border)] bg-[var(--card)] hover:bg-[var(--card-hover)] text-[var(--text-muted)] hover:text-[var(--foreground)] transition cursor-pointer shadow-xs disabled:opacity-50"
+              title="Actualiser"
+            >
+              <RotateCcw size={14} className={isLoading ? 'animate-spin' : ''} />
+            </button>
+          }
+        />
 
         {/* Feedback Alert */}
         {feedback && (
           <div
-            className={`p-3 rounded-lg flex items-center justify-between text-xs font-medium ${
+            className={`p-3 rounded-xl flex items-center justify-between text-xs font-medium border shadow-xs ${
               feedback.type === 'success'
-                ? 'bg-emerald-50 text-emerald-800 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800'
-                : 'bg-rose-50 text-rose-800 border border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800'
+                ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/25'
+                : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/25'
             }`}
           >
             <div className="flex items-center gap-2">
               {feedback.type === 'success' ? (
-                <CheckCircle2 size={15} className="shrink-0 text-emerald-600" />
+                <CheckCircle2 size={15} className="shrink-0" />
               ) : (
-                <AlertCircle size={15} className="shrink-0 text-rose-600" />
+                <AlertCircle size={15} className="shrink-0" />
               )}
               <span>{feedback.text}</span>
             </div>
@@ -221,223 +213,180 @@ export default function ProgressionAdminPage() {
               onClick={() => setFeedback(null)}
               className="text-xs opacity-70 hover:opacity-100 cursor-pointer"
             >
-              Fermer
+              <X size={14} />
             </button>
           </div>
         )}
 
-        {/* 4 KPIs Statistiques */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard
-            title="Joueurs Enregistrés"
-            value={isLoading ? '...' : stats.totalPlayers}
-            subtitle="Profils avec progression"
-            icon={Users}
-            variant="default"
-          />
+        {/* 4 Métriques compactes */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
+          <div className="p-3.5 rounded-xl border border-[var(--card-border)] bg-[var(--card)] shadow-xs">
+            <div className="flex items-center justify-between text-[11px] text-[var(--text-muted)]">
+              <span>Joueurs Inscrits</span>
+              <Users size={13} className="text-[var(--accent)]" />
+            </div>
+            <div className="text-lg font-bold font-mono text-[var(--foreground)] mt-1">
+              {isLoading ? '...' : stats.totalPlayers.toLocaleString()}
+            </div>
+            <div className="text-[10px] text-[var(--text-muted)] mt-0.5">Profils avec progression</div>
+          </div>
 
-          <StatCard
-            title="Total XP Distribué"
-            value={isLoading ? '...' : `${stats.totalXpDistributed.toLocaleString()} XP`}
-            subtitle="Points acquis dans l'écosystème"
-            icon={Flame}
-            variant="warning"
-          />
+          <div className="p-3.5 rounded-xl border border-[var(--card-border)] bg-[var(--card)] shadow-xs">
+            <div className="flex items-center justify-between text-[11px] text-[var(--text-muted)]">
+              <span>Total XP Distribué</span>
+              <Flame size={13} className="text-amber-500" />
+            </div>
+            <div className="text-lg font-bold font-mono text-amber-600 dark:text-amber-400 mt-1">
+              {isLoading ? '...' : `${stats.totalXpDistributed.toLocaleString()} XP`}
+            </div>
+            <div className="text-[10px] text-[var(--text-muted)] mt-0.5">Points acquis en jeu</div>
+          </div>
 
-          <StatCard
-            title="Niveau Record"
-            value={isLoading ? '...' : `Niveau ${stats.maxLevel}`}
-            subtitle={`Moyenne : Niv. ${stats.averageLevel} • Max ${stats.highestXp} XP`}
-            icon={Crown}
-            variant="success"
-          />
+          <div className="p-3.5 rounded-xl border border-[var(--card-border)] bg-[var(--card)] shadow-xs">
+            <div className="flex items-center justify-between text-[11px] text-[var(--text-muted)]">
+              <span>Niveau Record</span>
+              <Crown size={13} className="text-emerald-500" />
+            </div>
+            <div className="text-lg font-bold font-mono text-emerald-600 dark:text-emerald-400 mt-1">
+              {isLoading ? '...' : `Niveau ${stats.maxLevel}`}
+            </div>
+            <div className="text-[10px] text-[var(--text-muted)] mt-0.5">
+              Moyenne : Niv. {stats.averageLevel}
+            </div>
+          </div>
 
-          <StatCard
-            title="Séries Actives (Streaks)"
-            value={isLoading ? '...' : stats.activeStreaksCount}
-            subtitle={`Record : ${stats.maxStreakDays} j consécutifs`}
-            icon={Flame}
-            variant="info"
-          />
+          <div className="p-3.5 rounded-xl border border-[var(--card-border)] bg-[var(--card)] shadow-xs">
+            <div className="flex items-center justify-between text-[11px] text-[var(--text-muted)]">
+              <span>Séries Actives (Streaks)</span>
+              <Flame size={13} className="text-orange-500" />
+            </div>
+            <div className="text-lg font-bold font-mono text-orange-600 dark:text-orange-400 mt-1">
+              {isLoading ? '...' : stats.activeStreaksCount}
+            </div>
+            <div className="text-[10px] text-[var(--text-muted)] mt-0.5">
+              Record : {stats.maxStreakDays} j consécutifs
+            </div>
+          </div>
         </div>
 
-        {/* Onglets de navigation */}
-        <div className="flex items-center gap-2 border-b border-[var(--card-border)] pb-2">
+        {/* Onglets épurés */}
+        <div className="flex items-center gap-1.5 p-1 rounded-xl border border-[var(--card-border)] bg-[var(--card)] shadow-xs w-fit">
           <button
             onClick={() => setActiveTab('leaderboard')}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer ${
+            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
               activeTab === 'leaderboard'
-                ? 'bg-[var(--foreground)] text-[var(--background)] font-semibold'
+                ? 'bg-[var(--accent)] text-white shadow-xs'
                 : 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--card-hover)]'
             }`}
           >
-            <Trophy size={14} />
+            <Trophy size={13} />
             <span>Classement & Joueurs</span>
-            <span className="px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-neutral-200 dark:bg-neutral-800 text-[var(--foreground)]">
+            <span
+              className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${
+                activeTab === 'leaderboard' ? 'bg-white/20 text-white' : 'bg-[var(--input-bg)] text-[var(--text-muted)]'
+              }`}
+            >
               {leaderboard.length}
             </span>
           </button>
 
           <button
             onClick={() => setActiveTab('ranks')}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer ${
+            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
               activeTab === 'ranks'
-                ? 'bg-[var(--foreground)] text-[var(--background)] font-semibold'
+                ? 'bg-[var(--accent)] text-white shadow-xs'
                 : 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--card-hover)]'
             }`}
           >
-            <Layers size={14} />
-            <span>Les 10 Rangs Culturels Malagasy</span>
+            <Layers size={13} />
+            <span>Les 10 Rangs Culturels</span>
           </button>
         </div>
 
-        {/* ───────────────────────────────────────────────────────────── */}
-        {/* ONGLET 1 : CLASSEMENT ET JOUEURS                              */}
-        {/* ───────────────────────────────────────────────────────────── */}
+        {/* ─── ONGLET 1 : CLASSEMENT ─────────────────────────────────────────── */}
         {activeTab === 'leaderboard' && (
-          <div className="space-y-3.5">
-            {/* Barre de recherche et filtrage unique (KISS & DRY) */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 bg-[var(--card)] p-3 rounded-2xl border border-[var(--card-border)] shadow-xs">
-              {/* Champ de recherche */}
+          <div className="space-y-3">
+            {/* Barre de recherche et filtre de niveau */}
+            <div className="p-3 rounded-xl border border-[var(--card-border)] bg-[var(--card)] shadow-xs flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
               <div className="relative flex-1">
-                <Search
-                  size={15}
-                  className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-subtle)]"
-                />
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-subtle)]" />
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Rechercher parmi le Top 100 des joueurs (nom ou ID)..."
-                  className="w-full pl-10 pr-9 py-2 text-xs rounded-xl bg-[var(--background)] border border-[var(--card-border)] text-[var(--foreground)] placeholder-[var(--text-subtle)] focus:outline-none focus:border-[var(--accent)] transition"
+                  className="w-full pl-8 pr-8 py-1.5 text-xs rounded-lg bg-[var(--input-bg)] border border-[var(--input-border)] text-[var(--foreground)] placeholder:text-[var(--text-subtle)] focus:outline-none focus:border-[var(--accent)] transition"
                 />
                 {searchQuery && (
                   <button
                     onClick={() => setSearchQuery('')}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-subtle)] hover:text-[var(--foreground)] p-0.5 rounded-full transition cursor-pointer"
-                    title="Effacer la recherche"
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--text-subtle)] hover:text-[var(--foreground)] p-0.5 cursor-pointer"
                   >
-                    <X size={13} />
+                    <X size={12} />
                   </button>
                 )}
               </div>
 
-              {/* Filtre unique par Niveau */}
+              {/* Filtre Niveau */}
               <div className="relative shrink-0 flex items-center gap-2" ref={dropdownRef}>
                 <button
                   onClick={() => setIsLevelDropdownOpen((prev) => !prev)}
-                  className={`w-full sm:w-auto flex items-center justify-between gap-2.5 px-3.5 py-2 rounded-xl text-xs font-medium border transition cursor-pointer ${
+                  className={`flex items-center justify-between gap-2 px-3 py-1.5 rounded-lg text-xs font-medium border transition cursor-pointer ${
                     selectedLevel !== 'ALL'
-                      ? 'border-[var(--accent)] bg-[var(--card-hover)] text-[var(--foreground)]'
-                      : 'border-[var(--card-border)] bg-[var(--background)] hover:bg-[var(--card-hover)] text-[var(--foreground)]'
+                      ? 'border-[var(--accent)] bg-[var(--accent-light)] text-[var(--accent-text)]'
+                      : 'border-[var(--input-border)] bg-[var(--input-bg)] hover:bg-[var(--card-hover)] text-[var(--foreground)]'
                   }`}
                 >
-                  <div className="flex items-center gap-2 truncate">
-                    <Filter
-                      size={14}
-                      className={
-                        selectedLevel !== 'ALL'
-                          ? 'text-[var(--accent)]'
-                          : 'text-[var(--text-subtle)]'
-                      }
-                    />
-                    {activeRankObj ? (
-                      <span className="flex items-center gap-1.5 truncate">
-                        <span
-                          className="w-2 h-2 rounded-full shrink-0"
-                          style={{ backgroundColor: activeRankObj.color }}
-                        />
-                        <span className="font-semibold font-heritage truncate">
-                          Niveau {activeRankObj.level} • {activeRankObj.titleMg}
-                        </span>
-                      </span>
-                    ) : (
-                      <span>Tous les niveaux</span>
-                    )}
-                  </div>
-
-                  <div className="flex items-center gap-1.5 shrink-0 pl-1">
-                    <span className="px-1.5 py-0.5 rounded-md text-[10px] font-mono bg-[var(--card-border)]/50 text-[var(--text-muted)]">
-                      {activeRankObj
-                        ? `${stats.levelDistribution[activeRankObj.level] || 0} j.`
-                        : `${stats.totalPlayers} j.`}
+                  <Filter size={13} className="text-[var(--text-subtle)]" />
+                  {activeRankObj ? (
+                    <span className="flex items-center gap-1.5 font-semibold">
+                      <span className="w-2 h-2 rounded-full" style={{ backgroundColor: activeRankObj.color }} />
+                      Niveau {activeRankObj.level} • {activeRankObj.titleMg}
                     </span>
-                    <ChevronDown
-                      size={14}
-                      className={`text-[var(--text-subtle)] transition-transform duration-200 ${
-                        isLevelDropdownOpen ? 'rotate-180' : ''
-                      }`}
-                    />
-                  </div>
+                  ) : (
+                    <span>Tous les niveaux</span>
+                  )}
+                  <ChevronDown
+                    size={13}
+                    className={`text-[var(--text-subtle)] transition-transform ${
+                      isLevelDropdownOpen ? 'rotate-180' : ''
+                    }`}
+                  />
                 </button>
 
-                {/* Bouton direct pour réinitialiser le filtre */}
                 {hasActiveFilters && (
                   <button
                     onClick={() => {
                       setSelectedLevel('ALL');
                       setSearchQuery('');
                     }}
-                    className="p-2 rounded-xl border border-[var(--card-border)] bg-[var(--background)] hover:bg-rose-50 dark:hover:bg-rose-950/30 text-[var(--text-muted)] hover:text-rose-600 dark:hover:text-rose-400 transition cursor-pointer shrink-0"
+                    className="p-1.5 rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] hover:bg-rose-500/10 text-[var(--text-muted)] hover:text-rose-500 transition cursor-pointer"
                     title="Réinitialiser les filtres"
                   >
-                    <RotateCcw size={14} />
+                    <RotateCcw size={13} />
                   </button>
                 )}
 
-                {/* Menu déroulant des 10 Niveaux */}
+                {/* Menu déroulant */}
                 {isLevelDropdownOpen && (
-                  <div
-                    className="absolute right-0 top-full mt-1.5 w-80 sm:w-96 max-h-[420px] overflow-y-auto rounded-2xl border border-[var(--card-border)] bg-[var(--card)] shadow-xl z-30 p-2 space-y-1 animate-in fade-in zoom-in-95 duration-150"
-                    style={{ backdropFilter: 'blur(16px)' }}
-                  >
-                    <div className="px-3 py-2 text-[10.5px] font-mono uppercase tracking-wider text-[var(--text-subtle)] border-b border-[var(--card-border)] flex items-center justify-between">
-                      <span>Filtrer par niveau</span>
-                      {selectedLevel !== 'ALL' && (
-                        <button
-                          onClick={() => {
-                            setSelectedLevel('ALL');
-                            setIsLevelDropdownOpen(false);
-                          }}
-                          className="text-[var(--accent)] hover:underline capitalize font-sans text-xs cursor-pointer font-medium"
-                        >
-                          Tous les niveaux
-                        </button>
-                      )}
-                    </div>
-
-                    {/* Option : Tous les niveaux */}
+                  <div className="absolute right-0 top-full mt-1.5 w-72 max-h-80 overflow-y-auto rounded-xl border border-[var(--card-border)] bg-[var(--card)] shadow-xl z-30 p-1.5 space-y-0.5">
                     <button
                       onClick={() => {
                         setSelectedLevel('ALL');
                         setIsLevelDropdownOpen(false);
                       }}
-                      className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs transition cursor-pointer text-left ${
+                      className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs transition cursor-pointer text-left ${
                         selectedLevel === 'ALL'
-                          ? 'bg-[var(--foreground)] text-[var(--background)] font-semibold'
+                          ? 'bg-[var(--accent)] text-white font-semibold'
                           : 'hover:bg-[var(--card-hover)] text-[var(--foreground)]'
                       }`}
                     >
-                      <div className="flex items-center gap-2.5">
-                        <Users size={15} className="shrink-0 opacity-70" />
-                        <div>
-                          <div>Tous les niveaux</div>
-                          <div className="text-[10px] opacity-70 font-normal">
-                            Ensemble des joueurs classés
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono text-[11px] opacity-80">
-                          {stats.totalPlayers}
-                        </span>
-                        {selectedLevel === 'ALL' && <Check size={14} />}
-                      </div>
+                      <span>Tous les niveaux</span>
+                      <span className="font-mono text-[11px] opacity-80">{stats.totalPlayers} j.</span>
                     </button>
 
-                    <div className="h-[1px] bg-[var(--card-border)] my-1" />
+                    <div className="h-px bg-[var(--card-border)] my-1" />
 
-                    {/* Liste des 10 Niveaux */}
                     {CULTURAL_RANKS.map((rank) => {
                       const isSelected = selectedLevel === rank.level;
                       const count = stats.levelDistribution[rank.level] || 0;
@@ -449,42 +398,21 @@ export default function ProgressionAdminPage() {
                             setSelectedLevel(rank.level);
                             setIsLevelDropdownOpen(false);
                           }}
-                          className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs transition cursor-pointer text-left ${
+                          className={`w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-xs transition cursor-pointer text-left ${
                             isSelected
-                              ? 'bg-[var(--card-hover)] border border-[var(--card-border)] font-semibold'
+                              ? 'bg-[var(--accent-light)] text-[var(--accent-text)] font-semibold border border-[var(--accent-border)]'
                               : 'hover:bg-[var(--card-hover)] text-[var(--foreground)]'
-                          } ${count === 0 ? 'opacity-40 hover:opacity-75' : ''}`}
+                          }`}
                         >
-                          <div className="flex items-center gap-2.5 min-w-0">
-                            <span
-                              className="w-2.5 h-2.5 rounded-full shrink-0"
-                              style={{ backgroundColor: rank.color }}
-                            />
-                            <div className="min-w-0 truncate">
-                              <div className="flex items-center gap-1.5">
-                                <span className="font-mono text-[10px] px-1 py-0.2 rounded bg-[var(--card-border)]/50 font-bold shrink-0">
-                                  Niv. {rank.level}
-                                </span>
-                                <span className="font-heritage truncate">{rank.titleMg}</span>
-                              </div>
-                              <div className="text-[10px] text-[var(--text-subtle)] truncate">
-                                {rank.titleFr} • {rank.minXp} XP requis
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-2 shrink-0 ml-2">
-                            <span
-                              className={`px-2 py-0.5 rounded-full font-mono text-[10px] font-semibold ${
-                                count > 0
-                                  ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300'
-                                  : 'bg-[var(--card-border)]/40 text-[var(--text-subtle)]'
-                              }`}
-                            >
-                              {count} {count > 1 ? 'joueurs' : 'joueur'}
+                          <div className="flex items-center gap-2 truncate">
+                            <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: rank.color }} />
+                            <span className="truncate">
+                              Niv. {rank.level} • {rank.titleMg}
                             </span>
-                            {isSelected && <Check size={14} className="text-[var(--accent)]" />}
                           </div>
+                          <span className="font-mono text-[10px] opacity-75 shrink-0 ml-1">
+                            {count} j.
+                          </span>
                         </button>
                       );
                     })}
@@ -493,94 +421,70 @@ export default function ProgressionAdminPage() {
               </div>
             </div>
 
-            {/* Table du Classement */}
-            <div className="rounded-xl border border-[var(--card-border)] bg-[var(--card)] overflow-hidden shadow-xs">
+            {/* Tableau du Classement */}
+            <div className="rounded-xl border border-[var(--card-border)] bg-[var(--card)] shadow-xs overflow-hidden">
               {isLoading ? (
-                <div className="py-16 text-center text-xs text-[var(--text-muted)] flex items-center justify-center gap-2">
-                  <RefreshCw size={15} className="animate-spin" />
-                  <span>Chargement du classement...</span>
+                <div className="py-16 flex flex-col items-center justify-center gap-2">
+                  <Loader2 className="w-5 h-5 animate-spin text-[var(--accent)]" />
+                  <span className="text-xs text-[var(--text-muted)]">Chargement du classement...</span>
                 </div>
               ) : filteredPlayers.length === 0 ? (
-                <div className="py-16 text-center flex flex-col items-center justify-center gap-2.5">
-                  <div className="w-10 h-10 rounded-full bg-[var(--card-border)]/40 flex items-center justify-center text-[var(--text-subtle)]">
-                    <Users size={18} />
-                  </div>
-                  <div className="text-xs font-semibold text-[var(--foreground)]">
-                    Aucun joueur trouvé
-                  </div>
-                  <p className="text-[11px] text-[var(--text-muted)] max-w-xs">
-                    Aucun joueur ne correspond à ce niveau ou à cette recherche.
-                  </p>
-                  {hasActiveFilters && (
-                    <button
-                      onClick={() => {
-                        setSelectedLevel('ALL');
-                        setSearchQuery('');
-                      }}
-                      className="mt-1 px-3 py-1.5 rounded-lg text-xs font-medium border border-[var(--card-border)] bg-[var(--background)] hover:bg-[var(--card-hover)] text-[var(--foreground)] transition cursor-pointer"
-                    >
-                      Réinitialiser les filtres
-                    </button>
-                  )}
+                <div className="py-16 text-center text-xs text-[var(--text-muted)]">
+                  Aucun joueur ne correspond à ce niveau ou à cette recherche.
                 </div>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs border-collapse">
                     <thead>
-                      <tr className="border-b border-[var(--card-border)] bg-neutral-50/50 dark:bg-neutral-800/30 text-[var(--text-subtle)] font-mono text-[10.5px]">
-                        <th className="py-3 px-4 w-16 text-center font-normal">RANG</th>
-                        <th className="py-3 px-4 font-normal">JOUEUR</th>
-                        <th className="py-3 px-4 font-normal">RANG CULTUREL</th>
-                        <th className="py-3 px-4 text-center font-normal">NIVEAU</th>
-                        <th className="py-3 px-4 text-center font-normal">SÉRIE (STREAK)</th>
-                        <th className="py-3 px-4 text-right font-normal">XP ACQUIS</th>
-                        <th className="py-3 px-4 pr-4 text-right font-normal">ACTION</th>
+                      <tr className="border-b border-[var(--card-border)] bg-[var(--input-bg)] text-[11px] font-semibold text-[var(--text-muted)]">
+                        <th className="py-2.5 px-3.5 w-16 text-center">Rang</th>
+                        <th className="py-2.5 px-3.5">Joueur</th>
+                        <th className="py-2.5 px-3.5">Rang Culturel</th>
+                        <th className="py-2.5 px-3.5 text-center">Niveau</th>
+                        <th className="py-2.5 px-3.5 text-center">Série (Streak)</th>
+                        <th className="py-2.5 px-3.5 text-right">XP Acquis</th>
+                        <th className="py-2.5 px-3.5 text-right">Action</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[var(--card-border)]">
                       {filteredPlayers.map((player, idx) => {
                         const rankNumber = player.rank || idx + 1;
-                        const culturalRank = progressionService.getRankForLevel(
-                          player.level
-                        );
+                        const culturalRank = progressionService.getRankForLevel(player.level);
 
                         return (
-                          <tr
-                            key={player.userId || idx}
-                            className="hover:bg-neutral-50/60 dark:hover:bg-neutral-800/40 transition-colors"
-                          >
+                          <tr key={player.userId || idx} className="hover:bg-[var(--card-hover)] transition-colors">
                             {/* Position */}
-                            <td className="py-3 px-4 text-center">
+                            <td className="py-2.5 px-3.5 text-center">
                               {rankNumber === 1 ? (
-                                <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-400 font-bold text-xs">
+                                <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 font-bold text-xs">
                                   <Crown size={13} />
                                 </span>
                               ) : rankNumber === 2 ? (
-                                <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-neutral-200 text-neutral-800 dark:bg-neutral-700 dark:text-neutral-200 font-bold text-xs">
+                                <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-300/40 text-slate-700 dark:text-slate-300 font-bold text-xs">
                                   <Medal size={13} />
                                 </span>
                               ) : rankNumber === 3 ? (
-                                <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-orange-100 text-orange-800 dark:bg-orange-950/60 dark:text-orange-400 font-bold text-xs">
+                                <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-orange-500/15 text-orange-600 dark:text-orange-400 font-bold text-xs">
                                   <Award size={13} />
                                 </span>
                               ) : (
-                                <span className="font-mono text-xs text-[var(--text-subtle)] font-medium">
+                                <span className="font-mono text-xs text-[var(--text-muted)] font-medium">
                                   #{rankNumber}
                                 </span>
                               )}
                             </td>
 
                             {/* Joueur */}
-                            <td className="py-3 px-4">
+                            <td className="py-2.5 px-3.5">
                               <div className="flex items-center gap-2.5">
-                                <div className="w-7 h-7 rounded-full bg-neutral-100 dark:bg-neutral-800 border border-[var(--card-border)] text-[var(--foreground)] font-bold flex items-center justify-center text-xs">
+                                <div className="w-7 h-7 rounded-full bg-[var(--accent-light)] border border-[var(--accent-border)] text-[var(--accent-text)] font-bold flex items-center justify-center text-xs shrink-0">
                                   {player.name ? player.name.charAt(0).toUpperCase() : 'U'}
                                 </div>
-                                <div>
-                                  <div className="font-semibold text-[var(--foreground)]">
+                                <div className="min-w-0">
+                                  <div className="font-semibold text-[var(--foreground)] truncate">
                                     {player.name || 'Anonyme'}
                                   </div>
-                                  <div className="text-[10.5px] font-mono text-[var(--text-subtle)]">
+                                  <div className="text-[10px] font-mono text-[var(--text-muted)] truncate">
                                     ID: {player.userId?.slice(0, 8)}...
                                   </div>
                                 </div>
@@ -588,60 +492,60 @@ export default function ProgressionAdminPage() {
                             </td>
 
                             {/* Rang Culturel Malagasy */}
-                            <td className="py-3 px-4">
+                            <td className="py-2.5 px-3.5">
                               <span
-                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium border"
+                                className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-semibold border shadow-2xs"
                                 style={{
                                   borderColor: culturalRank.color,
                                   color: culturalRank.color,
                                   backgroundColor: `${culturalRank.color}15`,
                                 }}
                               >
-                                <Crown size={11} />
+                                <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: culturalRank.color }} />
                                 <span>{culturalRank.titleMg}</span>
-                                <span className="opacity-70 text-[10px]">
+                                <span className="opacity-70 text-[10px] font-normal">
                                   ({culturalRank.titleFr})
                                 </span>
                               </span>
                             </td>
 
                             {/* Niveau */}
-                            <td className="py-3 px-4 text-center">
+                            <td className="py-2.5 px-3.5 text-center">
                               <span className="font-mono font-bold text-xs text-[var(--foreground)]">
                                 Niv. {player.level}
                               </span>
                             </td>
 
                             {/* Streak */}
-                            <td className="py-3 px-4 text-center">
+                            <td className="py-2.5 px-3.5 text-center">
                               {player.streakDays > 0 ? (
                                 <span className="inline-flex items-center gap-1 font-mono text-xs font-semibold text-orange-600 dark:text-orange-400">
                                   <Flame size={13} />
                                   <span>{player.streakDays} j</span>
                                 </span>
                               ) : (
-                                <span className="text-[var(--text-subtle)] text-xs">-</span>
+                                <span className="text-[var(--text-muted)] text-xs">—</span>
                               )}
                             </td>
 
                             {/* XP Total */}
-                            <td className="py-3 px-4 text-right">
+                            <td className="py-2.5 px-3.5 text-right">
                               <div className="font-mono font-bold text-xs text-[var(--foreground)]">
                                 {player.totalXP.toLocaleString()} XP
                               </div>
                             </td>
 
-                            {/* Actions Modérateur */}
-                            <td className="py-3 px-4 text-right">
+                            {/* Action Modérateur */}
+                            <td className="py-2.5 px-3.5 text-right">
                               <button
                                 onClick={() => {
                                   setSelectedUserForXp(player);
                                   setXpDeltaInput('50');
                                   setXpReasonInput('');
                                 }}
-                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium border border-[var(--card-border)] hover:bg-[var(--card-hover)] text-[var(--foreground)] transition cursor-pointer"
+                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium border border-[var(--card-border)] bg-[var(--input-bg)] hover:bg-[var(--card-hover)] text-[var(--foreground)] transition cursor-pointer shadow-xs"
                               >
-                                <PlusCircle size={12} className="text-emerald-600" />
+                                <PlusCircle size={12} className="text-emerald-500" />
                                 <span>Ajuster XP</span>
                               </button>
                             </td>
@@ -656,22 +560,20 @@ export default function ProgressionAdminPage() {
           </div>
         )}
 
-        {/* ───────────────────────────────────────────────────────────── */}
-        {/* ONGLET 2 : LES 10 RANGS CULTURELS MALAGASY                     */}
-        {/* ───────────────────────────────────────────────────────────── */}
+        {/* ─── ONGLET 2 : LES 10 RANGS CULTURELS ───────────────────────────────── */}
         {activeTab === 'ranks' && (
           <div className="space-y-4">
-            <div className="p-4 rounded-xl border border-[var(--card-border)] bg-[var(--card)] space-y-1">
-              <h3 className="text-sm font-semibold text-[var(--foreground)] font-heritage">
+            <div className="p-3.5 rounded-xl border border-[var(--card-border)] bg-[var(--card)] shadow-xs">
+              <h3 className="text-xs font-bold text-[var(--foreground)]">
                 Échelle Initiatique du Conservatoire Kanto
               </h3>
-              <p className="text-xs text-[var(--text-muted)] leading-relaxed">
-                Chaque niveau d&apos;expérience franchi par un apprenant débloque un titre culturel
+              <p className="text-[11px] text-[var(--text-muted)] mt-0.5 leading-relaxed">
+                Chaque palier d&apos;expérience franchi par un apprenant débloque un titre culturel
                 traditionnel malagasy récompensant sa maîtrise des contes, sagesses et de l&apos;art oratoire.
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {CULTURAL_RANKS.map((rank) => {
                 const playerCount = stats.levelDistribution[rank.level] || 0;
                 const percentOfTotal =
@@ -682,53 +584,53 @@ export default function ProgressionAdminPage() {
                 return (
                   <div
                     key={rank.level}
-                    className="p-4 rounded-xl border border-[var(--card-border)] bg-[var(--card)] hover:border-neutral-300 dark:hover:border-neutral-700 transition flex flex-col justify-between space-y-3"
+                    className="p-3.5 rounded-xl border border-[var(--card-border)] bg-[var(--card)] hover:border-[var(--accent)] transition-colors shadow-xs flex flex-col justify-between space-y-3"
                   >
                     <div>
                       {/* Titre & Badge */}
-                      <div className="flex items-center justify-between gap-2 mb-1.5">
-                        <div className="flex items-center gap-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
                           <span
-                            className="w-6 h-6 rounded-md flex items-center justify-center text-xs font-bold font-mono text-white"
+                            className="w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold font-mono text-white shrink-0 shadow-xs"
                             style={{ backgroundColor: rank.color }}
                           >
                             {rank.level}
                           </span>
-                          <h4 className="font-semibold text-sm text-[var(--foreground)] font-heritage">
-                            {rank.titleMg}
-                          </h4>
-                          <span className="text-xs text-[var(--text-muted)]">
-                            &bull; {rank.titleFr}
-                          </span>
+                          <div className="min-w-0">
+                            <h4 className="font-bold text-xs text-[var(--foreground)] truncate">
+                              {rank.titleMg}
+                            </h4>
+                            <span className="text-[10px] text-[var(--text-muted)] block">
+                              {rank.titleFr}
+                            </span>
+                          </div>
                         </div>
 
-                        <span className="font-mono text-xs font-bold text-[var(--foreground)] bg-neutral-100 dark:bg-neutral-800 px-2 py-0.5 rounded">
+                        <span className="font-mono text-xs font-semibold text-[var(--foreground)] bg-[var(--input-bg)] border border-[var(--input-border)] px-2 py-0.5 rounded-md shrink-0">
                           {rank.minXp} XP+
                         </span>
                       </div>
 
                       {/* Description Bilingue */}
-                      <div className="space-y-1 text-xs mt-2">
-                        <p className="text-[var(--foreground)] font-medium leading-relaxed">
+                      <div className="space-y-1 text-xs mt-2.5">
+                        <p className="text-[var(--foreground)] font-medium leading-relaxed text-[11px]">
                           {rank.descriptionMg}
                         </p>
-                        <p className="text-[var(--text-muted)] italic leading-relaxed">
+                        <p className="text-[var(--text-muted)] italic leading-relaxed text-[10px]">
                           {rank.descriptionFr}
                         </p>
                       </div>
                     </div>
 
-                    {/* Jauge des joueurs ayant ce rang + Bouton d'accès direct */}
+                    {/* Jauge des joueurs ayant ce rang */}
                     <div className="pt-2 border-t border-[var(--card-border)] space-y-2">
                       <div className="flex items-center justify-between text-[11px]">
-                        <span className="text-[var(--text-subtle)]">
-                          Joueurs à ce niveau
-                        </span>
+                        <span className="text-[var(--text-muted)]">Joueurs à ce niveau</span>
                         <span className="font-mono font-semibold text-[var(--foreground)]">
-                          {playerCount} joueur{playerCount > 1 ? 's' : ''} ({percentOfTotal}%)
+                          {playerCount} ({percentOfTotal}%)
                         </span>
                       </div>
-                      <div className="w-full bg-neutral-100 dark:bg-neutral-800 h-1.5 rounded-full overflow-hidden">
+                      <div className="w-full bg-[var(--input-bg)] h-1.5 rounded-full overflow-hidden">
                         <div
                           className="h-full rounded-full transition-all duration-500"
                           style={{
@@ -742,9 +644,9 @@ export default function ProgressionAdminPage() {
                           setSelectedLevel(rank.level);
                           setActiveTab('leaderboard');
                         }}
-                        className="w-full py-1 text-center text-[11px] font-medium rounded border border-[var(--card-border)] hover:bg-[var(--card-hover)] text-[var(--foreground)] transition cursor-pointer"
+                        className="w-full py-1 text-center text-xs font-medium rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] hover:bg-[var(--card-hover)] text-[var(--foreground)] transition cursor-pointer"
                       >
-                        Voir les joueurs de ce rang &rarr;
+                        Filtrer les joueurs de ce rang &rarr;
                       </button>
                     </div>
                   </div>
@@ -754,100 +656,100 @@ export default function ProgressionAdminPage() {
           </div>
         )}
 
-        {/* ───────────────────────────────────────────────────────────── */}
-        {/* MODALE : AJUSTEMENT D'XP MANUEL                               */}
-        {/* ───────────────────────────────────────────────────────────── */}
+        {/* ─── MODALE : AJUSTEMENT D'XP MANUEL ──────────────────────────────── */}
         {selectedUserForXp && (
-          <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs overflow-y-auto flex items-start justify-center p-4 pt-6 sm:pt-10 md:pt-12">
-            <div className="w-full max-w-md rounded-xl border border-[var(--card-border)] bg-[var(--card)] p-5 space-y-4 shadow-xl animate-in fade-in slide-in-from-top-3 duration-150">
-              <div className="flex items-center justify-between border-b border-[var(--card-border)] pb-3">
+          <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs overflow-y-auto flex items-start justify-center p-4 pt-8 md:pt-12 animate-in fade-in duration-150">
+            <div className="w-full max-w-md rounded-2xl border border-[var(--card-border)] bg-[var(--card)] shadow-2xl overflow-hidden">
+              <div className="flex items-center justify-between px-5 py-3.5 border-b border-[var(--card-border)] bg-[var(--input-bg)]">
                 <div className="flex items-center gap-2">
-                  <Award size={16} className="text-amber-500" />
+                  <Award size={15} className="text-amber-500" />
                   <h3 className="font-semibold text-sm text-[var(--foreground)]">
                     Ajuster les points d&apos;XP
                   </h3>
                 </div>
                 <button
                   onClick={() => setSelectedUserForXp(null)}
-                  className="p-1 rounded-md text-[var(--text-subtle)] hover:text-[var(--foreground)] cursor-pointer"
+                  className="p-1 rounded-lg hover:bg-[var(--card-hover)] text-[var(--text-muted)] transition cursor-pointer"
                 >
-                  <X size={16} />
+                  <X size={15} />
                 </button>
               </div>
 
-              <div className="bg-neutral-50 dark:bg-neutral-900/60 p-3 rounded-lg border border-[var(--card-border)] text-xs space-y-1">
-                <div className="font-semibold text-[var(--foreground)]">
-                  {selectedUserForXp.name || 'Joueur sans nom'}
-                </div>
-                <div className="text-[var(--text-muted)] font-mono">
-                  XP Actuel : {selectedUserForXp.totalXP.toLocaleString()} XP &bull; Niveau {selectedUserForXp.level}
-                </div>
-              </div>
-
-              <form onSubmit={handleConfirmXpAdjustment} className="space-y-3">
-                <div>
-                  <label className="block text-xs font-medium text-[var(--foreground)] mb-1">
-                    Valeur d&apos;ajustement (XP)
-                  </label>
-                  <input
-                    type="number"
-                    step="1"
-                    required
-                    value={xpDeltaInput}
-                    onChange={(e) => setXpDeltaInput(e.target.value)}
-                    placeholder="Ex: 50 ou -20"
-                    className="w-full px-3 py-1.5 text-xs rounded-lg bg-[var(--background)] border border-[var(--card-border)] text-[var(--foreground)] font-mono focus:outline-none focus:border-[var(--accent)]"
-                  />
-                  {/* Raccourcis rapides */}
-                  <div className="flex items-center gap-1.5 mt-2">
-                    {[25, 50, 100, 250, 500].map((val) => (
-                      <button
-                        key={val}
-                        type="button"
-                        onClick={() => setXpDeltaInput(String(val))}
-                        className="px-2 py-0.5 rounded text-[10.5px] font-mono border border-[var(--card-border)] hover:bg-[var(--card-hover)] cursor-pointer"
-                      >
-                        +{val}
-                      </button>
-                    ))}
+              <div className="p-5 space-y-4">
+                <div className="bg-[var(--input-bg)] p-3 rounded-xl border border-[var(--card-border)] text-xs space-y-0.5">
+                  <div className="font-semibold text-[var(--foreground)]">
+                    {selectedUserForXp.name || 'Joueur sans nom'}
+                  </div>
+                  <div className="text-[var(--text-muted)] font-mono text-[11px]">
+                    XP Actuel : {selectedUserForXp.totalXP.toLocaleString()} XP • Niveau {selectedUserForXp.level}
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-medium text-[var(--foreground)] mb-1">
-                    Motif ou Justification (optionnel)
-                  </label>
-                  <input
-                    type="text"
-                    value={xpReasonInput}
-                    onChange={(e) => setXpReasonInput(e.target.value)}
-                    placeholder="Ex: Récompense contribution culturelle exceptionnelle"
-                    className="w-full px-3 py-1.5 text-xs rounded-lg bg-[var(--background)] border border-[var(--card-border)] text-[var(--foreground)] focus:outline-none focus:border-[var(--accent)]"
-                  />
-                </div>
+                <form onSubmit={handleConfirmXpAdjustment} className="space-y-3.5">
+                  <div>
+                    <label className="block text-xs font-semibold text-[var(--foreground)] mb-1">
+                      Valeur d&apos;ajustement (XP)
+                    </label>
+                    <input
+                      type="number"
+                      step="1"
+                      required
+                      value={xpDeltaInput}
+                      onChange={(e) => setXpDeltaInput(e.target.value)}
+                      placeholder="Ex: 50 ou -20"
+                      className="w-full px-3 py-1.5 text-xs rounded-lg bg-[var(--input-bg)] border border-[var(--input-border)] text-[var(--foreground)] font-mono focus:outline-none focus:border-[var(--accent)]"
+                    />
+                    {/* Raccourcis rapides */}
+                    <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                      {[25, 50, 100, 250, 500].map((val) => (
+                        <button
+                          key={val}
+                          type="button"
+                          onClick={() => setXpDeltaInput(String(val))}
+                          className="px-2 py-0.5 rounded-md text-[10.5px] font-mono border border-[var(--card-border)] bg-[var(--input-bg)] hover:bg-[var(--card-hover)] cursor-pointer text-[var(--foreground)]"
+                        >
+                          +{val}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
 
-                <div className="pt-3 flex items-center justify-end gap-2 border-t border-[var(--card-border)]">
-                  <button
-                    type="button"
-                    onClick={() => setSelectedUserForXp(null)}
-                    className="px-3 py-1.5 rounded-lg border border-[var(--card-border)] text-xs font-medium hover:bg-[var(--card-hover)] cursor-pointer"
-                  >
-                    Annuler
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={isSubmittingXp}
-                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900 text-xs font-semibold hover:opacity-90 transition cursor-pointer disabled:opacity-50"
-                  >
-                    {isSubmittingXp ? (
-                      <Loader2 size={13} className="animate-spin" />
-                    ) : (
-                      <CheckCircle2 size={13} />
-                    )}
-                    <span>Confirmer l&apos;ajustement</span>
-                  </button>
-                </div>
-              </form>
+                  <div>
+                    <label className="block text-xs font-semibold text-[var(--foreground)] mb-1">
+                      Motif ou Justification (optionnel)
+                    </label>
+                    <input
+                      type="text"
+                      value={xpReasonInput}
+                      onChange={(e) => setXpReasonInput(e.target.value)}
+                      placeholder="Ex: Récompense contribution culturelle"
+                      className="w-full px-3 py-1.5 text-xs rounded-lg bg-[var(--input-bg)] border border-[var(--input-border)] text-[var(--foreground)] focus:outline-none focus:border-[var(--accent)]"
+                    />
+                  </div>
+
+                  <div className="pt-3 flex items-center justify-end gap-2 border-t border-[var(--card-border)]">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedUserForXp(null)}
+                      className="px-3.5 py-1.5 rounded-lg border border-[var(--card-border)] hover:bg-[var(--card-hover)] text-xs font-medium text-[var(--foreground)] cursor-pointer"
+                    >
+                      Annuler
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={isSubmittingXp}
+                      className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-[var(--accent)] text-white text-xs font-semibold hover:opacity-90 transition cursor-pointer shadow-xs disabled:opacity-50"
+                    >
+                      {isSubmittingXp ? (
+                        <Loader2 size={13} className="animate-spin" />
+                      ) : (
+                        <CheckCircle2 size={13} />
+                      )}
+                      <span>Confirmer l&apos;ajustement</span>
+                    </button>
+                  </div>
+                </form>
+              </div>
             </div>
           </div>
         )}

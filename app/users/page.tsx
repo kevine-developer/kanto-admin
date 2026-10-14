@@ -18,14 +18,15 @@ import {
   Users as UsersIcon,
   UserCheck,
   ArrowUpDown,
-  Filter,
-  Layers,
-  List,
   RotateCcw,
   X,
   ChevronLeft,
   ChevronRight,
+  List,
+  Layers,
+  Copy,
 } from 'lucide-react';
+import { useToast } from '@/lib/hooks/useToast';
 
 type SortOption =
   | 'date_desc'
@@ -39,6 +40,7 @@ type RoleFilter = 'ALL' | 'ADMIN' | 'USER';
 type ViewMode = 'flat' | 'grouped';
 
 export default function UsersAdminPage() {
+  const { toast } = useToast();
   const [users, setUsers] = useState<UserAccount[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -53,9 +55,6 @@ export default function UsersAdminPage() {
   // Actions
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [resettingId, setResettingId] = useState<string | null>(null);
-  const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(
-    null
-  );
 
   const loadUsers = useCallback(async () => {
     try {
@@ -63,19 +62,17 @@ export default function UsersAdminPage() {
       const data = await systemService.getUsers();
       setUsers(data || []);
     } catch (err: unknown) {
-      const msg =
-        err instanceof Error ? err.message : 'Erreur lors du chargement des utilisateurs';
-      setFeedback({ type: 'error', text: msg });
+      const msg = err instanceof Error ? err.message : 'Erreur lors du chargement des utilisateurs';
+      toast.error(msg);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [toast]);
 
   useEffect(() => {
     void loadUsers();
   }, [loadUsers]);
 
-  // Réinitialiser la page si les filtres changent
   useEffect(() => {
     setCurrentPage(1);
   }, [search, roleFilter, sortBy, pageSize]);
@@ -96,7 +93,6 @@ export default function UsersAdminPage() {
   const filteredAndSortedUsers = useMemo(() => {
     let result = [...users];
 
-    // 1. Filtre par recherche textuelle (Nom ou Email)
     if (search.trim()) {
       const q = search.toLowerCase().trim();
       result = result.filter(
@@ -107,12 +103,10 @@ export default function UsersAdminPage() {
       );
     }
 
-    // 2. Filtre par Rôle
     if (roleFilter !== 'ALL') {
       result = result.filter((u) => u.role === roleFilter);
     }
 
-    // 3. Tri
     result.sort((a, b) => {
       switch (sortBy) {
         case 'date_desc':
@@ -139,21 +133,18 @@ export default function UsersAdminPage() {
     return result;
   }, [users, search, roleFilter, sortBy]);
 
-  // Pagination découpée
   const totalPages = Math.ceil(filteredAndSortedUsers.length / pageSize) || 1;
   const paginatedUsers = useMemo(() => {
     const startIndex = (currentPage - 1) * pageSize;
     return filteredAndSortedUsers.slice(startIndex, startIndex + pageSize);
   }, [filteredAndSortedUsers, currentPage, pageSize]);
 
-  // Données groupées par rôle si vue 'grouped'
   const groupedUsers = useMemo(() => {
     const admins = filteredAndSortedUsers.filter((u) => u.role === 'ADMIN');
     const members = filteredAndSortedUsers.filter((u) => u.role !== 'ADMIN');
     return { admins, members };
   }, [filteredAndSortedUsers]);
 
-  // Formatage de date
   const formatDate = (dateString?: string) => {
     if (!dateString) return '—';
     try {
@@ -169,28 +160,17 @@ export default function UsersAdminPage() {
   };
 
   const handleResetPassword = async (user: UserAccount) => {
-    if (
-      !confirm(
-        `Envoyer un email de réinitialisation de mot de passe à ${user.name || user.email} (${user.email}) ?`
-      )
-    ) {
+    if (!confirm(`Envoyer un email de réinitialisation de mot de passe à ${user.email} ?`)) {
       return;
     }
 
     try {
       setResettingId(user.id);
-      setFeedback(null);
       const res = await systemService.resetUserPassword(user.id);
-      setFeedback({
-        type: 'success',
-        text: res.message || `Lien de réinitialisation envoyé à ${user.email}.`,
-      });
+      toast.success(res.message || `Lien envoyé à ${user.email}.`);
     } catch (err: unknown) {
-      const msg =
-        err instanceof Error
-          ? err.message
-          : "Erreur lors de l'envoi de l'email de réinitialisation";
-      setFeedback({ type: 'error', text: msg });
+      const msg = err instanceof Error ? err.message : "Erreur d'envoi de réinitialisation";
+      toast.error(msg);
     } finally {
       setResettingId(null);
     }
@@ -198,52 +178,31 @@ export default function UsersAdminPage() {
 
   const handleToggleRole = async (user: UserAccount) => {
     const nextRole = user.role === 'ADMIN' ? 'USER' : 'ADMIN';
-    const actionLabel =
-      nextRole === 'ADMIN'
-        ? 'promouvoir en Administrateur'
-        : 'rétrograder en Utilisateur simple';
+    const actionLabel = nextRole === 'ADMIN' ? 'promouvoir en Administrateur' : 'rétrograder en Membre simple';
 
-    if (
-      !confirm(
-        `Voulez-vous vraiment ${actionLabel} le compte de ${user.name} (${user.email}) ?`
-      )
-    ) {
+    if (!confirm(`Voulez-vous vraiment ${actionLabel} le compte ${user.email} ?`)) {
       return;
     }
 
     try {
       setUpdatingId(user.id);
-      setFeedback(null);
-
       await systemService.updateUserRole(user.id, nextRole);
-
-      setFeedback({
-        type: 'success',
-        text: `Le rôle de ${user.name} a été mis à jour en [${nextRole}].`,
-      });
-
-      setUsers((prev) =>
-        prev.map((u) => (u.id === user.id ? { ...u, role: nextRole } : u))
-      );
-      void loadUsers();
+      toast.success(`Rôle de ${user.name || user.email} mis à jour : [${nextRole}].`);
+      setUsers((prev) => prev.map((u) => (u.id === user.id ? { ...u, role: nextRole } : u)));
     } catch (err: unknown) {
-      const msg =
-        err instanceof Error ? err.message : 'Erreur lors du changement de rôle';
-      setFeedback({ type: 'error', text: msg });
+      const msg = err instanceof Error ? err.message : 'Erreur lors du changement de rôle';
+      toast.error(msg);
     } finally {
       setUpdatingId(null);
     }
   };
 
-  // Rendu d'une table d'utilisateurs
   const renderUserTable = (items: UserAccount[], titleBadge?: string) => (
-    <div className="rounded-xl border border-border bg-card overflow-hidden shadow-sm">
+    <div className="rounded-xl border border-[var(--card-border)] bg-[var(--card)] overflow-hidden shadow-xs">
       {titleBadge && (
-        <div className="px-4 py-2.5 bg-muted/40 border-b border-border flex items-center justify-between">
-          <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-            {titleBadge}
-          </span>
-          <span className="text-[11px] font-mono text-muted-foreground">
+        <div className="px-4 py-2.5 bg-[var(--input-bg)] border-b border-[var(--card-border)] flex items-center justify-between">
+          <span className="text-xs font-semibold text-[var(--foreground)]">{titleBadge}</span>
+          <span className="text-[11px] font-mono text-[var(--text-muted)]">
             {items.length} {items.length > 1 ? 'comptes' : 'compte'}
           </span>
         </div>
@@ -251,109 +210,100 @@ export default function UsersAdminPage() {
       <div className="overflow-x-auto">
         <table className="w-full text-left text-xs border-collapse">
           <thead>
-            <tr className="border-b border-border bg-muted/30 text-muted-foreground font-mono text-[10.5px] uppercase tracking-wider">
-              <th className="py-2.5 px-4 font-medium">Utilisateur</th>
-              <th className="py-2.5 px-4 font-medium">Email</th>
-              <th className="py-2.5 px-4 font-medium">Rôle / Privilège</th>
-              <th className="py-2.5 px-4 font-medium">Date d&apos;inscription</th>
-              <th className="py-2.5 px-4 text-right font-medium">Actions</th>
+            <tr className="border-b border-[var(--card-border)] bg-[var(--input-bg)] text-[var(--text-muted)] font-semibold text-[11px]">
+              <th className="py-2.5 px-4">Utilisateur</th>
+              <th className="py-2.5 px-4">Adresse Email</th>
+              <th className="py-2.5 px-4">Rôle</th>
+              <th className="py-2.5 px-4">Inscription</th>
+              <th className="py-2.5 px-4 text-right">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-border/60">
+          <tbody className="divide-y divide-[var(--card-border)]">
             {items.map((user) => {
               const isAdmin = user.role === 'ADMIN';
               const isUpdating = updatingId === user.id;
               const isResetting = resettingId === user.id;
 
               return (
-                <tr
-                  key={user.id}
-                  className="hover:bg-muted/40 transition-colors group"
-                >
-                  {/* Avatar + Nom */}
+                <tr key={user.id} className="hover:bg-[var(--card-hover)] transition-colors">
                   <td className="py-2.5 px-4">
                     <div className="flex items-center gap-2.5">
                       <div
                         className={`w-7 h-7 rounded-full border flex items-center justify-center text-xs font-bold shrink-0 ${
                           isAdmin
                             ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400'
-                            : 'bg-primary/10 border-primary/20 text-primary'
+                            : 'bg-[var(--accent-light)] border-[var(--accent-border)] text-[var(--accent-text)]'
                         }`}
                       >
                         {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
                       </div>
                       <div className="min-w-0">
-                        <div className="font-semibold text-foreground truncate">
+                        <div className="font-semibold text-[var(--foreground)] truncate">
                           {user.name || 'Sans nom'}
                         </div>
-                        <div className="text-[10px] font-mono text-muted-foreground truncate">
-                          ID: {user.id.slice(0, 10)}...
+                        <div className="text-[10px] font-mono text-[var(--text-muted)] truncate">
+                          ID: {user.id.slice(0, 8)}...
                         </div>
                       </div>
                     </div>
                   </td>
 
-                  {/* Email */}
-                  <td className="py-2.5 px-4 font-mono text-[11px] text-muted-foreground">
+                  <td className="py-2.5 px-4 font-mono text-[11px] text-[var(--foreground)]">
                     <div className="flex items-center gap-1.5">
-                      <Mail size={12} className="text-muted-foreground/70 shrink-0" />
                       <span className="truncate max-w-[200px]">{user.email}</span>
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(user.email);
+                          toast.success('Email copié !');
+                        }}
+                        className="text-[var(--text-subtle)] hover:text-[var(--foreground)] p-0.5 cursor-pointer"
+                        title="Copier l'email"
+                      >
+                        <Copy size={11} />
+                      </button>
                     </div>
                   </td>
 
-                  {/* Privilège */}
-                  <td className="py-2.5 px-4">
+                  <td className="py-2.5 px-4 whitespace-nowrap">
                     {isAdmin ? (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shadow-xs">
-                        <ShieldCheck size={12} />
-                        <span>ADMINISTRATEUR</span>
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25">
+                        <ShieldCheck size={11} />
+                        <span>ADMIN</span>
                       </span>
                     ) : (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-muted text-muted-foreground border border-border">
-                        <User size={12} />
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium bg-[var(--input-bg)] text-[var(--text-muted)] border border-[var(--card-border)]">
+                        <User size={11} />
                         <span>MEMBRE</span>
                       </span>
                     )}
                   </td>
 
-                  {/* Date */}
-                  <td className="py-2.5 px-4 font-mono text-[11px] text-muted-foreground">
-                    <div className="flex items-center gap-1.5">
-                      <Calendar size={12} className="text-muted-foreground/70 shrink-0" />
-                      <span>{formatDate(user.createdAt)}</span>
-                    </div>
+                  <td className="py-2.5 px-4 whitespace-nowrap font-mono text-[11px] text-[var(--text-muted)]">
+                    {formatDate(user.createdAt)}
                   </td>
 
-                  {/* Actions */}
-                  <td className="py-2.5 px-4 text-right">
+                  <td className="py-2.5 px-4 text-right whitespace-nowrap">
                     <div className="flex items-center justify-end gap-1.5">
-                      {/* Réinitialiser mot de passe */}
                       <button
                         onClick={() => handleResetPassword(user)}
                         disabled={isResetting}
-                        title="Envoyer un email de réinitialisation de mot de passe"
-                        className="p-1.5 rounded-lg border border-border hover:bg-muted text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50 cursor-pointer"
+                        title="Envoyer email de réinitialisation"
+                        className="p-1 rounded-md border border-[var(--card-border)] bg-[var(--input-bg)] hover:bg-[var(--card-hover)] text-[var(--text-muted)] hover:text-[var(--foreground)] transition cursor-pointer disabled:opacity-50"
                       >
-                        {isResetting ? (
-                          <Loader2 size={13} className="animate-spin" />
-                        ) : (
-                          <KeyRound size={13} />
-                        )}
+                        {isResetting ? <Loader2 size={12} className="animate-spin" /> : <KeyRound size={12} />}
                       </button>
 
-                      {/* Changer rôle */}
                       <button
                         onClick={() => handleToggleRole(user)}
                         disabled={isUpdating}
-                        title={isAdmin ? 'Rétrograder en Membre' : 'Promouvoir en Administrateur'}
-                        className={`px-2 py-1 rounded-lg text-[11px] font-medium border transition-colors flex items-center gap-1 disabled:opacity-50 cursor-pointer ${
+                        className={`px-2 py-1 rounded-md text-[11px] font-semibold border transition cursor-pointer disabled:opacity-50 ${
                           isAdmin
-                            ? 'border-border text-muted-foreground hover:bg-rose-500/10 hover:text-rose-500 hover:border-rose-500/30'
+                            ? 'border-[var(--card-border)] bg-[var(--input-bg)] text-[var(--text-muted)] hover:text-rose-500 hover:border-rose-500/30'
                             : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20'
                         }`}
                       >
                         {isUpdating ? (
-                          <Loader2 size={12} className="animate-spin" />
+                          <Loader2 size={11} className="animate-spin" />
                         ) : isAdmin ? (
                           'Rétrograder'
                         ) : (
@@ -373,157 +323,117 @@ export default function UsersAdminPage() {
 
   return (
     <AdminShell>
-      <div className="w-full space-y-5 pb-10">
+      <div className="space-y-5 max-w-5xl mx-auto pb-12">
         {/* En-tête de page standardisé */}
         <PageHeader
-          title="Gestion des Utilisateurs & Privilèges"
-          description="Supervision des comptes membres, rôles d'administration et sécurité."
+          title="Utilisateurs & Privilèges"
+          description="Supervision des comptes membres, gestion des rôles administrateurs et accès."
           icon={UsersIcon}
           actions={
             <button
               onClick={() => void loadUsers()}
               disabled={isLoading}
-              title="Rafraîchir la liste"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-border bg-card hover:bg-muted text-foreground transition-colors disabled:opacity-50 cursor-pointer"
+              title="Rafraîchir"
+              className="p-1.5 rounded-lg border border-[var(--card-border)] bg-[var(--card)] hover:bg-[var(--card-hover)] text-[var(--text-muted)] hover:text-[var(--foreground)] transition cursor-pointer shadow-xs"
             >
               <RotateCcw size={13} className={isLoading ? 'animate-spin' : ''} />
-              <span>Actualiser</span>
             </button>
           }
         />
 
-        {/* Feedback Alert */}
-        {feedback && (
-          <div
-            className={`p-3 rounded-xl flex items-center justify-between text-xs font-medium animate-in fade-in duration-150 ${
-              feedback.type === 'success'
-                ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20'
-                : 'bg-rose-500/10 text-rose-700 dark:text-rose-300 border border-rose-500/20'
-            }`}
-          >
-            <div className="flex items-center gap-2">
-              {feedback.type === 'success' ? (
-                <CheckCircle2 size={15} className="shrink-0 text-emerald-600 dark:text-emerald-400" />
-              ) : (
-                <AlertCircle size={15} className="shrink-0 text-rose-600 dark:text-rose-400" />
-              )}
-              <span>{feedback.text}</span>
+        {/* 4 Métriques compactes */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+          <div className="p-3 rounded-xl border border-[var(--card-border)] bg-[var(--card)] space-y-0.5">
+            <div className="text-[11px] text-[var(--text-muted)] flex items-center justify-between">
+              <span>Total inscrits</span>
+              <UsersIcon size={12} className="text-[var(--accent)]" />
             </div>
-            <button
-              onClick={() => setFeedback(null)}
-              className="text-xs opacity-70 hover:opacity-100 cursor-pointer"
-            >
-              <X size={14} />
-            </button>
-          </div>
-        )}
-
-        {/* Cartes KPI / Statistiques */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <div className="p-4 rounded-xl border border-border bg-card shadow-xs">
-            <div className="flex items-center justify-between text-muted-foreground mb-2">
-              <span className="text-xs font-medium">Total Inscrits</span>
-              <UsersIcon className="w-4 h-4 text-primary" />
-            </div>
-            <div className="text-2xl font-bold text-foreground">{stats.total}</div>
-            <div className="text-[11px] text-muted-foreground mt-0.5">Comptes enregistrés</div>
+            <div className="text-base font-bold font-mono text-[var(--foreground)] mt-0.5">{stats.total}</div>
           </div>
 
-          <div className="p-4 rounded-xl border border-border bg-card shadow-xs">
-            <div className="flex items-center justify-between text-muted-foreground mb-2">
-              <span className="text-xs font-medium">Administrateurs</span>
-              <ShieldCheck className="w-4 h-4 text-emerald-500" />
+          <div className="p-3 rounded-xl border border-[var(--card-border)] bg-[var(--card)] space-y-0.5">
+            <div className="text-[11px] text-[var(--text-muted)] flex items-center justify-between">
+              <span>Administrateurs</span>
+              <ShieldCheck size={12} className="text-emerald-500" />
             </div>
-            <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
-              {stats.admins}
-            </div>
-            <div className="text-[11px] text-muted-foreground mt-0.5">Accès backoffice total</div>
+            <div className="text-base font-bold font-mono text-emerald-600 dark:text-emerald-400 mt-0.5">{stats.admins}</div>
           </div>
 
-          <div className="p-4 rounded-xl border border-border bg-card shadow-xs">
-            <div className="flex items-center justify-between text-muted-foreground mb-2">
-              <span className="text-xs font-medium">Membres</span>
-              <UserCheck className="w-4 h-4 text-sky-500" />
+          <div className="p-3 rounded-xl border border-[var(--card-border)] bg-[var(--card)] space-y-0.5">
+            <div className="text-[11px] text-[var(--text-muted)] flex items-center justify-between">
+              <span>Membres</span>
+              <UserCheck size={12} className="text-sky-500" />
             </div>
-            <div className="text-2xl font-bold text-foreground">{stats.members}</div>
-            <div className="text-[11px] text-muted-foreground mt-0.5">Utilisateurs standards</div>
+            <div className="text-base font-bold font-mono text-[var(--foreground)] mt-0.5">{stats.members}</div>
           </div>
 
-          <div className="p-4 rounded-xl border border-border bg-card shadow-xs">
-            <div className="flex items-center justify-between text-muted-foreground mb-2">
-              <span className="text-xs font-medium">Récents (30j)</span>
-              <Calendar className="w-4 h-4 text-amber-500" />
+          <div className="p-3 rounded-xl border border-[var(--card-border)] bg-[var(--card)] space-y-0.5">
+            <div className="text-[11px] text-[var(--text-muted)] flex items-center justify-between">
+              <span>Récents (30j)</span>
+              <Calendar size={12} className="text-amber-500" />
             </div>
-            <div className="text-2xl font-bold text-foreground">{stats.recent}</div>
-            <div className="text-[11px] text-muted-foreground mt-0.5">Nouvelles adhésions</div>
+            <div className="text-base font-bold font-mono text-amber-600 dark:text-amber-400 mt-0.5">{stats.recent}</div>
           </div>
         </div>
 
-        {/* Barre d'outils professionnelle (Filtres, Recherche, Tri, Groupement) */}
-        <div className="p-3 rounded-xl border border-border bg-card shadow-xs space-y-3">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-            {/* Recherche textuelle */}
-            <div className="relative flex-1 max-w-md">
-              <Search
-                size={14}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-              />
+        {/* Barre d'outils compacte (Recherche, Filtres rôle, Tri, Vue) */}
+        <div className="p-3 rounded-xl border border-[var(--card-border)] bg-[var(--card)] space-y-2.5 shadow-xs">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+            <div className="relative flex-1">
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
               <input
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Rechercher par nom, email ou ID..."
-                className="w-full pl-9 pr-8 py-2 text-xs rounded-lg bg-background border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                placeholder="Rechercher par nom, email ou identifiant..."
+                className="w-full pl-8 pr-7 py-1.5 text-xs rounded-lg bg-[var(--input-bg)] border border-[var(--input-border)] text-[var(--foreground)] outline-none focus:border-[var(--accent)]"
               />
               {search && (
                 <button
                   onClick={() => setSearch('')}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--foreground)] cursor-pointer"
                 >
-                  <X size={13} />
+                  <X size={12} />
                 </button>
               )}
             </div>
 
-            {/* Sélecteur de Tri & Mode d'Affichage */}
-            <div className="flex flex-wrap items-center gap-2">
-              {/* Sélecteur de Tri */}
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <ArrowUpDown size={13} />
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 text-xs text-[var(--text-muted)]">
+                <ArrowUpDown size={12} />
                 <select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value as SortOption)}
-                  className="px-2.5 py-1.5 text-xs rounded-lg bg-background border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 cursor-pointer"
+                  className="px-2 py-1 text-xs rounded-lg bg-[var(--input-bg)] border border-[var(--input-border)] text-[var(--foreground)] cursor-pointer outline-none"
                 >
-                  <option value="date_desc">Inscription : Plus récent</option>
-                  <option value="date_asc">Inscription : Plus ancien</option>
-                  <option value="name_asc">Nom : A → Z</option>
-                  <option value="name_desc">Nom : Z → A</option>
-                  <option value="email_asc">Email : A → Z</option>
-                  <option value="role_first">Admins en premier</option>
+                  <option value="date_desc">Plus récents</option>
+                  <option value="date_asc">Plus anciens</option>
+                  <option value="name_asc">Nom A → Z</option>
+                  <option value="name_desc">Nom Z → A</option>
+                  <option value="role_first">Admins d&apos;abord</option>
                 </select>
               </div>
 
-              {/* Bascule de Vue (Liste continue vs Groupée par Rôle) */}
-              <div className="flex items-center rounded-lg border border-border p-0.5 bg-background">
+              {/* Commutateur de vue */}
+              <div className="flex items-center rounded-lg border border-[var(--card-border)] p-0.5 bg-[var(--input-bg)]">
                 <button
                   onClick={() => setViewMode('flat')}
                   title="Vue liste standard"
-                  className={`p-1.5 rounded-md text-xs transition-colors cursor-pointer ${
+                  className={`p-1 rounded-md text-xs transition cursor-pointer ${
                     viewMode === 'flat'
-                      ? 'bg-muted text-foreground font-semibold shadow-xs'
-                      : 'text-muted-foreground hover:text-foreground'
+                      ? 'bg-[var(--card)] text-[var(--foreground)] font-semibold shadow-xs'
+                      : 'text-[var(--text-muted)] hover:text-[var(--foreground)]'
                   }`}
                 >
                   <List size={13} />
                 </button>
                 <button
                   onClick={() => setViewMode('grouped')}
-                  title="Vue groupée par Rôle (Admins / Membres)"
-                  className={`p-1.5 rounded-md text-xs transition-colors cursor-pointer ${
+                  title="Vue groupée par rôle"
+                  className={`p-1 rounded-md text-xs transition cursor-pointer ${
                     viewMode === 'grouped'
-                      ? 'bg-muted text-foreground font-semibold shadow-xs'
-                      : 'text-muted-foreground hover:text-foreground'
+                      ? 'bg-[var(--card)] text-[var(--foreground)] font-semibold shadow-xs'
+                      : 'text-[var(--text-muted)] hover:text-[var(--foreground)]'
                   }`}
                 >
                   <Layers size={13} />
@@ -532,18 +442,14 @@ export default function UsersAdminPage() {
             </div>
           </div>
 
-          {/* Onglets Facettes de Rôle */}
-          <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-border/60">
-            <span className="text-[11px] font-mono text-muted-foreground mr-1 flex items-center gap-1">
-              <Filter size={11} /> Filtrer :
-            </span>
-
+          {/* Filtres de rôle en pilules discrètes */}
+          <div className="flex items-center gap-1.5 pt-2 border-t border-[var(--card-border)]">
             <button
               onClick={() => setRoleFilter('ALL')}
-              className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+              className={`px-2.5 py-1 rounded-lg text-xs font-medium transition cursor-pointer ${
                 roleFilter === 'ALL'
-                  ? 'bg-primary text-primary-foreground shadow-xs'
-                  : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground'
+                  ? 'bg-[var(--accent)] text-white shadow-xs'
+                  : 'bg-[var(--input-bg)] text-[var(--text-muted)] hover:text-[var(--foreground)]'
               }`}
             >
               Tous ({stats.total})
@@ -551,112 +457,97 @@ export default function UsersAdminPage() {
 
             <button
               onClick={() => setRoleFilter('ADMIN')}
-              className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 cursor-pointer ${
+              className={`px-2.5 py-1 rounded-lg text-xs font-medium transition flex items-center gap-1 cursor-pointer ${
                 roleFilter === 'ADMIN'
                   ? 'bg-emerald-600 text-white shadow-xs'
-                  : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground'
+                  : 'bg-[var(--input-bg)] text-[var(--text-muted)] hover:text-[var(--foreground)]'
               }`}
             >
-              <ShieldCheck size={12} />
-              <span>Administrateurs ({stats.admins})</span>
+              <ShieldCheck size={11} />
+              <span>Admins ({stats.admins})</span>
             </button>
 
             <button
               onClick={() => setRoleFilter('USER')}
-              className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 cursor-pointer ${
+              className={`px-2.5 py-1 rounded-lg text-xs font-medium transition flex items-center gap-1 cursor-pointer ${
                 roleFilter === 'USER'
                   ? 'bg-sky-600 text-white shadow-xs'
-                  : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground'
+                  : 'bg-[var(--input-bg)] text-[var(--text-muted)] hover:text-[var(--foreground)]'
               }`}
             >
-              <User size={12} />
+              <User size={11} />
               <span>Membres ({stats.members})</span>
             </button>
           </div>
         </div>
 
-        {/* Contenu principal : Tableaux */}
+        {/* Contenu : Tables d'utilisateurs */}
         {isLoading ? (
-          <div className="py-20 flex flex-col items-center justify-center text-xs text-muted-foreground gap-2">
-            <Loader2 size={18} className="animate-spin text-primary" />
-            <span>Chargement des utilisateurs en cours...</span>
+          <div className="py-16 flex flex-col items-center justify-center gap-2 text-[var(--text-muted)]">
+            <Loader2 size={18} className="animate-spin text-[var(--accent)]" />
+            <span className="text-xs">Chargement des utilisateurs...</span>
           </div>
         ) : filteredAndSortedUsers.length === 0 ? (
-          <div className="py-16 text-center rounded-xl border border-dashed border-border bg-card/50 p-6 space-y-2">
-            <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center mx-auto text-muted-foreground">
-              <UsersIcon size={20} />
-            </div>
-            <div className="text-sm font-semibold text-foreground">Aucun utilisateur trouvé</div>
-            <p className="text-xs text-muted-foreground max-w-sm mx-auto">
-              Aucun compte ne correspond à vos filtres actuels. Modifiez votre recherche ou réinitialisez les filtres.
-            </p>
+          <div className="py-16 text-center text-[var(--text-muted)] rounded-xl border border-[var(--card-border)] bg-[var(--card)] p-6 space-y-2">
+            <UsersIcon size={24} className="mx-auto mb-1 opacity-30" />
+            <p className="text-xs font-medium">Aucun utilisateur ne correspond à vos filtres</p>
             <button
-              onClick={() => {
-                setSearch('');
-                setRoleFilter('ALL');
-              }}
-              className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-border hover:bg-muted text-foreground transition-colors cursor-pointer"
+              onClick={() => { setSearch(''); setRoleFilter('ALL'); }}
+              className="text-xs text-[var(--accent)] hover:underline cursor-pointer"
             >
-              <RotateCcw size={12} />
-              <span>Réinitialiser les filtres</span>
+              Réinitialiser les filtres
             </button>
           </div>
         ) : viewMode === 'grouped' ? (
-          /* Mode Groupé par Rôle */
-          <div className="space-y-5">
-            {groupedUsers.admins.length > 0 &&
-              renderUserTable(groupedUsers.admins, 'Administrateurs du Système')}
-            {groupedUsers.members.length > 0 &&
-              renderUserTable(groupedUsers.members, 'Membres de la Communauté')}
+          <div className="space-y-4">
+            {groupedUsers.admins.length > 0 && renderUserTable(groupedUsers.admins, 'Administrateurs du Système')}
+            {groupedUsers.members.length > 0 && renderUserTable(groupedUsers.members, 'Membres de la Communauté')}
           </div>
         ) : (
-          /* Mode Liste Standard avec Pagination */
           <div className="space-y-3">
             {renderUserTable(paginatedUsers)}
 
-            {/* Pagination Controls */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-1 text-xs text-muted-foreground">
-              <div className="flex items-center gap-2">
-                <span>Lignes par page :</span>
-                <select
-                  value={pageSize}
-                  onChange={(e) => setPageSize(Number(e.target.value))}
-                  className="px-2 py-1 text-xs rounded-md bg-card border border-border text-foreground cursor-pointer"
-                >
-                  <option value={10}>10</option>
-                  <option value={15}>15</option>
-                  <option value={25}>25</option>
-                  <option value={50}>50</option>
-                </select>
-                <span className="font-mono text-[11px]">
-                  {(currentPage - 1) * pageSize + 1}–
-                  {Math.min(currentPage * pageSize, filteredAndSortedUsers.length)} sur{' '}
-                  {filteredAndSortedUsers.length}
-                </span>
-              </div>
+            {/* Pagination compacte */}
+            {totalPages > 1 && (
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-1 text-xs text-[var(--text-muted)]">
+                <div className="flex items-center gap-2">
+                  <span>Lignes :</span>
+                  <select
+                    value={pageSize}
+                    onChange={(e) => setPageSize(Number(e.target.value))}
+                    className="px-2 py-0.5 text-xs rounded-md bg-[var(--card)] border border-[var(--card-border)] text-[var(--foreground)] cursor-pointer"
+                  >
+                    <option value={10}>10</option>
+                    <option value={15}>15</option>
+                    <option value={25}>25</option>
+                    <option value={50}>50</option>
+                  </select>
+                  <span>
+                    {(currentPage - 1) * pageSize + 1}–{Math.min(currentPage * pageSize, filteredAndSortedUsers.length)} sur {filteredAndSortedUsers.length}
+                  </span>
+                </div>
 
-              <div className="flex items-center gap-1 self-end sm:self-auto">
-                <button
-                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
-                  className="p-1.5 rounded-lg border border-border hover:bg-muted text-foreground disabled:opacity-40 transition-colors cursor-pointer"
-                  title="Page précédente"
-                >
-                  <ChevronLeft size={14} />
-                </button>
-                <span className="px-2.5 font-mono text-xs">
-                  {currentPage} / {totalPages}
-                </span>
-                <button
-                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={currentPage === totalPages}
-                  className="p-1.5 rounded-lg border border-border hover:bg-muted text-foreground disabled:opacity-40 transition-colors cursor-pointer"
-                  title="Page suivante"
-                >
-                  <ChevronRight size={14} />
-                </button>
+                <div className="flex items-center gap-1.5 self-end sm:self-auto">
+                  <button
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    className="p-1 rounded-md border border-[var(--card-border)] bg-[var(--card)] hover:bg-[var(--card-hover)] disabled:opacity-30 cursor-pointer"
+                  >
+                    <ChevronLeft size={13} />
+                  </button>
+                  <span className="font-mono text-xs px-1">
+                    {currentPage} / {totalPages}
+                  </span>
+                  <button
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                    className="p-1 rounded-md border border-[var(--card-border)] bg-[var(--card)] hover:bg-[var(--card-hover)] disabled:opacity-30 cursor-pointer"
+                  >
+                    <ChevronRight size={13} />
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         )}
       </div>

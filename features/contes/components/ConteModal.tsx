@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, Field } from '@/components/ui';
 import { ConteFormData } from '@/types/conte';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, Loader2 } from 'lucide-react';
 import { contesService } from '@/services/contes.service';
 
 interface ConteModalProps {
@@ -122,7 +122,7 @@ export function ConteModal({
       isOpen={isOpen}
       onClose={onClose}
       title={isEditing ? 'Modifier le conte' : 'Nouveau conte malagasy'}
-      subtitle="Saisissez les récits bilingues et la morale culturelle."
+      subtitle="Récits oraux bilingues et morale culturelle."
       maxWidth="2xl"
     >
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -173,26 +173,26 @@ export function ConteModal({
         </div>
 
         {/* Paragraphes du conte */}
-        <div className="space-y-3 pt-2 border-t border-[var(--card-border)]">
+        <div className="space-y-2.5 pt-2 border-t border-[var(--card-border)]">
           <div className="flex items-center justify-between">
-            <label className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-subtle)]">
+            <label className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
               Paragraphes du récit ({formData.paragraphs.length})
             </label>
             <button
               type="button"
               onClick={handleAddParagraph}
-              className="px-2 py-1 rounded bg-[var(--card)] hover:bg-[var(--card-hover)] border border-[var(--card-border)] text-[11px] font-medium text-[var(--foreground)] flex items-center gap-1 cursor-pointer"
+              className="px-2 py-1 rounded-lg bg-[var(--input-bg)] hover:bg-[var(--card-hover)] border border-[var(--card-border)] text-xs font-semibold text-[var(--foreground)] flex items-center gap-1 cursor-pointer shadow-xs"
             >
               <Plus size={12} />
               <span>Ajouter paragraphe</span>
             </button>
           </div>
 
-          <div className="space-y-3 max-h-64 overflow-y-auto pr-1">
+          <div className="space-y-2.5 max-h-64 overflow-y-auto pr-1">
             {formData.paragraphs.map((p, idx) => (
               <div
                 key={idx}
-                className="p-3 rounded-lg border border-[var(--card-border)] bg-[var(--card)] space-y-2 relative group"
+                className="p-3 rounded-xl border border-[var(--card-border)] bg-[var(--input-bg)] space-y-2 relative group"
               >
                 <div className="flex items-center justify-between text-[10px] font-mono text-[var(--text-muted)]">
                   <span>Paragraphe #{idx + 1}</span>
@@ -200,7 +200,7 @@ export function ConteModal({
                     <button
                       type="button"
                       onClick={() => handleRemoveParagraph(idx)}
-                      className="p-0.5 rounded text-[var(--text-subtle)] hover:text-red-600 transition cursor-pointer"
+                      className="p-1 rounded text-[var(--text-muted)] hover:text-rose-500 transition cursor-pointer"
                       title="Supprimer ce paragraphe"
                     >
                       <Trash2 size={12} />
@@ -214,14 +214,14 @@ export function ConteModal({
                     value={p.textMg}
                     onChange={(e) => handleParagraphChange(idx, 'textMg', e.target.value)}
                     placeholder="Texte en malgache..."
-                    className="w-full p-2 text-xs rounded bg-[var(--input-bg)] border border-[var(--card-border)] text-[var(--foreground)] focus:outline-none focus:border-[var(--accent)] resize-none"
+                    className="w-full p-2 text-xs rounded-lg bg-[var(--card)] border border-[var(--input-border)] text-[var(--foreground)] focus:outline-none focus:border-[var(--accent)] resize-none"
                   />
                   <textarea
                     rows={2}
                     value={p.textFr}
                     onChange={(e) => handleParagraphChange(idx, 'textFr', e.target.value)}
                     placeholder="Traduction en français..."
-                    className="w-full p-2 text-xs rounded bg-[var(--input-bg)] border border-[var(--card-border)] text-[var(--foreground)] focus:outline-none focus:border-[var(--accent)] resize-none"
+                    className="w-full p-2 text-xs rounded-lg bg-[var(--card)] border border-[var(--input-border)] text-[var(--foreground)] focus:outline-none focus:border-[var(--accent)] resize-none"
                   />
                 </div>
               </div>
@@ -256,16 +256,25 @@ export function ConteModal({
           <button
             type="button"
             onClick={onClose}
-            className="px-3 py-1.5 rounded-md text-xs font-medium text-[var(--text-muted)] hover:bg-[var(--card-hover)] transition cursor-pointer"
+            className="px-3.5 py-1.5 rounded-lg text-xs font-medium border border-[var(--card-border)] hover:bg-[var(--card-hover)] text-[var(--foreground)] transition cursor-pointer"
           >
             Annuler
           </button>
           <button
             type="submit"
             disabled={isSubmitting}
-            className="px-4 py-1.5 rounded-md bg-[var(--foreground)] text-[var(--background)] hover:opacity-90 text-xs font-semibold transition cursor-pointer disabled:opacity-50"
+            className="px-4 py-1.5 rounded-lg bg-[var(--accent)] text-white hover:opacity-90 text-xs font-semibold transition cursor-pointer disabled:opacity-50 shadow-xs flex items-center gap-1.5"
           >
-            {isSubmitting ? 'Enregistrement...' : isEditing ? 'Mettre à jour' : 'Créer le conte'}
+            {isSubmitting ? (
+              <>
+                <Loader2 size={13} className="animate-spin" />
+                <span>Enregistrement...</span>
+              </>
+            ) : isEditing ? (
+              'Mettre à jour'
+            ) : (
+              'Créer le conte'
+            )}
           </button>
         </div>
       </form>

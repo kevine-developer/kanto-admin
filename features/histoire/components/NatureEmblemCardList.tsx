@@ -23,13 +23,13 @@ export function NatureEmblemCardList({ items, onEdit, onDelete }: NatureEmblemCa
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
       {items.map((item) => (
         <div
           key={item.id}
-          className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-2xl overflow-hidden shadow-sm flex flex-col justify-between"
+          className="bg-[var(--card)] border border-[var(--card-border)] rounded-xl overflow-hidden shadow-xs flex flex-col justify-between hover:border-[var(--accent)] transition-colors"
         >
-          <div className="relative h-44 bg-stone-100 dark:bg-stone-800">
+          <div className="relative h-40 bg-[var(--input-bg)]">
             {item.imageUrl ? (
               <img
                 src={resolveMediaUrl(item.imageUrl)}
@@ -37,42 +37,42 @@ export function NatureEmblemCardList({ items, onEdit, onDelete }: NatureEmblemCa
                 className="w-full h-full object-cover"
               />
             ) : (
-              <div className="w-full h-full flex items-center justify-center text-stone-400">
-                <TreePine size={32} />
+              <div className="w-full h-full flex items-center justify-center text-[var(--text-subtle)]">
+                <TreePine size={28} />
               </div>
             )}
-            <span className="absolute top-2.5 left-2.5 px-2.5 py-0.5 bg-black/70 backdrop-blur-sm text-white text-xs font-semibold rounded-md">
+            <span className="absolute top-2.5 left-2.5 px-2 py-0.5 bg-black/75 backdrop-blur-xs text-white text-[10px] font-bold rounded-md">
               {item.type === 'FLORA' ? '🌿 Flore' : '🐾 Faune'}
             </span>
           </div>
 
-          <div className="p-4 space-y-1.5">
-            <div className="flex items-center justify-between">
-              <h4 className="font-bold text-stone-900 dark:text-white text-base">{item.nameFr}</h4>
-              <span className="text-xs text-stone-500 font-medium">🇲🇬 {item.nameMg}</span>
+          <div className="p-3.5 space-y-1">
+            <div className="flex items-center justify-between gap-1">
+              <h4 className="font-bold text-[var(--foreground)] text-sm truncate">{item.nameFr}</h4>
+              <span className="text-[11px] text-[var(--text-muted)] font-medium shrink-0">🇲🇬 {item.nameMg}</span>
             </div>
-            <p className="text-xs italic font-serif text-emerald-700 dark:text-emerald-400">
+            <p className="text-[11px] italic font-serif text-[var(--accent)]">
               {item.scientificName}
             </p>
-            <p className="text-xs text-stone-600 dark:text-stone-300 line-clamp-2 mt-2">
+            <p className="text-xs text-[var(--foreground)] line-clamp-2 leading-relaxed pt-1">
               {item.descriptionFr}
             </p>
           </div>
 
-          <div className="flex items-center justify-end gap-2 p-3 border-t border-stone-100 dark:border-stone-800">
+          <div className="flex items-center justify-end gap-1 p-2.5 border-t border-[var(--card-border)]">
             <button
               onClick={() => onEdit(item)}
-              className="p-1.5 text-stone-600 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 rounded-lg transition-colors"
+              className="p-1.5 text-[var(--text-muted)] hover:text-[var(--accent)] hover:bg-[var(--input-bg)] rounded-lg transition-colors cursor-pointer"
               title="Modifier"
             >
-              <Edit2 size={16} />
+              <Edit2 size={14} />
             </button>
             <button
               onClick={() => onDelete(item)}
-              className="p-1.5 text-stone-600 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition-colors"
+              className="p-1.5 text-[var(--text-muted)] hover:text-rose-500 hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer"
               title="Supprimer"
             >
-              <Trash2 size={16} />
+              <Trash2 size={14} />
             </button>
           </div>
         </div>

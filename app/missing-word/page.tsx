@@ -19,6 +19,7 @@ import {
   Shuffle,
   Layers,
   HelpCircle,
+  RotateCcw,
 } from 'lucide-react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -53,23 +54,31 @@ interface MissingWordLevel {
 
 const toRoman = (num: number): string => {
   const map: [number, string][] = [
-    [10, 'X'], [9, 'IX'], [5, 'V'], [4, 'IV'], [1, 'I'],
+    [10, 'X'],
+    [9, 'IX'],
+    [5, 'V'],
+    [4, 'IV'],
+    [1, 'I'],
   ];
   let res = '';
   for (const [v, r] of map) {
-    while (num >= v) { res += r; num -= v; }
+    while (num >= v) {
+      res += r;
+      num -= v;
+    }
   }
   return res || 'I';
 };
 
 const DIFF_LABEL: Record<string, string> = {
-  EASY: 'Facile', MEDIUM: 'Moyen', HARD: 'Difficile', EXPERT: 'Expert',
+  EASY: 'Facile',
+  MEDIUM: 'Moyen',
+  HARD: 'Difficile',
+  EXPERT: 'Expert',
 };
 
-
-
 const inputCls =
-  'w-full px-3 py-2 text-sm rounded-lg bg-[var(--input-bg,var(--card))] border border-[var(--card-border)] focus:outline-none focus:border-[var(--accent)] transition placeholder:text-[var(--text-subtle)]';
+  'w-full px-3 py-2 text-xs rounded-lg bg-[var(--input-bg)] border border-[var(--input-border)] focus:outline-none focus:border-[var(--accent)] transition placeholder:text-[var(--text-subtle)] text-[var(--foreground)]';
 
 // ─── Page principale ──────────────────────────────────────────────────────────
 
@@ -116,7 +125,10 @@ export default function MissingWordAdminPage() {
 
   // Confirmation suppression
   const [deleteTarget, setDeleteTarget] = useState<{
-    isOpen: boolean; type: 'level' | 'question'; id: string; name: string;
+    isOpen: boolean;
+    type: 'level' | 'question';
+    id: string;
+    name: string;
   }>({ isOpen: false, type: 'level', id: '', name: '' });
 
   // Chargement des niveaux
@@ -129,25 +141,28 @@ export default function MissingWordAdminPage() {
         setSelectedLevelId((prev) => (prev && data.some((l) => l.id === prev) ? prev : data[0].id));
       }
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Erreur de chargement';
+      const msg = err instanceof Error ? err.message : 'Erreur de chargement des niveaux';
       toast.error(msg);
     } finally {
       setIsLoading(false);
     }
   }, [toast]);
 
-  const loadLevelDetail = useCallback(async (id: string) => {
-    try {
-      setIsPanelLoading(true);
-      const data = await fetchApi<MissingWordLevel>(`/admin/missing-word/levels/${id}`);
-      setSelectedLevel(data);
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Erreur de chargement du niveau';
-      toast.error(msg);
-    } finally {
-      setIsPanelLoading(false);
-    }
-  }, [toast]);
+  const loadLevelDetail = useCallback(
+    async (id: string) => {
+      try {
+        setIsPanelLoading(true);
+        const data = await fetchApi<MissingWordLevel>(`/admin/missing-word/levels/${id}`);
+        setSelectedLevel(data);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : 'Erreur de chargement du niveau';
+        toast.error(msg);
+      } finally {
+        setIsPanelLoading(false);
+      }
+    },
+    [toast]
+  );
 
   useEffect(() => {
     void loadLevels();
@@ -159,15 +174,17 @@ export default function MissingWordAdminPage() {
     }
   }, [selectedLevelId, loadLevelDetail]);
 
-  // Initialisation du seed si la base est vide
+  // Seeder 50 questions
   const handleSeed = async () => {
     try {
       setIsSeeding(true);
-      await fetchApi('/admin/missing-word/seed', { method: 'POST' });
-      toast.success('50 questions et 5 niveaux créés avec succès');
+      const res = await fetchApi<{ message: string; count: number }>('/admin/missing-word/seed', {
+        method: 'POST',
+      });
+      toast.success(res.message || '50 questions initialisées avec succès !');
       void loadLevels();
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Erreur lors du seed initial';
+      const msg = err instanceof Error ? err.message : 'Erreur lors de l’initialisation';
       toast.error(msg);
     } finally {
       setIsSeeding(false);
@@ -180,12 +197,14 @@ export default function MissingWordAdminPage() {
     try {
       if (editingLevel) {
         await fetchApi(`/admin/missing-word/levels/${editingLevel.id}`, {
-          method: 'PATCH', body: JSON.stringify(levelForm),
+          method: 'PATCH',
+          body: JSON.stringify(levelForm),
         });
         toast.success('Niveau mis à jour');
       } else {
         await fetchApi('/admin/missing-word/levels', {
-          method: 'POST', body: JSON.stringify(levelForm),
+          method: 'POST',
+          body: JSON.stringify(levelForm),
         });
         toast.success('Niveau créé');
       }
@@ -201,22 +220,23 @@ export default function MissingWordAdminPage() {
   const handleMove = async (questionId: string, direction: 'up' | 'down') => {
     try {
       await fetchApi(`/admin/missing-word/questions/${questionId}/move`, {
-        method: 'POST', body: JSON.stringify({ direction }),
+        method: 'POST',
+        body: JSON.stringify({ direction }),
       });
       if (selectedLevelId) void loadLevelDetail(selectedLevelId);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Erreur lors du déplacement';
+      const msg = err instanceof Error ? err.message : 'Erreur de déplacement';
       toast.error(msg);
     }
   };
 
-  // Mélanger aléatoirement les questions du niveau
+  // Mélanger les questions (Fisher-Yates)
   const [isShuffling, setIsShuffling] = useState(false);
   const handleShuffle = async () => {
     if (!selectedLevel?.questions || selectedLevel.questions.length < 2) return;
     try {
       setIsShuffling(true);
-      const ids = selectedLevel.questions.map(q => q.id);
+      const ids = selectedLevel.questions.map((q) => q.id);
       const shuffled = [...ids];
       for (let i = shuffled.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
@@ -226,7 +246,7 @@ export default function MissingWordAdminPage() {
         method: 'POST',
         body: JSON.stringify({ questionIds: shuffled }),
       });
-      toast.success('Questions mélangées');
+      toast.success('Ordre des questions mélangé');
       if (selectedLevelId) void loadLevelDetail(selectedLevelId);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Erreur lors du mélange';
@@ -241,26 +261,34 @@ export default function MissingWordAdminPage() {
     e.preventDefault();
     if (!selectedLevelId) return;
 
+    const trimmedSentence = questionSentence.trim();
     const trimmedWord = questionForm.correctWord.trim();
-    if (trimmedWord.length < 3) {
-      toast.error('Le mot manquant doit contenir au moins 3 caractères.');
+
+    if (!trimmedSentence) {
+      toast.error('Veuillez renseigner la phrase malgache.');
+      return;
+    }
+    if (!trimmedWord || trimmedWord.length < 3) {
+      toast.error('Le mot manquant doit faire au moins 3 caractères.');
       return;
     }
 
-    const words = questionSentence.trim().split(/\s+/).filter(Boolean);
-    const targetIdx = words.findIndex(
-      (w) => w.replace(/[.,!?;:]/g, '').toLowerCase() === trimmedWord.toLowerCase()
-    );
+    const words = trimmedSentence.split(/\s+/);
+    let found = false;
+    const template = words.map((w) => {
+      const clean = w.replace(/[.,!?;:]/g, '');
+      if (clean.toLowerCase() === trimmedWord.toLowerCase()) {
+        found = true;
+        return '';
+      }
+      return w;
+    });
 
-    if (targetIdx < 0) {
-      toast.error(`Le mot "${trimmedWord}" doit être présent dans la phrase malgache.`);
+    if (!found) {
+      toast.error(`Le mot "${trimmedWord}" n'a pas été trouvé dans la phrase.`);
       return;
     }
 
-    // Construire le template
-    const template = words.map((w, i) => (i === targetIdx ? '' : w));
-
-    // 4 choix (le mot correct + 3 choix distracteurs)
     const choices = [
       trimmedWord,
       questionForm.choice1.trim(),
@@ -269,7 +297,7 @@ export default function MissingWordAdminPage() {
     ].filter(Boolean);
 
     if (choices.length < 4) {
-      toast.error('Veuillez renseigner les 3 autres propositions de mots (distracteurs).');
+      toast.error('Veuillez renseigner les 3 propositions distractrices.');
       return;
     }
 
@@ -288,12 +316,14 @@ export default function MissingWordAdminPage() {
     try {
       if (editingQuestion) {
         await fetchApi(`/admin/missing-word/questions/${editingQuestion.id}`, {
-          method: 'PATCH', body: JSON.stringify(payload),
+          method: 'PATCH',
+          body: JSON.stringify(payload),
         });
         toast.success('Question mise à jour');
       } else {
         await fetchApi('/admin/missing-word/questions', {
-          method: 'POST', body: JSON.stringify(payload),
+          method: 'POST',
+          body: JSON.stringify(payload),
         });
         toast.success('Question ajoutée');
       }
@@ -319,7 +349,7 @@ export default function MissingWordAdminPage() {
         toast.success('Question supprimée');
         if (selectedLevelId) void loadLevelDetail(selectedLevelId);
       }
-      setDeleteTarget(d => ({ ...d, isOpen: false }));
+      setDeleteTarget((d) => ({ ...d, isOpen: false }));
       void loadLevels();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Erreur lors de la suppression';
@@ -329,13 +359,18 @@ export default function MissingWordAdminPage() {
 
   const questionCount = selectedLevel?.questions?.length ?? 0;
 
-  // ── Helpers Modal ──────────────────────────────────────────────────────────
-
+  // Helpers Modal
   const openCreateLevel = () => {
     setEditingLevel(null);
     setLevelForm({
-      levelNumber: levels.length + 1, titleMg: '', titleFr: '',
-      description: '', difficulty: 'EASY', passThreshold: 5, totalQuestions: 10, status: 'PUBLISHED',
+      levelNumber: levels.length + 1,
+      titleMg: '',
+      titleFr: '',
+      description: '',
+      difficulty: 'EASY',
+      passThreshold: 5,
+      totalQuestions: 10,
+      status: 'PUBLISHED',
     });
     setShowLevelModal(true);
   };
@@ -343,9 +378,13 @@ export default function MissingWordAdminPage() {
   const openEditLevel = (lvl: MissingWordLevel) => {
     setEditingLevel(lvl);
     setLevelForm({
-      levelNumber: lvl.levelNumber, titleMg: lvl.titleMg, titleFr: lvl.titleFr || '',
-      description: lvl.description || '', difficulty: lvl.difficulty,
-      passThreshold: lvl.passThreshold, totalQuestions: lvl.totalQuestions,
+      levelNumber: lvl.levelNumber,
+      titleMg: lvl.titleMg,
+      titleFr: lvl.titleFr || '',
+      description: lvl.description || '',
+      difficulty: lvl.difficulty,
+      passThreshold: lvl.passThreshold,
+      totalQuestions: lvl.totalQuestions,
       status: lvl.status as 'PUBLISHED' | 'DRAFT',
     });
     setShowLevelModal(true);
@@ -370,9 +409,7 @@ export default function MissingWordAdminPage() {
 
   const openEditQuestion = (q: MissingWordQuestion) => {
     setEditingQuestion(q);
-    const fullSentence = q.template
-      .map((w) => (w === '' ? q.correctWord : w))
-      .join(' ');
+    const fullSentence = q.template.map((w) => (w === '' ? q.correctWord : w)).join(' ');
     setQuestionSentence(fullSentence);
 
     const otherChoices = q.choices.filter(
@@ -393,7 +430,7 @@ export default function MissingWordAdminPage() {
     setShowQuestionModal(true);
   };
 
-  // Prévisualisation de la phrase avec mot manquant
+  // Prévisualisation dynamique
   const previewTemplate = useMemo(() => {
     if (!questionSentence) return [];
     const trimmed = questionForm.correctWord.trim().toLowerCase();
@@ -405,323 +442,380 @@ export default function MissingWordAdminPage() {
 
   return (
     <AdminShell>
-      {/* En-tête standardisé */}
-      <PageHeader
-        title="Mot Manquant"
-        description="Banque de questions par niveau · 10 questions tirées au sort par partie"
-        icon={HelpCircle}
-        badge={
-          <span
-            className="text-xs px-2 py-0.5 rounded font-mono font-medium"
-            style={{
-              background: 'var(--card)',
-              border: '1px solid var(--card-border)',
-              color: 'var(--text-muted)',
-            }}
-          >
-            {levels.length} niveau{levels.length !== 1 ? 'x' : ''}
-          </span>
-        }
-        actions={
-          levels.length === 0 ? (
-            <button
-              onClick={handleSeed}
-              disabled={isSeeding}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[var(--card-border)] bg-[var(--card)] text-xs font-medium hover:bg-[var(--card-hover)] transition disabled:opacity-50 cursor-pointer"
-            >
-              {isSeeding ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Layers className="w-3.5 h-3.5 text-amber-500" />}
-              <span>Initialiser 50 questions</span>
-            </button>
-          ) : undefined
-        }
-        primaryAction={{
-          label: 'Nouveau niveau',
-          icon: <Plus className="w-3.5 h-3.5" />,
-          onClick: openCreateLevel,
-        }}
-      />
-
-      {/* Layout deux colonnes */}
-      <div className="grid grid-cols-1 md:grid-cols-[280px_1fr] gap-4 items-start">
-
-        {/* ── Colonne gauche : liste des niveaux ── */}
-        <div className="space-y-1.5">
-          {isLoading ? (
-            <LoadingState message="Chargement..." />
-          ) : levels.length === 0 ? (
-            <div className="text-center py-10 space-y-3">
-              <p className="text-xs text-[var(--text-subtle)]">Aucun niveau configuré.</p>
+      <div className="w-full space-y-4 max-w-6xl mx-auto pb-12">
+        {/* En-tête standardisé */}
+        <PageHeader
+          title="Mot Manquant"
+          description="Banque de questions par niveau · 10 questions tirées au sort par partie"
+          icon={HelpCircle}
+          badge={
+            <span className="text-xs px-2.5 py-1 rounded-lg font-mono font-medium border border-[var(--card-border)] bg-[var(--card)] text-[var(--foreground)] shadow-xs">
+              {levels.length} niveau{levels.length !== 1 ? 'x' : ''}
+            </span>
+          }
+          actions={
+            <div className="flex items-center gap-2">
+              {levels.length === 0 && (
+                <button
+                  onClick={handleSeed}
+                  disabled={isSeeding}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[var(--card-border)] bg-[var(--card)] text-xs font-semibold hover:bg-[var(--card-hover)] transition disabled:opacity-50 cursor-pointer shadow-xs"
+                >
+                  {isSeeding ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Layers className="w-3.5 h-3.5 text-amber-500" />
+                  )}
+                  <span>Initialiser 50 questions</span>
+                </button>
+              )}
               <button
-                onClick={handleSeed}
-                disabled={isSeeding}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[var(--card-border)] text-xs font-medium hover:bg-[var(--accent)] transition"
+                onClick={() => void loadLevels()}
+                disabled={isLoading}
+                className="p-2 rounded-lg border border-[var(--card-border)] bg-[var(--card)] hover:bg-[var(--card-hover)] text-[var(--text-muted)] hover:text-[var(--foreground)] transition cursor-pointer shadow-xs disabled:opacity-50"
+                title="Actualiser"
               >
-                <Layers className="w-3.5 h-3.5 text-amber-500" />
-                Charger les 50 questions
+                <RotateCcw size={14} className={isLoading ? 'animate-spin' : ''} />
               </button>
             </div>
-          ) : (
-            levels.map((lvl) => {
-              const count = lvl._count?.questions ?? 0;
-              const isSelected = lvl.id === selectedLevelId;
-              const isReady = count >= 10;
+          }
+          primaryAction={{
+            label: 'Nouveau niveau',
+            icon: <Plus className="w-3.5 h-3.5" />,
+            onClick: openCreateLevel,
+          }}
+        />
 
-              return (
-                <div
-                  key={lvl.id}
-                  onClick={() => setSelectedLevelId(lvl.id)}
-                  className={`group flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-all select-none ${
-                    isSelected
-                      ? 'bg-[var(--accent)] text-[var(--foreground)]'
-                      : 'hover:bg-[var(--card)] text-[var(--text-subtle)]'
-                  }`}
-                >
-                  {/* Badge niveau */}
-                  <span className={`shrink-0 w-8 h-8 rounded-md flex items-center justify-center text-[11px] font-black border transition ${
-                    isSelected
-                      ? 'bg-[var(--foreground)] text-[var(--background)] border-transparent'
-                      : 'bg-[var(--card)] border-[var(--card-border)] text-[var(--foreground)]'
-                  }`}>
-                    {toRoman(lvl.levelNumber)}
-                  </span>
-
-                  {/* Titre */}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium truncate text-[var(--foreground)]">
-                      {lvl.titleMg}
-                    </p>
-                    <p className="text-[10px] text-[var(--text-subtle)] mt-0.5 flex items-center gap-1.5">
-                      <span>{DIFF_LABEL[lvl.difficulty]}</span>
-                      <span>·</span>
-                      <span className={isReady ? 'text-emerald-500 font-medium' : 'text-amber-500 font-medium'}>
-                        {count} question{count !== 1 ? 's' : ''} {count >= 10 ? '✓' : '(min 10)'}
-                      </span>
-                    </p>
-                  </div>
-
-                  {/* Actions */}
-                  <div
-                    className={`flex items-center gap-0.5 transition ${isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
-                    onClick={e => e.stopPropagation()}
-                  >
-                    <button
-                      onClick={() => openEditLevel(lvl)}
-                      className="p-1 rounded hover:bg-[var(--card-border)] transition"
-                      title="Modifier"
-                    >
-                      <Edit className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      onClick={() => setDeleteTarget({
-                        isOpen: true, type: 'level', id: lvl.id,
-                        name: `Niveau ${toRoman(lvl.levelNumber)} — ${lvl.titleMg}`,
-                      })}
-                      className="p-1 rounded hover:bg-red-500/10 hover:text-red-500 transition"
-                      title="Supprimer"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                </div>
-              );
-            })
-          )}
-        </div>
-
-        {/* ── Colonne droite : détail du niveau ── */}
-        {selectedLevel ? (
-          <div className="space-y-4">
-            {/* En-tête du panel */}
-            <div className="flex items-start justify-between gap-4 pb-4 border-b border-[var(--card-border)]">
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-subtle)]">
-                    Niveau {toRoman(selectedLevel.levelNumber)}
-                  </span>
-                  <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
-                    questionCount >= 10
-                      ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-                      : 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
-                  }`}>
-                    {questionCount} question{questionCount !== 1 ? 's' : ''} {questionCount >= 10 ? '(10 tirées au sort / partie)' : '(min 10 recommandé)'}
-                  </span>
-                </div>
-                <h2 className="text-sm font-semibold mt-0.5 text-[var(--foreground)]">
-                  {selectedLevel.titleMg}
-                  {selectedLevel.titleFr && (
-                    <span className="font-normal text-[var(--text-subtle)] ml-1.5">· {selectedLevel.titleFr}</span>
-                  )}
-                </h2>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={openAddQuestion}
-                  className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[var(--card-border)] text-[11px] font-medium hover:bg-[var(--card)] transition"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  Ajouter une question
-                </button>
-
-                {questionCount >= 2 && (
-                  <button
-                    onClick={handleShuffle}
-                    disabled={isShuffling}
-                    className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[var(--card-border)] text-[11px] font-medium hover:bg-[var(--card)] transition disabled:opacity-50"
-                    title="Mélanger l'ordre des questions aléatoirement"
-                  >
-                    {isShuffling
-                      ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      : <Shuffle className="w-3.5 h-3.5" />}
-                    Mélanger
-                  </button>
-                )}
-              </div>
+        {/* Layout deux colonnes épuré */}
+        <div className="grid grid-cols-1 md:grid-cols-[270px_1fr] gap-4 items-start">
+          {/* ── Colonne gauche : Liste des niveaux ── */}
+          <div className="rounded-xl border border-[var(--card-border)] bg-[var(--card)] p-2 space-y-1.5 shadow-xs">
+            <div className="px-2.5 py-1.5 text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wider flex items-center justify-between border-b border-[var(--card-border)] mb-1">
+              <span>Niveaux de jeu</span>
+              <span className="font-mono text-xs">{levels.length}</span>
             </div>
 
-            {/* Avertissement quota */}
-            {questionCount < 10 && (
-              <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg border border-amber-500/20 bg-amber-500/5 text-amber-600 dark:text-amber-400 text-[11px]">
-                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                <span>
-                  Ce niveau compte <strong>{questionCount} question{questionCount !== 1 ? 's' : ''}</strong>. Il est conseillé d&apos;avoir au moins 10 questions pour que le joueur bénéficie d&apos;une session complète de 10 questions tirées au sort.
-                </span>
+            {isLoading ? (
+              <div className="py-12 flex justify-center">
+                <Loader2 className="w-5 h-5 animate-spin text-[var(--accent)]" />
               </div>
-            )}
-
-            {/* Liste des questions */}
-            {isPanelLoading ? (
-              <div className="flex items-center justify-center py-10">
-                <Loader2 className="w-5 h-5 animate-spin text-[var(--text-subtle)]" />
-              </div>
-            ) : questionCount === 0 ? (
-              <div className="text-center py-12 text-xs text-[var(--text-subtle)]">
-                Aucune question. Cliquez sur &quot;Ajouter une question&quot;.
+            ) : levels.length === 0 ? (
+              <div className="text-center py-8 space-y-2.5">
+                <p className="text-xs text-[var(--text-muted)]">Aucun niveau configuré.</p>
+                <button
+                  onClick={handleSeed}
+                  disabled={isSeeding}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] text-xs font-semibold hover:bg-[var(--card-hover)] transition cursor-pointer"
+                >
+                  <Layers className="w-3.5 h-3.5 text-amber-500" />
+                  <span>Charger les 50 questions</span>
+                </button>
               </div>
             ) : (
-              <div className="space-y-2">
-                {selectedLevel.questions?.map((q, idx) => {
-                  const isFirst = idx === 0;
-                  const isLast = idx === (selectedLevel.questions?.length ?? 0) - 1;
+              levels.map((lvl) => {
+                const count = lvl._count?.questions ?? 0;
+                const isSelected = lvl.id === selectedLevelId;
+                const isReady = count >= 10;
 
-                  return (
-                    <div
-                      key={q.id}
-                      className="group flex gap-3 p-3.5 rounded-lg border border-[var(--card-border)] bg-[var(--card)] hover:border-[var(--accent)] transition"
-                    >
-                      {/* Contrôle d'ordre */}
-                      <div className="flex flex-col items-center gap-0.5 shrink-0 pt-0.5">
-                        <button
-                          disabled={isFirst}
-                          onClick={() => handleMove(q.id, 'up')}
-                          className={`p-0.5 rounded transition ${isFirst ? 'opacity-20 cursor-not-allowed' : 'hover:bg-[var(--accent)] text-[var(--text-subtle)]'}`}
-                        >
-                          <ChevronUp className="w-3.5 h-3.5" />
-                        </button>
-                        <span className="text-[10px] font-black text-[var(--text-subtle)] w-5 text-center leading-none py-1">
-                          {q.orderIndex}
-                        </span>
-                        <button
-                          disabled={isLast}
-                          onClick={() => handleMove(q.id, 'down')}
-                          className={`p-0.5 rounded transition ${isLast ? 'opacity-20 cursor-not-allowed' : 'hover:bg-[var(--accent)] text-[var(--text-subtle)]'}`}
-                        >
-                          <ChevronDown className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
+                return (
+                  <div
+                    key={lvl.id}
+                    onClick={() => setSelectedLevelId(lvl.id)}
+                    className={`group flex items-center justify-between gap-2.5 p-2.5 rounded-xl cursor-pointer transition select-none border ${
+                      isSelected
+                        ? 'border-[var(--accent)] bg-[var(--accent-light)] shadow-xs'
+                        : 'border-transparent hover:border-[var(--card-border)] hover:bg-[var(--card-hover)]'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <span
+                        className={`shrink-0 w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold font-mono border transition ${
+                          isSelected
+                            ? 'bg-[var(--accent)] text-white border-transparent'
+                            : 'bg-[var(--input-bg)] border-[var(--input-border)] text-[var(--foreground)]'
+                        }`}
+                      >
+                        {toRoman(lvl.levelNumber)}
+                      </span>
 
-                      {/* Contenu */}
-                      <div className="flex-1 min-w-0 space-y-2">
-                        <div>
-                          <p className="text-sm font-medium text-[var(--foreground)] leading-snug">
-                            {q.template.map((w, i) => (
-                              <span key={i}>
-                                {w === '' ? (
-                                  <span className="inline-block px-2 py-0.5 mx-1 rounded bg-[var(--accent)] text-[var(--foreground)] font-bold text-xs">
-                                    {q.correctWord}
-                                  </span>
-                                ) : (
-                                  `${w} `
-                                )}
-                              </span>
-                            ))}
-                          </p>
-                          <p className="text-xs text-[var(--text-subtle)] mt-0.5">« {q.french} »</p>
-                        </div>
-
-                        {/* Aperçu tuiles choix */}
-                        <div className="flex flex-wrap gap-1 items-center">
-                          <span className="inline-flex items-center gap-1 text-[10px] text-[var(--text-subtle)] mr-1">
-                            <Eye className="w-3 h-3" />
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold text-[var(--foreground)] truncate">
+                          {lvl.titleMg}
+                        </p>
+                        <div className="text-[10px] text-[var(--text-muted)] flex items-center gap-1.5 mt-0.5">
+                          <span>{DIFF_LABEL[lvl.difficulty]}</span>
+                          <span>•</span>
+                          <span
+                            className={
+                              isReady
+                                ? 'text-emerald-600 dark:text-emerald-400 font-medium'
+                                : 'text-amber-600 dark:text-amber-400 font-medium'
+                            }
+                          >
+                            {count} question{count !== 1 ? 's' : ''} {isReady ? '✓' : '(min 10)'}
                           </span>
-                          {q.choices.map((choice, i) => {
-                            const isCorrect = choice.toLowerCase() === q.correctWord.toLowerCase();
-                            return (
-                              <span
-                                key={i}
-                                className={`px-2 py-0.5 rounded text-[11px] font-medium border ${
-                                  isCorrect
-                                    ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 font-bold'
-                                    : 'border-[var(--card-border)] bg-[var(--background)] text-[var(--text-subtle)]'
-                                }`}
-                              >
-                                {choice} {isCorrect && '✓'}
-                              </span>
-                            );
-                          })}
                         </div>
-
-                        {/* Explication / Indice */}
-                        {q.explanation && (
-                          <p className="text-[11px] text-[var(--text-subtle)] line-clamp-1">
-                            <span className="font-semibold text-[var(--foreground)]">Sens : </span>
-                            {q.explanation}
-                          </p>
-                        )}
-                      </div>
-
-                      {/* Actions */}
-                      <div className="flex flex-col gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition">
-                        <button
-                          onClick={() => openEditQuestion(q)}
-                          className="p-1.5 rounded hover:bg-[var(--accent)] transition text-[var(--text-subtle)]"
-                          title="Modifier"
-                        >
-                          <Edit className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          onClick={() => setDeleteTarget({
-                            isOpen: true, type: 'question', id: q.id,
-                            name: `Question #${q.orderIndex}`,
-                          })}
-                          className="p-1.5 rounded hover:bg-red-500/10 hover:text-red-500 transition text-[var(--text-subtle)]"
-                          title="Supprimer"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
                       </div>
                     </div>
-                  );
-                })}
-              </div>
+
+                    {/* Actions d'édition du niveau */}
+                    <div
+                      className={`flex items-center gap-1 shrink-0 transition ${
+                        isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                      }`}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <button
+                        onClick={() => openEditLevel(lvl)}
+                        className="p-1 rounded-md hover:bg-[var(--card)] text-[var(--text-muted)] hover:text-[var(--accent)] transition cursor-pointer"
+                        title="Modifier le niveau"
+                      >
+                        <Edit className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() =>
+                          setDeleteTarget({
+                            isOpen: true,
+                            type: 'level',
+                            id: lvl.id,
+                            name: `Niveau ${toRoman(lvl.levelNumber)} — ${lvl.titleMg}`,
+                          })
+                        }
+                        className="p-1 rounded-md hover:bg-rose-500/10 text-[var(--text-muted)] hover:text-rose-500 transition cursor-pointer"
+                        title="Supprimer le niveau"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })
             )}
           </div>
-        ) : !isLoading ? (
-          <div className="flex items-center justify-center py-16 text-xs text-[var(--text-subtle)]">
-            Sélectionnez un niveau pour voir ses questions.
-          </div>
-        ) : null}
+
+          {/* ── Colonne droite : Détail du niveau sélectionné ── */}
+          {selectedLevel ? (
+            <div className="rounded-xl border border-[var(--card-border)] bg-[var(--card)] p-4 space-y-4 shadow-xs">
+              {/* En-tête du niveau */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[var(--card-border)]">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--accent)] font-mono">
+                      Niveau {toRoman(selectedLevel.levelNumber)}
+                    </span>
+                    <span
+                      className={`text-[10px] px-2 py-0.5 rounded-md font-semibold border ${
+                        questionCount >= 10
+                          ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                          : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
+                      }`}
+                    >
+                      {questionCount} question{questionCount !== 1 ? 's' : ''}{' '}
+                      {questionCount >= 10 ? '(Prêt pour tirage)' : '(Min 10 recommandé)'}
+                    </span>
+                  </div>
+                  <h2 className="text-sm font-bold text-[var(--foreground)] mt-1">
+                    {selectedLevel.titleMg}
+                    {selectedLevel.titleFr && (
+                      <span className="font-normal text-[var(--text-muted)] ml-2 text-xs">
+                        · {selectedLevel.titleFr}
+                      </span>
+                    )}
+                  </h2>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={openAddQuestion}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--accent)] text-white text-xs font-semibold hover:opacity-90 transition cursor-pointer shadow-xs"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Ajouter une question</span>
+                  </button>
+
+                  {questionCount >= 2 && (
+                    <button
+                      onClick={handleShuffle}
+                      disabled={isShuffling}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] hover:bg-[var(--card-hover)] text-xs font-medium text-[var(--foreground)] transition cursor-pointer shadow-xs disabled:opacity-50"
+                      title="Mélanger l'ordre des questions aléatoirement"
+                    >
+                      {isShuffling ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Shuffle className="w-3.5 h-3.5 text-[var(--accent)]" />
+                      )}
+                      <span>Mélanger</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Avertissement quota < 10 questions */}
+              {questionCount < 10 && (
+                <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-amber-500/25 bg-amber-500/10 text-amber-600 dark:text-amber-400 text-xs">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>
+                    Ce niveau compte <strong>{questionCount} question{questionCount !== 1 ? 's' : ''}</strong>. Il est conseillé d&apos;atteindre au moins 10 questions pour un tirage au sort complet par partie.
+                  </span>
+                </div>
+              )}
+
+              {/* Liste des questions */}
+              {isPanelLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="w-5 h-5 animate-spin text-[var(--accent)]" />
+                </div>
+              ) : questionCount === 0 ? (
+                <div className="text-center py-12 text-xs text-[var(--text-muted)]">
+                  Aucune question enregistrée dans ce niveau. Cliquez sur &quot;Ajouter une question&quot;.
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {selectedLevel.questions?.map((q, idx) => {
+                    const isFirst = idx === 0;
+                    const isLast = idx === (selectedLevel.questions?.length ?? 0) - 1;
+
+                    return (
+                      <div
+                        key={q.id}
+                        className="group flex gap-3 p-3 rounded-xl border border-[var(--card-border)] bg-[var(--input-bg)] hover:bg-[var(--card)] transition-colors shadow-xs"
+                      >
+                        {/* Contrôles d'ordre */}
+                        <div className="flex flex-col items-center gap-0.5 shrink-0 pt-0.5">
+                          <button
+                            disabled={isFirst}
+                            onClick={() => handleMove(q.id, 'up')}
+                            className={`p-1 rounded-md transition ${
+                              isFirst
+                                ? 'opacity-20 cursor-not-allowed'
+                                : 'hover:bg-[var(--card)] text-[var(--text-muted)] hover:text-[var(--foreground)] cursor-pointer'
+                            }`}
+                            title="Monter"
+                          >
+                            <ChevronUp className="w-3.5 h-3.5" />
+                          </button>
+                          <span className="text-[11px] font-mono font-bold text-[var(--text-muted)] w-5 text-center">
+                            {q.orderIndex}
+                          </span>
+                          <button
+                            disabled={isLast}
+                            onClick={() => handleMove(q.id, 'down')}
+                            className={`p-1 rounded-md transition ${
+                              isLast
+                                ? 'opacity-20 cursor-not-allowed'
+                                : 'hover:bg-[var(--card)] text-[var(--text-muted)] hover:text-[var(--foreground)] cursor-pointer'
+                            }`}
+                            title="Descendre"
+                          >
+                            <ChevronDown className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+
+                        {/* Contenu de la question */}
+                        <div className="flex-1 min-w-0 space-y-1.5">
+                          <div>
+                            <p className="text-xs font-semibold text-[var(--foreground)] leading-snug">
+                              {q.template.map((w, i) => (
+                                <span key={i}>
+                                  {w === '' ? (
+                                    <span className="inline-block px-2 py-0.5 mx-1 rounded-md bg-[var(--accent-light)] text-[var(--accent-text)] border border-[var(--accent-border)] font-bold text-xs shadow-2xs">
+                                      {q.correctWord}
+                                    </span>
+                                  ) : (
+                                    `${w} `
+                                  )}
+                                </span>
+                              ))}
+                            </p>
+                            <p className="text-[11px] text-[var(--text-muted)] italic mt-0.5">
+                              « {q.french} »
+                            </p>
+                          </div>
+
+                          {/* Aperçu des 4 propositions de choix */}
+                          <div className="flex flex-wrap gap-1.5 items-center pt-1">
+                            <span className="inline-flex items-center text-[10px] text-[var(--text-muted)] mr-1">
+                              <Eye className="w-3 h-3 text-[var(--accent)] mr-1" />
+                              Choix :
+                            </span>
+                            {q.choices.map((choice, i) => {
+                              const isCorrect =
+                                choice.toLowerCase() === q.correctWord.toLowerCase();
+                              return (
+                                <span
+                                  key={i}
+                                  className={`px-2 py-0.5 rounded-md text-[10px] font-medium border shadow-xs ${
+                                    isCorrect
+                                      ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 font-bold'
+                                      : 'border-[var(--card-border)] bg-[var(--card)] text-[var(--text-muted)]'
+                                  }`}
+                                >
+                                  {choice} {isCorrect && '✓'}
+                                </span>
+                              );
+                            })}
+                          </div>
+
+                          {/* Explication */}
+                          {q.explanation && (
+                            <p className="text-[11px] text-[var(--text-muted)] line-clamp-1 pt-0.5">
+                              <span className="font-semibold text-[var(--foreground)]">Sens : </span>
+                              {q.explanation}
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex flex-col gap-1 shrink-0">
+                          <button
+                            onClick={() => openEditQuestion(q)}
+                            className="p-1.5 rounded-lg hover:bg-[var(--card)] text-[var(--text-muted)] hover:text-[var(--accent)] transition cursor-pointer"
+                            title="Modifier"
+                          >
+                            <Edit className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() =>
+                              setDeleteTarget({
+                                isOpen: true,
+                                type: 'question',
+                                id: q.id,
+                                name: `Question #${q.orderIndex}`,
+                              })
+                            }
+                            className="p-1.5 rounded-lg hover:bg-rose-500/10 text-[var(--text-muted)] hover:text-rose-500 transition cursor-pointer"
+                            title="Supprimer"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          ) : !isLoading ? (
+            <div className="flex items-center justify-center py-16 text-xs text-[var(--text-muted)] rounded-xl border border-[var(--card-border)] bg-[var(--card)]">
+              Sélectionnez un niveau à gauche pour visualiser et gérer ses questions.
+            </div>
+          ) : null}
+        </div>
       </div>
 
       {/* ─── Modal Niveau ─────────────────────────────────────────────────────── */}
       {showLevelModal && (
-        <div className="fixed inset-0 z-50 overflow-y-auto flex items-start justify-center p-4 pt-6 sm:pt-10 md:pt-12 bg-black/50 backdrop-blur-sm">
-          <div className="w-full max-w-sm bg-[var(--card)] rounded-xl border border-[var(--card-border)] shadow-xl animate-in fade-in slide-in-from-top-3 duration-150">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--card-border)]">
-              <h3 className="text-sm font-semibold">
+        <div className="fixed inset-0 z-50 overflow-y-auto flex items-start justify-center p-4 pt-8 md:pt-12 bg-black/50 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="w-full max-w-sm bg-[var(--card)] rounded-2xl border border-[var(--card-border)] shadow-2xl overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-3.5 border-b border-[var(--card-border)] bg-[var(--input-bg)]">
+              <h3 className="text-sm font-semibold text-[var(--foreground)]">
                 {editingLevel ? 'Modifier le niveau' : 'Nouveau niveau'}
               </h3>
-              <button onClick={() => setShowLevelModal(false)} className="p-1 rounded hover:bg-[var(--accent)] transition">
+              <button
+                onClick={() => setShowLevelModal(false)}
+                className="p-1 rounded-lg hover:bg-[var(--card-hover)] transition text-[var(--text-muted)] cursor-pointer"
+              >
                 <X className="w-4 h-4" />
               </button>
             </div>
@@ -729,30 +823,37 @@ export default function MissingWordAdminPage() {
             <form onSubmit={handleSaveLevel} className="p-5 space-y-4">
               <Field label="Numéro du niveau" required>
                 <input
-                  type="number" min={1} required
+                  type="number"
+                  min={1}
+                  required
                   value={levelForm.levelNumber}
-                  onChange={e => setLevelForm({ ...levelForm, levelNumber: parseInt(e.target.value) || 1 })}
+                  onChange={(e) =>
+                    setLevelForm({ ...levelForm, levelNumber: parseInt(e.target.value) || 1 })
+                  }
                   className={inputCls}
                 />
-                <p className="text-[10px] text-[var(--text-subtle)] mt-1">
-                  Affiché comme : <strong>NIVEAU {toRoman(levelForm.levelNumber)}</strong>
+                <p className="text-[10px] text-[var(--text-muted)] mt-1 font-mono">
+                  Identifiant romain : <strong>NIVEAU {toRoman(levelForm.levelNumber)}</strong>
                 </p>
               </Field>
 
               <Field label="Titre malgache" required>
                 <input
-                  type="text" required placeholder="ex: Mora, Antonony, Sarotra..."
+                  type="text"
+                  required
+                  placeholder="ex: Mora, Antonony, Sarotra..."
                   value={levelForm.titleMg}
-                  onChange={e => setLevelForm({ ...levelForm, titleMg: e.target.value })}
+                  onChange={(e) => setLevelForm({ ...levelForm, titleMg: e.target.value })}
                   className={inputCls}
                 />
               </Field>
 
               <Field label="Titre français">
                 <input
-                  type="text" placeholder="ex: Débutant, Intermédiaire, Avancé..."
+                  type="text"
+                  placeholder="ex: Débutant, Intermédiaire, Avancé..."
                   value={levelForm.titleFr}
-                  onChange={e => setLevelForm({ ...levelForm, titleFr: e.target.value })}
+                  onChange={(e) => setLevelForm({ ...levelForm, titleFr: e.target.value })}
                   className={inputCls}
                 />
               </Field>
@@ -761,7 +862,12 @@ export default function MissingWordAdminPage() {
                 <Field label="Difficulté">
                   <select
                     value={levelForm.difficulty}
-                    onChange={e => setLevelForm({ ...levelForm, difficulty: e.target.value as MissingWordLevel['difficulty'] })}
+                    onChange={(e) =>
+                      setLevelForm({
+                        ...levelForm,
+                        difficulty: e.target.value as MissingWordLevel['difficulty'],
+                      })
+                    }
                     className={inputCls}
                   >
                     <option value="EASY">Facile</option>
@@ -773,21 +879,30 @@ export default function MissingWordAdminPage() {
 
                 <Field label="Seuil de passage">
                   <input
-                    type="number" min={1} max={10}
+                    type="number"
+                    min={1}
+                    max={10}
                     value={levelForm.passThreshold}
-                    onChange={e => setLevelForm({ ...levelForm, passThreshold: parseInt(e.target.value) || 5 })}
+                    onChange={(e) =>
+                      setLevelForm({ ...levelForm, passThreshold: parseInt(e.target.value) || 5 })
+                    }
                     className={inputCls}
                   />
                 </Field>
               </div>
 
-              <div className="flex justify-end gap-2 pt-2">
-                <button type="button" onClick={() => setShowLevelModal(false)}
-                  className="px-4 py-2 text-xs rounded-lg border border-[var(--card-border)] hover:bg-[var(--accent)] transition">
+              <div className="flex justify-end gap-2 pt-2 border-t border-[var(--card-border)]">
+                <button
+                  type="button"
+                  onClick={() => setShowLevelModal(false)}
+                  className="px-3.5 py-1.5 text-xs rounded-lg border border-[var(--card-border)] hover:bg-[var(--card-hover)] text-[var(--foreground)] transition cursor-pointer"
+                >
                   Annuler
                 </button>
-                <button type="submit"
-                  className="px-4 py-2 text-xs rounded-lg bg-[var(--foreground)] text-[var(--background)] font-medium hover:opacity-90 transition">
+                <button
+                  type="submit"
+                  className="px-4 py-1.5 text-xs rounded-lg bg-[var(--accent)] text-white font-semibold hover:opacity-90 transition cursor-pointer shadow-xs"
+                >
                   Enregistrer
                 </button>
               </div>
@@ -798,13 +913,16 @@ export default function MissingWordAdminPage() {
 
       {/* ─── Modal Question ─────────────────────────────────────────────────────── */}
       {showQuestionModal && (
-        <div className="fixed inset-0 z-50 overflow-y-auto flex items-start justify-center p-4 pt-6 sm:pt-10 md:pt-12 bg-black/50 backdrop-blur-sm">
-          <div className="w-full max-w-md bg-[var(--card)] rounded-xl border border-[var(--card-border)] shadow-xl max-h-[calc(100vh-3rem)] sm:max-h-[calc(100vh-5.5rem)] overflow-y-auto animate-in fade-in slide-in-from-top-3 duration-150">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--card-border)] sticky top-0 bg-[var(--card)] z-10">
-              <h3 className="text-sm font-semibold">
+        <div className="fixed inset-0 z-50 overflow-y-auto flex items-start justify-center p-4 pt-8 md:pt-12 bg-black/50 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="w-full max-w-md bg-[var(--card)] rounded-2xl border border-[var(--card-border)] shadow-2xl max-h-[calc(100vh-4rem)] overflow-y-auto">
+            <div className="flex items-center justify-between px-5 py-3.5 border-b border-[var(--card-border)] sticky top-0 bg-[var(--input-bg)] z-10">
+              <h3 className="text-sm font-semibold text-[var(--foreground)]">
                 {editingQuestion ? 'Modifier la question' : 'Ajouter une question'}
               </h3>
-              <button onClick={() => setShowQuestionModal(false)} className="p-1 rounded hover:bg-[var(--accent)] transition">
+              <button
+                onClick={() => setShowQuestionModal(false)}
+                className="p-1 rounded-lg hover:bg-[var(--card-hover)] transition text-[var(--text-muted)] cursor-pointer"
+              >
                 <X className="w-4 h-4" />
               </button>
             </div>
@@ -812,33 +930,37 @@ export default function MissingWordAdminPage() {
             <form onSubmit={handleSaveQuestion} className="p-5 space-y-4">
               <Field label="Phrase malgache complète" required>
                 <textarea
-                  rows={2} required
+                  rows={2}
+                  required
                   placeholder="ex: Ny vary sy ny rano tsy mifanary."
                   value={questionSentence}
-                  onChange={e => setQuestionSentence(e.target.value)}
+                  onChange={(e) => setQuestionSentence(e.target.value)}
                   className={inputCls}
                 />
               </Field>
 
               <Field label="Mot manquant (min. 3 caractères)" required>
                 <input
-                  type="text" required
+                  type="text"
+                  required
                   placeholder="ex: rano (doit figurer dans la phrase ci-dessus)"
                   value={questionForm.correctWord}
-                  onChange={e => setQuestionForm({ ...questionForm, correctWord: e.target.value })}
+                  onChange={(e) => setQuestionForm({ ...questionForm, correctWord: e.target.value })}
                   className={inputCls}
                 />
               </Field>
 
               {/* Aperçu dynamique */}
               {questionSentence.trim() && questionForm.correctWord.trim() && (
-                <div className="px-3 py-2.5 rounded-lg border border-[var(--card-border)] bg-[var(--background)] space-y-1.5">
-                  <span className="text-[10px] text-[var(--text-subtle)] font-medium uppercase tracking-wider">Aperçu du joueur :</span>
-                  <p className="text-xs font-medium text-[var(--foreground)]">
+                <div className="p-3 rounded-xl border border-[var(--card-border)] bg-[var(--input-bg)] space-y-1.5">
+                  <span className="text-[10px] text-[var(--text-muted)] font-mono uppercase tracking-wider">
+                    Aperçu joueur :
+                  </span>
+                  <p className="text-xs font-semibold text-[var(--foreground)]">
                     {previewTemplate.map((w, i) => (
                       <span key={i}>
                         {w === '' ? (
-                          <span className="inline-block px-2 py-0.5 mx-1 rounded border border-dashed border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--foreground)] font-bold">
+                          <span className="inline-block px-2 py-0.5 mx-1 rounded-md border border-dashed border-[var(--accent)] bg-[var(--accent-light)] text-[var(--accent-text)] font-bold">
                             ··· ? ···
                           </span>
                         ) : (
@@ -851,27 +973,33 @@ export default function MissingWordAdminPage() {
               )}
 
               {/* Les 3 autres choix (distracteurs) */}
-              <div className="space-y-2">
-                <label className="block text-[11px] font-medium text-[var(--text-subtle)] uppercase tracking-wider">
-                  3 Fausses réponses (Distracteurs) <span className="text-red-400">*</span>
+              <div className="space-y-1.5">
+                <label className="block text-[11px] font-semibold text-[var(--foreground)]">
+                  3 Fausses réponses (Distracteurs) <span className="text-rose-500">*</span>
                 </label>
                 <div className="grid grid-cols-3 gap-2">
                   <input
-                    type="text" required placeholder="Choix 2"
+                    type="text"
+                    required
+                    placeholder="Choix 2"
                     value={questionForm.choice1}
-                    onChange={e => setQuestionForm({ ...questionForm, choice1: e.target.value })}
+                    onChange={(e) => setQuestionForm({ ...questionForm, choice1: e.target.value })}
                     className={inputCls}
                   />
                   <input
-                    type="text" required placeholder="Choix 3"
+                    type="text"
+                    required
+                    placeholder="Choix 3"
                     value={questionForm.choice2}
-                    onChange={e => setQuestionForm({ ...questionForm, choice2: e.target.value })}
+                    onChange={(e) => setQuestionForm({ ...questionForm, choice2: e.target.value })}
                     className={inputCls}
                   />
                   <input
-                    type="text" required placeholder="Choix 4"
+                    type="text"
+                    required
+                    placeholder="Choix 4"
                     value={questionForm.choice3}
-                    onChange={e => setQuestionForm({ ...questionForm, choice3: e.target.value })}
+                    onChange={(e) => setQuestionForm({ ...questionForm, choice3: e.target.value })}
                     className={inputCls}
                   />
                 </div>
@@ -879,10 +1007,11 @@ export default function MissingWordAdminPage() {
 
               <Field label="Traduction française" required>
                 <textarea
-                  rows={2} required
+                  rows={2}
+                  required
                   placeholder="ex: Le riz et l'eau sont inséparables."
                   value={questionForm.french}
-                  onChange={e => setQuestionForm({ ...questionForm, french: e.target.value })}
+                  onChange={(e) => setQuestionForm({ ...questionForm, french: e.target.value })}
                   className={inputCls}
                 />
               </Field>
@@ -892,18 +1021,23 @@ export default function MissingWordAdminPage() {
                   rows={2}
                   placeholder="ex: Proverbe valorisant l'harmonie et la solidarité..."
                   value={questionForm.explanation}
-                  onChange={e => setQuestionForm({ ...questionForm, explanation: e.target.value })}
+                  onChange={(e) => setQuestionForm({ ...questionForm, explanation: e.target.value })}
                   className={inputCls}
                 />
               </Field>
 
-              <div className="flex justify-end gap-2 pt-2">
-                <button type="button" onClick={() => setShowQuestionModal(false)}
-                  className="px-4 py-2 text-xs rounded-lg border border-[var(--card-border)] hover:bg-[var(--accent)] transition">
+              <div className="flex justify-end gap-2 pt-2 border-t border-[var(--card-border)]">
+                <button
+                  type="button"
+                  onClick={() => setShowQuestionModal(false)}
+                  className="px-3.5 py-1.5 text-xs rounded-lg border border-[var(--card-border)] hover:bg-[var(--card-hover)] text-[var(--foreground)] transition cursor-pointer"
+                >
                   Annuler
                 </button>
-                <button type="submit"
-                  className="px-4 py-2 text-xs rounded-lg bg-[var(--foreground)] text-[var(--background)] font-medium hover:opacity-90 transition">
+                <button
+                  type="submit"
+                  className="px-4 py-1.5 text-xs rounded-lg bg-[var(--accent)] text-white font-semibold hover:opacity-90 transition cursor-pointer shadow-xs"
+                >
                   Enregistrer
                 </button>
               </div>
@@ -915,7 +1049,7 @@ export default function MissingWordAdminPage() {
       {/* Confirmation suppression */}
       <ConfirmModal
         isOpen={deleteTarget.isOpen}
-        onClose={() => setDeleteTarget(d => ({ ...d, isOpen: false }))}
+        onClose={() => setDeleteTarget((d) => ({ ...d, isOpen: false }))}
         onConfirm={handleDelete}
         title={`Supprimer ${deleteTarget.name}`}
         description="Cette action est irréversible. Voulez-vous vraiment continuer ?"

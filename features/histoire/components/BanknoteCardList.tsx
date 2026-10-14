@@ -35,9 +35,9 @@ function BanknoteCard({
   const activeImg = isVerso ? item.imageUrlVerso || item.imageUrl : item.imageUrl;
 
   return (
-    <div className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-2xl p-4 shadow-sm flex flex-col justify-between space-y-3">
+    <div className="bg-[var(--card)] border border-[var(--card-border)] rounded-xl p-3.5 shadow-xs flex flex-col justify-between space-y-3 hover:border-[var(--accent)] transition-colors">
       {/* Visuel du billet avec flip recto/verso interactif */}
-      <div className="relative h-44 bg-stone-100 dark:bg-stone-800 rounded-xl overflow-hidden border border-stone-200 dark:border-stone-700 group">
+      <div className="relative h-40 bg-[var(--input-bg)] rounded-lg overflow-hidden border border-[var(--card-border)] group">
         {activeImg ? (
           <img
             src={resolveMediaUrl(activeImg)}
@@ -45,37 +45,37 @@ function BanknoteCard({
             className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-stone-400">
-            <BanknoteIcon size={36} />
+          <div className="w-full h-full flex items-center justify-center text-[var(--text-subtle)]">
+            <BanknoteIcon size={32} />
           </div>
         )}
 
         {/* Badge de valeur en haut à droite */}
-        <div className="absolute top-2.5 right-2.5 flex flex-col items-end gap-1">
+        <div className="absolute top-2 right-2 flex flex-col items-end gap-1">
           {isColonial ? (
             <>
-              <span className="px-2.5 py-1 bg-amber-700/95 backdrop-blur-xs text-white text-xs font-bold rounded-lg shadow-sm">
+              <span className="px-2 py-0.5 bg-amber-700/90 backdrop-blur-xs text-white text-[11px] font-bold rounded-md shadow-xs">
                 {item.valueFmg.toLocaleString()} Francs
               </span>
-              <span className="px-2 py-0.5 bg-black/75 backdrop-blur-xs text-amber-200 text-[9.5px] font-semibold rounded-md">
+              <span className="px-1.5 py-0.2 bg-black/70 backdrop-blur-xs text-amber-200 text-[9px] font-semibold rounded">
                 Ère coloniale
               </span>
             </>
           ) : item.series === 'SERIE_FMG' ? (
             <>
-              <span className="px-2.5 py-1 bg-amber-600/90 backdrop-blur-xs text-white text-xs font-bold rounded-lg shadow-sm">
+              <span className="px-2 py-0.5 bg-amber-600/90 backdrop-blur-xs text-white text-[11px] font-bold rounded-md shadow-xs">
                 {item.valueFmg.toLocaleString()} Fmg
               </span>
-              <span className="px-2 py-0.5 bg-black/65 backdrop-blur-xs text-stone-200 text-[10px] font-semibold rounded-md">
+              <span className="px-1.5 py-0.2 bg-black/60 backdrop-blur-xs text-white text-[9.5px] font-semibold rounded">
                 Éq. {item.valueAriary.toLocaleString()} Ariary
               </span>
             </>
           ) : (
             <>
-              <span className="px-2.5 py-1 bg-emerald-600/90 backdrop-blur-xs text-white text-xs font-bold rounded-lg shadow-sm">
+              <span className="px-2 py-0.5 bg-emerald-600/90 backdrop-blur-xs text-white text-[11px] font-bold rounded-md shadow-xs">
                 {item.valueAriary.toLocaleString()} Ariary
               </span>
-              <span className="px-2 py-0.5 bg-black/65 backdrop-blur-xs text-stone-200 text-[10px] font-semibold rounded-md">
+              <span className="px-1.5 py-0.2 bg-black/60 backdrop-blur-xs text-white text-[9.5px] font-semibold rounded">
                 {item.valueFmg.toLocaleString()} Fmg
               </span>
             </>
@@ -85,21 +85,24 @@ function BanknoteCard({
         {/* Bouton bascule Recto / Verso */}
         <button
           type="button"
-          onClick={(e) => { e.stopPropagation(); setIsVerso((v) => !v); }}
-          className="absolute bottom-2.5 left-2.5 px-2.5 py-1 bg-black/75 hover:bg-black/90 text-white rounded-lg text-xs font-medium flex items-center gap-1.5 shadow-md backdrop-blur-xs transition-all cursor-pointer"
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsVerso((v) => !v);
+          }}
+          className="absolute bottom-2 left-2 px-2 py-1 bg-black/75 hover:bg-black/90 text-white rounded-md text-[11px] font-medium flex items-center gap-1.5 shadow-md backdrop-blur-xs transition cursor-pointer"
         >
-          <RotateCcw size={12} className={isVerso ? 'rotate-180 transition-transform' : 'transition-transform'} />
+          <RotateCcw size={11} className={isVerso ? 'rotate-180 transition-transform' : 'transition-transform'} />
           <span>{isVerso ? 'Verso (Arrière)' : 'Recto (Avant)'}</span>
         </button>
 
-        <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5">
+        <div className="absolute top-2 left-2 flex items-center gap-1">
           {item.imageUrlVerso && (
-            <span className="px-2 py-0.5 bg-white/90 dark:bg-stone-900/90 text-stone-700 dark:text-stone-300 text-[10px] font-bold rounded-md shadow-xs backdrop-blur-xs">
+            <span className="px-1.5 py-0.5 bg-[var(--card)]/90 text-[var(--foreground)] text-[9.5px] font-bold rounded shadow-xs backdrop-blur-xs border border-[var(--card-border)]">
               2 Faces
             </span>
           )}
           {item.isComingSoon && (
-            <span className="px-2 py-0.5 bg-amber-500/90 text-white text-[10px] font-bold rounded-md shadow-xs backdrop-blur-xs">
+            <span className="px-1.5 py-0.5 bg-amber-500/90 text-white text-[9.5px] font-bold rounded shadow-xs backdrop-blur-xs">
               À venir
             </span>
           )}
@@ -107,33 +110,33 @@ function BanknoteCard({
       </div>
 
       {/* Informations textuelles */}
-      <div>
-        <div className="flex items-center justify-between text-xs text-stone-500 mb-1.5">
+      <div className="space-y-1">
+        <div className="flex items-center justify-between text-xs text-[var(--text-muted)]">
           <div className="flex items-center gap-1.5">
             <span
-              className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${
+              className={`px-1.5 py-0.2 rounded text-[10px] font-bold ${
                 item.series === 'SERIE_2017'
-                  ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
+                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
                   : item.series === 'SERIE_2003'
-                  ? 'bg-purple-100 text-purple-800 dark:bg-purple-950/60 dark:text-purple-300'
-                  : 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300'
+                  ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20'
+                  : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
               }`}
             >
               {item.series}
             </span>
             {item.isComingSoon && (
-              <span className="px-1.5 py-0.5 rounded text-[9.5px] font-semibold bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60">
+              <span className="px-1.5 py-0.2 rounded text-[9px] font-medium bg-amber-500/10 text-amber-600 border border-amber-500/20">
                 Textes à venir
               </span>
             )}
           </div>
-          <span className="font-medium text-stone-600 dark:text-stone-400">{item.period}</span>
+          <span className="font-mono text-[11px]">{item.period}</span>
         </div>
-        <h4 className="font-bold text-stone-900 dark:text-white text-base">{item.titleFr}</h4>
-        <p className="text-xs text-stone-500 dark:text-stone-400 font-medium">🇲🇬 {item.titleMg}</p>
-        <div className="mt-2 p-2 bg-stone-50 dark:bg-stone-800/50 rounded-lg border border-stone-100 dark:border-stone-800">
-          <p className="text-xs text-stone-600 dark:text-stone-300 line-clamp-2">
-            <span className="font-semibold text-stone-900 dark:text-white">{isVerso ? 'Verso : ' : 'Recto : '}</span>
+        <h4 className="font-bold text-[var(--foreground)] text-sm truncate">{item.titleFr}</h4>
+        <p className="text-[11px] text-[var(--text-muted)] font-medium truncate">🇲🇬 {item.titleMg}</p>
+        <div className="p-2 bg-[var(--input-bg)] rounded-lg border border-[var(--card-border)]">
+          <p className="text-[11px] text-[var(--text-muted)] line-clamp-2 leading-relaxed">
+            <span className="font-semibold text-[var(--foreground)]">{isVerso ? 'Verso : ' : 'Recto : '}</span>
             {isVerso
               ? item.reverseDescriptionFr || (item.isComingSoon ? 'Description verso en cours de rédaction...' : 'Aucune description verso')
               : item.obverseDescriptionFr || (item.isComingSoon ? 'Description recto en cours de rédaction...' : 'Aucune description recto')}
@@ -142,20 +145,20 @@ function BanknoteCard({
       </div>
 
       {/* Actions */}
-      <div className="flex items-center justify-end gap-2 pt-2 border-t border-stone-100 dark:border-stone-800">
+      <div className="flex items-center justify-end gap-1 pt-2 border-t border-[var(--card-border)]">
         <button
           onClick={onEdit}
-          className="p-1.5 text-stone-600 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 rounded-lg transition-colors"
+          className="p-1.5 text-[var(--text-muted)] hover:text-[var(--accent)] hover:bg-[var(--input-bg)] rounded-lg transition-colors cursor-pointer"
           title="Modifier"
         >
-          <Edit2 size={16} />
+          <Edit2 size={14} />
         </button>
         <button
           onClick={onDelete}
-          className="p-1.5 text-stone-600 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition-colors"
+          className="p-1.5 text-[var(--text-muted)] hover:text-rose-500 hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer"
           title="Supprimer"
         >
-          <Trash2 size={16} />
+          <Trash2 size={14} />
         </button>
       </div>
     </div>
@@ -179,7 +182,7 @@ export function BanknoteCardList({
             ? {
                 label: isSeeding ? 'Synchronisation...' : 'Synchroniser les billets par défaut',
                 onClick: onSyncDefaults,
-                icon: <RotateCcw size={14} className={isSeeding ? 'animate-spin' : ''} />,
+                icon: <RotateCcw size={13} className={isSeeding ? 'animate-spin' : ''} />,
               }
             : undefined
         }
@@ -188,7 +191,7 @@ export function BanknoteCardList({
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
       {items.map((item) => (
         <BanknoteCard key={item.id} item={item} onEdit={() => onEdit(item)} onDelete={() => onDelete(item)} />
       ))}

@@ -1,7 +1,6 @@
 'use client';
 
-import { SearchBar } from '@/components/ui';
-
+import { Search, X } from 'lucide-react';
 import type { BanknoteSeriesFilter } from '../hooks/useHistoireFilters';
 
 interface HistoireFilterBarProps {
@@ -15,7 +14,6 @@ interface HistoireFilterBarProps {
 
 /**
  * Barre de recherche et filtres contextuels pour la page Histoire.
- * Affiche le filtre par série uniquement sur l'onglet billets.
  */
 export function HistoireFilterBar({
   searchQuery,
@@ -26,24 +24,35 @@ export function HistoireFilterBar({
   totalBanknotes,
 }: HistoireFilterBarProps) {
   return (
-    <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-      <div className="w-full max-w-md">
-        <SearchBar
+    <div className="p-3 rounded-xl border border-[var(--card-border)] bg-[var(--card)] shadow-xs flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
+      <div className="relative flex-1">
+        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-subtle)]" />
+        <input
+          type="text"
           value={searchQuery}
-          onChange={onSearchChange}
+          onChange={(e) => onSearchChange(e.target.value)}
           placeholder="Rechercher par nom, province, mot-clé, date..."
+          className="w-full pl-8 pr-8 py-1.5 text-xs rounded-lg bg-[var(--input-bg)] border border-[var(--input-border)] text-[var(--foreground)] placeholder:text-[var(--text-subtle)] focus:outline-none focus:border-[var(--accent)] transition"
         />
+        {searchQuery && (
+          <button
+            onClick={() => onSearchChange('')}
+            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--text-subtle)] hover:text-[var(--foreground)] p-0.5 cursor-pointer"
+          >
+            <X size={12} />
+          </button>
+        )}
       </div>
 
       {showBanknoteFilter && (
-        <div className="flex items-center gap-2 self-start sm:self-auto">
-          <span className="text-xs font-medium text-stone-500 dark:text-stone-400">
-            Période / Émission :
+        <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
+          <span className="text-[11px] font-medium text-[var(--text-muted)]">
+            Époque / Série :
           </span>
           <select
             value={banknoteSeriesFilter}
             onChange={(e) => onBanknoteSeriesChange(e.target.value as BanknoteSeriesFilter)}
-            className="px-3 py-2 rounded-xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 text-xs font-semibold text-stone-800 dark:text-stone-200 focus:ring-2 focus:ring-emerald-500 shadow-xs"
+            className="px-2.5 py-1.5 rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] text-xs font-semibold text-[var(--foreground)] focus:outline-none focus:border-[var(--accent)] cursor-pointer"
           >
             <option value="ALL">Toutes les époques ({totalBanknotes})</option>
             <optgroup label="✨ Série Actuelle (2017 - Présent)">

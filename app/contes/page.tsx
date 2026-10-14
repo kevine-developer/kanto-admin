@@ -10,7 +10,8 @@ import {
   BookOpen,
   Search,
   Plus,
-  RefreshCw,
+  RotateCcw,
+  X,
 } from 'lucide-react';
 
 export default function ContesAdminPage() {
@@ -102,26 +103,31 @@ export default function ContesAdminPage() {
 
   return (
     <AdminShell>
-      <div className="w-full space-y-4 pb-8">
+      <div className="w-full space-y-4 max-w-6xl mx-auto pb-12">
+        {/* En-tête standardisé */}
         <PageHeader
           title="Contes & Angano"
           description="Préservation des récits oraux malagasy et génération studio audio Gemini TTS."
           icon={BookOpen}
+          badge={
+            <span className="text-xs px-2.5 py-1 rounded-lg font-mono font-medium border border-[var(--card-border)] bg-[var(--card)] text-[var(--foreground)] shadow-xs">
+              {contes.length} conte{contes.length !== 1 ? 's' : ''}
+            </span>
+          }
           actions={
             <div className="flex items-center gap-2">
               <button
                 onClick={loadContes}
                 disabled={isLoading}
-                className="p-1.5 rounded-md border border-[var(--card-border)] bg-[var(--card)] text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--card-hover)] transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-medium"
+                className="p-2 rounded-lg border border-[var(--card-border)] bg-[var(--card)] text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--card-hover)] transition cursor-pointer shadow-xs disabled:opacity-50"
                 title="Actualiser les contes"
               >
-                <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
-                <span className="hidden sm:inline">Actualiser</span>
+                <RotateCcw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
               </button>
 
               <button
                 onClick={handleOpenCreateModal}
-                className="px-3 py-1.5 rounded-md bg-[var(--foreground)] text-[var(--background)] hover:opacity-90 transition cursor-pointer flex items-center gap-1.5 text-xs font-medium shadow-xs"
+                className="px-3 py-1.5 rounded-lg bg-[var(--accent)] text-white hover:opacity-90 transition cursor-pointer flex items-center gap-1.5 text-xs font-semibold shadow-xs"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>Nouveau conte</span>
@@ -130,9 +136,10 @@ export default function ContesAdminPage() {
           }
         />
 
-        {/* Filtres & Recherche */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 bg-[var(--card)] p-2.5 rounded-lg border border-[var(--card-border)]">
-          <div className="flex flex-wrap items-center gap-1">
+        {/* Barre de filtres & Recherche */}
+        <div className="p-3 rounded-xl border border-[var(--card-border)] bg-[var(--card)] shadow-xs flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
+          {/* Pastilles filtres audio */}
+          <div className="flex flex-wrap items-center gap-1 p-0.5 rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)]">
             {[
               { id: 'ALL' as const, label: `Tous (${contes.length})` },
               {
@@ -153,10 +160,10 @@ export default function ContesAdminPage() {
               <button
                 key={tab.id}
                 onClick={() => setAudioFilter(tab.id)}
-                className={`px-2.5 py-1 text-xs rounded-md transition cursor-pointer font-medium ${
+                className={`px-2.5 py-1 text-[11px] rounded-md transition cursor-pointer font-medium ${
                   audioFilter === tab.id
-                    ? 'bg-[var(--accent)] text-white'
-                    : 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--card-hover)]'
+                    ? 'bg-[var(--card)] text-[var(--foreground)] font-semibold shadow-xs'
+                    : 'text-[var(--text-muted)] hover:text-[var(--foreground)]'
                 }`}
               >
                 {tab.label}
@@ -165,19 +172,27 @@ export default function ContesAdminPage() {
           </div>
 
           <div className="relative min-w-[240px]">
-            <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-subtle)]" />
+            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-subtle)]" />
             <input
               type="text"
               placeholder="Rechercher par titre..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-8 pr-3 py-1 text-xs rounded-md bg-[var(--input-bg)] border border-[var(--input-border)] text-[var(--foreground)] placeholder-[var(--text-subtle)] focus:outline-none focus:border-[var(--accent)]"
+              className="w-full pl-8 pr-8 py-1.5 text-xs rounded-lg bg-[var(--input-bg)] border border-[var(--input-border)] text-[var(--foreground)] placeholder:text-[var(--text-subtle)] focus:outline-none focus:border-[var(--accent)]"
             />
+            {search && (
+              <button
+                onClick={() => setSearch('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--text-subtle)] hover:text-[var(--foreground)] p-0.5 cursor-pointer"
+              >
+                <X size={12} />
+              </button>
+            )}
           </div>
         </div>
 
         {/* Tableau des contes */}
-        <div className="border border-[var(--card-border)] rounded-lg bg-[var(--card)] overflow-hidden">
+        <div className="border border-[var(--card-border)] rounded-xl bg-[var(--card)] shadow-xs overflow-hidden">
           <ContesTable
             contes={filteredContes}
             isLoading={isLoading}
@@ -210,32 +225,32 @@ export default function ContesAdminPage() {
           subtitle={selectedConte.titleFr}
           maxWidth="2xl"
         >
-          <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
+          <div className="space-y-3 max-h-[70vh] overflow-y-auto pr-1 text-xs">
             {selectedConte.moralMg && (
-              <div className="p-3 rounded-lg border border-amber-200 dark:border-amber-900/40 bg-amber-50/40 dark:bg-amber-950/20 text-xs">
-                <div className="font-semibold text-amber-900 dark:text-amber-300 mb-1">
+              <div className="p-3 rounded-xl border border-amber-500/20 bg-amber-500/5 text-xs space-y-1">
+                <div className="font-semibold text-amber-600 dark:text-amber-400">
                   Morale / Fahendrena :
                 </div>
                 <div className="italic text-[var(--foreground)]">{selectedConte.moralMg}</div>
                 {selectedConte.moralFr && (
-                  <div className="text-[var(--text-muted)] mt-1">{selectedConte.moralFr}</div>
+                  <div className="text-[var(--text-muted)] mt-0.5">{selectedConte.moralFr}</div>
                 )}
               </div>
             )}
 
-            <div className="space-y-3">
+            <div className="space-y-2.5">
               {(selectedConte.paragraphs || []).map((p, idx) => (
                 <div
                   key={idx}
-                  className="p-3 rounded-lg border border-[var(--card-border)] bg-[var(--card)] space-y-1.5"
+                  className="p-3 rounded-xl border border-[var(--card-border)] bg-[var(--input-bg)] space-y-1"
                 >
-                  <div className="text-[10px] font-mono text-[var(--text-subtle)] uppercase">
+                  <div className="text-[10px] font-mono text-[var(--text-muted)] uppercase">
                     Paragraphe {p.paragraphNumber || idx + 1}
                   </div>
                   <div className="text-xs text-[var(--foreground)] leading-relaxed">
                     {p.textMg}
                   </div>
-                  <div className="text-xs text-[var(--text-muted)] italic leading-relaxed pt-1 border-t border-[var(--card-border)]/50">
+                  <div className="text-[11px] text-[var(--text-muted)] italic leading-relaxed pt-1 border-t border-[var(--card-border)]">
                     {p.textFr}
                   </div>
                 </div>

@@ -3,15 +3,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { AdminShell } from '@/components/layout/AdminShell';
 import { PageHeader } from '@/components/layout/PageHeader';
-import { StatCard } from '@/components/ui/StatCard';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/lib/hooks/useToast';
 import { fetchApi } from '@/lib/api-client';
 import {
   FileText,
   ShieldCheck,
-  CheckCircle2,
-  AlertTriangle,
   RotateCcw,
   Save,
   ExternalLink,
@@ -19,6 +16,8 @@ import {
   Smartphone,
   Laptop,
   Users,
+  CheckCircle2,
+  AlertTriangle,
 } from 'lucide-react';
 
 interface LegalDocument {
@@ -60,14 +59,14 @@ export default function LegalManagementPage() {
   const [stats, setStats] = useState<LegalStats | null>(null);
   const [selectedSlug, setSelectedSlug] = useState<'terms' | 'privacy'>('terms');
 
-  // Form State
+  // État du formulaire
   const [title, setTitle] = useState('');
   const [version, setVersion] = useState('');
   const [effectiveDate, setEffectiveDate] = useState('');
   const [summary, setSummary] = useState('');
   const [contentHtml, setContentHtml] = useState('');
 
-  // Mode de vue
+  // Mode d'affichage
   const [viewMode, setViewMode] = useState<'edit' | 'preview-mobile' | 'preview-desktop'>('edit');
 
   const loadData = useCallback(async () => {
@@ -99,7 +98,6 @@ export default function LegalManagementPage() {
     loadData();
   }, [loadData]);
 
-  // Synchronisation lors du changement d'onglet
   const handleSelectSlug = (slug: 'terms' | 'privacy') => {
     setSelectedSlug(slug);
     const doc = documents.find((d) => d.slug === slug);
@@ -119,7 +117,7 @@ export default function LegalManagementPage() {
       return;
     }
     if (!version.trim()) {
-      toast.error('Le numéro de version est requis (ex: 1.0 ou 1.1).');
+      toast.error('Le numéro de version est requis (ex: 1.0).');
       return;
     }
     if (!contentHtml.trim()) {
@@ -144,7 +142,7 @@ export default function LegalManagementPage() {
       );
 
       if (res && res.success) {
-        toast.success(`"${title}" enregistré et publié avec succès !`);
+        toast.success(`"${title}" publié avec succès !`);
         await loadData();
       }
     } catch (err: unknown) {
@@ -180,7 +178,6 @@ export default function LegalManagementPage() {
     }
   };
 
-  // Insertion rapide de balises HTML dans l'éditeur
   const insertSnippet = (snippet: string) => {
     setContentHtml((prev) => prev + '\n\n' + snippet);
     toast.info('Bloc inséré à la fin du document.');
@@ -190,10 +187,11 @@ export default function LegalManagementPage() {
 
   return (
     <AdminShell>
-      <div className="space-y-6 max-w-7xl mx-auto">
+      <div className="space-y-5 max-w-5xl mx-auto pb-12">
+        {/* En-tête épuré */}
         <PageHeader
-          title="Gestion des CGU & Documents Légaux"
-          description="Contrôlez les conditions d'utilisation, la politique de confidentialité, le suivi des versions et la conformité légale des utilisateurs mobiles."
+          title="CGU & Textes Juridiques"
+          description="Gestion des conditions d'utilisation, politique de confidentialité et conformité utilisateur."
           icon={FileText}
           actions={
             <div className="flex items-center gap-2">
@@ -201,216 +199,199 @@ export default function LegalManagementPage() {
                 href={`/api-proxy/pages/${selectedSlug}?embed=true`}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors"
-                style={{
-                  borderColor: 'var(--card-border)',
-                  color: 'var(--foreground)',
-                  background: 'var(--card)',
-                }}
-                title="Ouvrir la page publique réelle vue par le mobile"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border border-[var(--card-border)] bg-[var(--card)] hover:bg-[var(--card-hover)] text-[var(--foreground)] transition-colors shadow-xs"
+                title="Consulter la vue WebView telle qu'affichée sur l'application mobile"
               >
-                <ExternalLink size={13} />
-                <span>Tester le rendu public</span>
+                <ExternalLink size={13} className="text-[var(--accent)]" />
+                <span>Page publique</span>
               </a>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={loadData}
-                leftIcon={<RotateCcw size={14} className={isLoading ? 'animate-spin' : ''} />}
+                leftIcon={<RotateCcw size={13} className={isLoading ? 'animate-spin' : ''} />}
               >
-                Rafraîchir
+                Actualiser
               </Button>
             </div>
           }
         />
 
-        {/* 1. Métriques et Statistiques UX */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard
-            title="Version Active"
-            value={stats ? `v${stats.activeVersion}` : 'v1.0'}
-            subtitle={effectiveDate || 'En vigueur'}
-            icon={ShieldCheck}
-            variant="default"
-            badge="Obligatoire"
-          />
-          <StatCard
-            title="Taux de Couverture"
-            value={stats ? `${stats.acceptanceRate}%` : '100%'}
-            subtitle="Utilisateurs à jour"
-            icon={CheckCircle2}
-            variant={stats && stats.acceptanceRate >= 90 ? 'success' : 'warning'}
-            badge="Conforme RGPD"
-          />
-          <StatCard
-            title="Utilisateurs à Jour"
-            value={stats?.acceptedCurrentVersion ?? 0}
-            subtitle={`Sur un total de ${stats?.totalUsers ?? 0} comptes`}
-            icon={Users}
-            variant="info"
-          />
-          <StatCard
-            title="À Renouveler"
-            value={(stats?.acceptedOlderVersion ?? 0) + (stats?.unacceptedOrUnknown ?? 0)}
-            subtitle="Comptes sur version antérieure"
-            icon={AlertTriangle}
-            variant={
-              (stats?.acceptedOlderVersion ?? 0) + (stats?.unacceptedOrUnknown ?? 0) > 0
-                ? 'warning'
-                : 'success'
-            }
-          />
+        {/* Barre de métriques compacte */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+          <div className="p-3 rounded-xl border border-[var(--card-border)] bg-[var(--card)] space-y-0.5">
+            <div className="flex items-center justify-between text-[11px] text-[var(--text-muted)]">
+              <span>Version active</span>
+              <ShieldCheck size={13} className="text-[var(--accent)]" />
+            </div>
+            <div className="text-base font-bold font-mono text-[var(--foreground)]">
+              {stats ? `v${stats.activeVersion}` : 'v1.0'}
+            </div>
+            <div className="text-[10px] text-[var(--text-subtle)] truncate">
+              {effectiveDate || 'En vigueur'}
+            </div>
+          </div>
+
+          <div className="p-3 rounded-xl border border-[var(--card-border)] bg-[var(--card)] space-y-0.5">
+            <div className="flex items-center justify-between text-[11px] text-[var(--text-muted)]">
+              <span>Couverture légale</span>
+              <CheckCircle2 size={13} className="text-emerald-500" />
+            </div>
+            <div className="text-base font-bold font-mono text-emerald-600 dark:text-emerald-400">
+              {stats ? `${stats.acceptanceRate}%` : '100%'}
+            </div>
+            <div className="text-[10px] text-[var(--text-subtle)]">Conforme RGPD</div>
+          </div>
+
+          <div className="p-3 rounded-xl border border-[var(--card-border)] bg-[var(--card)] space-y-0.5">
+            <div className="flex items-center justify-between text-[11px] text-[var(--text-muted)]">
+              <span>Comptes à jour</span>
+              <Users size={13} className="text-sky-500" />
+            </div>
+            <div className="text-base font-bold font-mono text-[var(--foreground)]">
+              {stats?.acceptedCurrentVersion ?? 0}
+            </div>
+            <div className="text-[10px] text-[var(--text-subtle)]">
+              sur {stats?.totalUsers ?? 0} utilisateurs
+            </div>
+          </div>
+
+          <div className="p-3 rounded-xl border border-[var(--card-border)] bg-[var(--card)] space-y-0.5">
+            <div className="flex items-center justify-between text-[11px] text-[var(--text-muted)]">
+              <span>À renouveler</span>
+              <AlertTriangle size={13} className="text-amber-500" />
+            </div>
+            <div className="text-base font-bold font-mono text-[var(--foreground)]">
+              {(stats?.acceptedOlderVersion ?? 0) + (stats?.unacceptedOrUnknown ?? 0)}
+            </div>
+            <div className="text-[10px] text-[var(--text-subtle)]">Versions antérieures</div>
+          </div>
         </div>
 
-        {/* 2. Onglets de sélection de document */}
-        <div
-          className="flex items-center gap-2 p-1.5 rounded-xl border w-fit"
-          style={{ background: 'var(--card)', borderColor: 'var(--card-border)' }}
-        >
+        {/* Sélecteur de document (Pills épurées) */}
+        <div className="flex items-center gap-1 p-1 rounded-xl bg-[var(--input-bg)] border border-[var(--card-border)] w-fit">
           <button
             type="button"
             onClick={() => handleSelectSlug('terms')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all ${
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
               selectedSlug === 'terms'
-                ? 'bg-amber-600 text-white shadow-sm'
+                ? 'bg-[var(--card)] text-[var(--foreground)] shadow-xs'
                 : 'text-[var(--text-muted)] hover:text-[var(--foreground)]'
             }`}
           >
-            <FileText size={15} />
+            <FileText size={14} className={selectedSlug === 'terms' ? 'text-[var(--accent)]' : ''} />
             <span>Conditions d&apos;Utilisation (CGU)</span>
           </button>
+
           <button
             type="button"
             onClick={() => handleSelectSlug('privacy')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all ${
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
               selectedSlug === 'privacy'
-                ? 'bg-amber-600 text-white shadow-sm'
+                ? 'bg-[var(--card)] text-[var(--foreground)] shadow-xs'
                 : 'text-[var(--text-muted)] hover:text-[var(--foreground)]'
             }`}
           >
-            <ShieldCheck size={15} />
+            <ShieldCheck size={14} className={selectedSlug === 'privacy' ? 'text-[var(--accent)]' : ''} />
             <span>Politique de Confidentialité</span>
           </button>
         </div>
 
-        {/* 3. Zone Principale : Éditeur & Prévisualisation */}
-        <div
-          className="rounded-2xl border p-6 space-y-6"
-          style={{ background: 'var(--card)', borderColor: 'var(--card-border)' }}
-        >
-          {/* Header de la carte d'édition */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-4" style={{ borderColor: 'var(--card-border)' }}>
+        {/* Zone Principale : Édition & Prévisualisation */}
+        <div className="p-5 rounded-2xl border border-[var(--card-border)] bg-[var(--card)] space-y-5">
+          {/* En-tête de section avec sélecteur de vue */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[var(--card-border)] pb-4">
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-base font-bold font-heritage" style={{ color: 'var(--foreground)' }}>
+                <h2 className="text-sm font-bold text-[var(--foreground)]">
                   {title || (selectedSlug === 'terms' ? 'CGU Kanto' : 'Politique de confidentialité')}
                 </h2>
-                <span
-                  className="px-2 py-0.5 rounded text-[11px] font-mono font-bold"
-                  style={{
-                    background: 'color-mix(in srgb, var(--accent) 15%, transparent)',
-                    color: 'var(--accent)',
-                  }}
-                >
+                <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-[var(--accent-light)] text-[var(--accent-text)] border border-[var(--accent-border)]">
                   v{version || '1.0'}
                 </span>
               </div>
-              <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                Dernière modification : {currentDoc?.updatedAt ? new Date(currentDoc.updatedAt).toLocaleString('fr-FR') : 'Inconnue'}
+              <p className="text-[11px] text-[var(--text-muted)] mt-0.5">
+                Mis à jour le {currentDoc?.updatedAt ? new Date(currentDoc.updatedAt).toLocaleDateString('fr-FR') : 'Inconnue'}
                 {currentDoc?.updatedBy ? ` par ${currentDoc.updatedBy}` : ''}
               </p>
             </div>
 
-            {/* Sélecteur de mode d'affichage */}
-            <div
-              className="flex items-center gap-1 p-1 rounded-lg border text-xs"
-              style={{ borderColor: 'var(--card-border)', background: 'var(--background)' }}
-            >
+            {/* Commutateur de vue en pilules */}
+            <div className="flex items-center p-0.5 rounded-lg bg-[var(--input-bg)] border border-[var(--card-border)] text-xs self-start sm:self-auto">
               <button
                 type="button"
                 onClick={() => setViewMode('edit')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md font-medium transition-colors ${
+                className={`flex items-center gap-1.5 px-3 py-1 rounded-md font-medium transition cursor-pointer ${
                   viewMode === 'edit'
-                    ? 'bg-amber-600 text-white'
+                    ? 'bg-[var(--card)] text-[var(--foreground)] font-semibold shadow-xs'
                     : 'text-[var(--text-muted)] hover:text-[var(--foreground)]'
                 }`}
               >
                 <Code size={13} />
                 <span>Édition HTML</span>
               </button>
+
               <button
                 type="button"
                 onClick={() => setViewMode('preview-mobile')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md font-medium transition-colors ${
+                className={`flex items-center gap-1.5 px-3 py-1 rounded-md font-medium transition cursor-pointer ${
                   viewMode === 'preview-mobile'
-                    ? 'bg-amber-600 text-white'
+                    ? 'bg-[var(--card)] text-[var(--foreground)] font-semibold shadow-xs'
                     : 'text-[var(--text-muted)] hover:text-[var(--foreground)]'
                 }`}
               >
                 <Smartphone size={13} />
-                <span>Aperçu Mobile</span>
+                <span>Mobile (375px)</span>
               </button>
+
               <button
                 type="button"
                 onClick={() => setViewMode('preview-desktop')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md font-medium transition-colors ${
+                className={`flex items-center gap-1.5 px-3 py-1 rounded-md font-medium transition cursor-pointer ${
                   viewMode === 'preview-desktop'
-                    ? 'bg-amber-600 text-white'
+                    ? 'bg-[var(--card)] text-[var(--foreground)] font-semibold shadow-xs'
                     : 'text-[var(--text-muted)] hover:text-[var(--foreground)]'
                 }`}
               >
                 <Laptop size={13} />
-                <span>Aperçu Web</span>
+                <span>Web Plein écran</span>
               </button>
             </div>
           </div>
 
-          {/* Formulaire & Champs */}
-          <form onSubmit={handleSave} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-xs font-semibold mb-1.5" style={{ color: 'var(--foreground)' }}>
-                  Titre officiel du document
+          <form onSubmit={handleSave} className="space-y-4">
+            {/* Métadonnées du document */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="space-y-1">
+                <label className="text-[11px] font-semibold text-[var(--foreground)]">
+                  Titre officiel
                 </label>
                 <input
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="ex: Conditions Générales d'Utilisation"
-                  className="w-full px-3 py-2 rounded-lg text-xs border outline-none transition-colors"
-                  style={{
-                    background: 'var(--background)',
-                    borderColor: 'var(--card-border)',
-                    color: 'var(--foreground)',
-                  }}
+                  className="w-full px-2.5 py-1.5 rounded-lg text-xs border border-[var(--input-border)] bg-[var(--input-bg)] text-[var(--foreground)] outline-none focus:border-[var(--accent)]"
                   required
                 />
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold mb-1.5" style={{ color: 'var(--foreground)' }}>
+              <div className="space-y-1">
+                <label className="text-[11px] font-semibold text-[var(--foreground)]">
                   Numéro de version
                 </label>
                 <input
                   type="text"
                   value={version}
                   onChange={(e) => setVersion(e.target.value)}
-                  placeholder="ex: 1.0 ou 1.1"
-                  className="w-full px-3 py-2 rounded-lg text-xs border outline-none font-mono transition-colors"
-                  style={{
-                    background: 'var(--background)',
-                    borderColor: 'var(--card-border)',
-                    color: 'var(--foreground)',
-                  }}
+                  placeholder="1.0"
+                  className="w-full px-2.5 py-1.5 rounded-lg text-xs font-mono border border-[var(--input-border)] bg-[var(--input-bg)] text-[var(--foreground)] outline-none focus:border-[var(--accent)]"
                   required
                 />
-                <span className="text-[10px] mt-1 block" style={{ color: 'var(--text-muted)' }}>
-                  Incrémentez la version si vous souhaitez demander un nouveau consentement.
-                </span>
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold mb-1.5" style={{ color: 'var(--foreground)' }}>
+              <div className="space-y-1">
+                <label className="text-[11px] font-semibold text-[var(--foreground)]">
                   Date d&apos;entrée en vigueur
                 </label>
                 <input
@@ -418,162 +399,115 @@ export default function LegalManagementPage() {
                   value={effectiveDate}
                   onChange={(e) => setEffectiveDate(e.target.value)}
                   placeholder="ex: 1er Octobre 2026"
-                  className="w-full px-3 py-2 rounded-lg text-xs border outline-none transition-colors"
-                  style={{
-                    background: 'var(--background)',
-                    borderColor: 'var(--card-border)',
-                    color: 'var(--foreground)',
-                  }}
+                  className="w-full px-2.5 py-1.5 rounded-lg text-xs border border-[var(--input-border)] bg-[var(--input-bg)] text-[var(--foreground)] outline-none focus:border-[var(--accent)]"
                 />
               </div>
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold mb-1.5" style={{ color: 'var(--foreground)' }}>
+            <div className="space-y-1">
+              <label className="text-[11px] font-semibold text-[var(--foreground)]">
                 Résumé des modifications (Changelog public)
               </label>
               <input
                 type="text"
                 value={summary}
                 onChange={(e) => setSummary(e.target.value)}
-                placeholder="ex: Clarification des règles de signalement et protection des utilisateurs invités"
-                className="w-full px-3 py-2 rounded-lg text-xs border outline-none transition-colors"
-                style={{
-                  background: 'var(--background)',
-                  borderColor: 'var(--card-border)',
-                  color: 'var(--foreground)',
-                }}
+                placeholder="ex: Clarification des règles de signalement et protection des utilisateurs"
+                className="w-full px-2.5 py-1.5 rounded-lg text-xs border border-[var(--input-border)] bg-[var(--input-bg)] text-[var(--foreground)] outline-none focus:border-[var(--accent)]"
               />
             </div>
 
-            {/* 4. Zone d'édition ou de prévisualisation */}
+            {/* Corps selon le mode actif */}
             {viewMode === 'edit' ? (
-              <div className="space-y-3">
+              <div className="space-y-2 pt-1">
                 {/* Outils d'insertion rapide */}
-                <div className="flex flex-wrap items-center gap-1.5 pb-2">
-                  <span className="text-[11px] font-medium mr-2" style={{ color: 'var(--text-muted)' }}>
-                    Insérer :
-                  </span>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="text-[11px] text-[var(--text-muted)] mr-1">Raccourcis :</span>
                   <button
                     type="button"
                     onClick={() => insertSnippet('<h2>Titre de section</h2>\n<p>Texte explicatif...</p>')}
-                    className="px-2 py-1 rounded text-[11px] border font-mono transition-colors hover:bg-neutral-100 dark:hover:bg-neutral-800"
-                    style={{ borderColor: 'var(--card-border)', color: 'var(--foreground)' }}
+                    className="px-2 py-0.5 rounded text-[11px] border border-[var(--card-border)] bg-[var(--input-bg)] hover:bg-[var(--card-hover)] text-[var(--foreground)] font-mono transition cursor-pointer"
                   >
-                    + Section H2
+                    + Titre H2
                   </button>
                   <button
                     type="button"
-                    onClick={() => insertSnippet('<div class="callout">\n  <p>Avis important ou point de vigilance pour les utilisateurs.</p>\n</div>')}
-                    className="px-2 py-1 rounded text-[11px] border font-mono transition-colors hover:bg-neutral-100 dark:hover:bg-neutral-800"
-                    style={{ borderColor: 'var(--card-border)', color: 'var(--foreground)' }}
+                    onClick={() => insertSnippet('<div class="callout">\n  <p>Avis important pour les utilisateurs.</p>\n</div>')}
+                    className="px-2 py-0.5 rounded text-[11px] border border-[var(--card-border)] bg-[var(--input-bg)] hover:bg-[var(--card-hover)] text-[var(--foreground)] font-mono transition cursor-pointer"
                   >
                     + Encadré Callout
                   </button>
                   <button
                     type="button"
                     onClick={() => insertSnippet('<ul>\n  <li>Règle 1</li>\n  <li>Règle 2</li>\n</ul>')}
-                    className="px-2 py-1 rounded text-[11px] border font-mono transition-colors hover:bg-neutral-100 dark:hover:bg-neutral-800"
-                    style={{ borderColor: 'var(--card-border)', color: 'var(--foreground)' }}
+                    className="px-2 py-0.5 rounded text-[11px] border border-[var(--card-border)] bg-[var(--input-bg)] hover:bg-[var(--card-hover)] text-[var(--foreground)] font-mono transition cursor-pointer"
                   >
                     + Liste à puces
                   </button>
                   <button
                     type="button"
                     onClick={() => insertSnippet('<div class="contact-card">\n  <div class="body">\n    <div class="label">Contact</div>\n    <div class="value"><a href="mailto:contact@kanto.mg">contact@kanto.mg</a></div>\n  </div>\n</div>')}
-                    className="px-2 py-1 rounded text-[11px] border font-mono transition-colors hover:bg-neutral-100 dark:hover:bg-neutral-800"
-                    style={{ borderColor: 'var(--card-border)', color: 'var(--foreground)' }}
+                    className="px-2 py-0.5 rounded text-[11px] border border-[var(--card-border)] bg-[var(--input-bg)] hover:bg-[var(--card-hover)] text-[var(--foreground)] font-mono transition cursor-pointer"
                   >
-                    + Carte de contact
+                    + Contact
                   </button>
                 </div>
 
-                <div className="relative">
-                  <textarea
-                    rows={22}
-                    value={contentHtml}
-                    onChange={(e) => setContentHtml(e.target.value)}
-                    className="w-full p-4 rounded-xl border text-xs font-mono leading-relaxed outline-none transition-colors"
-                    style={{
-                      background: 'var(--background)',
-                      borderColor: 'var(--card-border)',
-                      color: 'var(--foreground)',
-                    }}
-                    placeholder="Saisissez le contenu HTML des conditions..."
-                    required
-                  />
-                  <div className="flex items-center justify-between text-[11px] px-1 pt-1" style={{ color: 'var(--text-muted)' }}>
-                    <span>HTML sémantique standard compatible navigateur et WebViews iOS / Android</span>
-                    <span>{contentHtml.length} caractères</span>
-                  </div>
+                <textarea
+                  rows={18}
+                  value={contentHtml}
+                  onChange={(e) => setContentHtml(e.target.value)}
+                  className="w-full p-3.5 rounded-xl border border-[var(--input-border)] bg-[var(--input-bg)] text-[var(--foreground)] text-xs font-mono leading-relaxed outline-none focus:border-[var(--accent)]"
+                  placeholder="Saisissez le contenu HTML des conditions..."
+                  required
+                />
+                <div className="flex items-center justify-between text-[11px] text-[var(--text-muted)] px-1">
+                  <span>HTML sémantique standard compatible iOS &amp; Android</span>
+                  <span>{contentHtml.length} caractères</span>
                 </div>
               </div>
             ) : viewMode === 'preview-mobile' ? (
-              /* Aperçu format smartphone */
-              <div className="flex flex-col items-center py-4 bg-neutral-100 dark:bg-neutral-950/60 rounded-xl border p-6" style={{ borderColor: 'var(--card-border)' }}>
-                <div className="text-center mb-3">
-                  <span className="text-xs font-semibold flex items-center justify-center gap-1.5 text-neutral-600 dark:text-neutral-400">
-                    <Smartphone size={14} /> Aperçu WebView Mobile (Format iOS / Android)
-                  </span>
-                </div>
-                <div
-                  className="w-full max-w-[390px] h-[640px] bg-white dark:bg-[#121215] text-[#111827] dark:text-[#F4F4F5] rounded-[36px] shadow-2xl border-4 border-neutral-300 dark:border-neutral-800 overflow-hidden flex flex-col"
-                >
-                  {/* Barre d'état smartphone factice */}
-                  <div className="h-6 bg-neutral-200 dark:bg-neutral-900 flex items-center justify-between px-6 text-[10px] font-semibold opacity-70">
+              <div className="flex flex-col items-center py-6 bg-[var(--input-bg)] rounded-xl border border-[var(--card-border)]">
+                <div className="w-full max-w-[375px] min-h-[550px] bg-white dark:bg-[#121215] text-[#111827] dark:text-[#F4F4F5] rounded-[32px] shadow-xl border-4 border-neutral-300 dark:border-neutral-800 overflow-hidden flex flex-col">
+                  <div className="h-5 bg-neutral-200 dark:bg-neutral-900 flex items-center justify-between px-5 text-[9px] font-semibold opacity-60">
                     <span>09:41</span>
-                    <div className="flex items-center gap-1">
-                      <span>5G</span>
-                      <span>100%</span>
-                    </div>
+                    <span>100%</span>
                   </div>
-
-                  {/* Contenu in-app scrollable */}
                   <div
-                    className="p-5 overflow-y-auto flex-1 text-xs leading-relaxed"
+                    className="p-4 overflow-y-auto flex-1 text-xs leading-relaxed"
                     dangerouslySetInnerHTML={{ __html: contentHtml }}
                   />
                 </div>
               </div>
             ) : (
-              /* Aperçu format web desktop */
               <div
-                className="p-8 rounded-xl border max-w-4xl mx-auto text-sm leading-relaxed"
-                style={{
-                  background: 'var(--background)',
-                  borderColor: 'var(--card-border)',
-                  color: 'var(--foreground)',
-                }}
+                className="p-6 rounded-xl border border-[var(--card-border)] bg-[var(--input-bg)] text-xs leading-relaxed max-w-3xl mx-auto"
                 dangerouslySetInnerHTML={{ __html: contentHtml }}
               />
             )}
 
-            {/* Barre d'actions */}
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t" style={{ borderColor: 'var(--card-border)' }}>
-              <div className="flex items-center gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={handleResetToDefault}
-                  disabled={isResetting || isSaving}
-                  leftIcon={<RotateCcw size={14} className={isResetting ? 'animate-spin' : ''} />}
-                >
-                  Réinitialiser au texte officiel
-                </Button>
-              </div>
+            {/* Actions de publication */}
+            <div className="flex items-center justify-between pt-3 border-t border-[var(--card-border)]">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleResetToDefault}
+                disabled={isResetting || isSaving}
+                leftIcon={<RotateCcw size={13} className={isResetting ? 'animate-spin' : ''} />}
+              >
+                Réinitialiser
+              </Button>
 
-              <div className="flex items-center gap-3 w-full sm:w-auto">
-                <Button
-                  type="submit"
-                  variant="primary"
-                  size="md"
-                  disabled={isSaving}
-                  leftIcon={<Save size={16} className={isSaving ? 'animate-spin' : ''} />}
-                >
-                  {isSaving ? 'Enregistrement en cours...' : 'Publier les modifications'}
-                </Button>
-              </div>
+              <Button
+                type="submit"
+                variant="primary"
+                size="sm"
+                disabled={isSaving}
+                leftIcon={<Save size={14} className={isSaving ? 'animate-spin' : ''} />}
+              >
+                {isSaving ? 'Enregistrement...' : 'Enregistrer et publier'}
+              </Button>
             </div>
           </form>
         </div>
