@@ -1,7 +1,15 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { AdminShell } from '@/components/layout/AdminShell';
+import { PageHeader } from '@/components/layout/PageHeader';
+import {
+  SearchBar,
+  ConfirmModal,
+  LoadingState,
+  EmptyState,
+  Modal,
+} from '@/components/ui';
 import { fetchApi } from '@/lib/api-client';
 import { useToast } from '@/lib/hooks/useToast';
 import {
@@ -11,15 +19,13 @@ import {
   Trash2,
   AlertCircle,
   Loader2,
-  X,
-  Send,
   Info,
   Wrench,
   Flame,
-  ToggleLeft,
-  ToggleRight,
   Pencil,
-  CheckCircle,
+  CheckCircle2,
+  Calendar,
+  Languages,
 } from 'lucide-react';
 
 export interface SystemAnnouncement {
@@ -36,25 +42,54 @@ export interface SystemAnnouncement {
 }
 
 const ANNOUNCEMENT_TYPES = [
-  { id: 'INFO', label: 'Information / Fampahafantarana', icon: Info, color: '#2980B9', bg: 'bg-blue-500/10 text-blue-500 border-blue-500/20' },
-  { id: 'MAINTENANCE', label: 'Maintenance / Fikojakojana', icon: Wrench, color: '#E67E22', bg: 'bg-amber-500/10 text-amber-500 border-amber-500/20' },
-  { id: 'NEW_FEATURE', label: 'Nouveauté / Vaovao', icon: Flame, color: '#8B5CF6', bg: 'bg-purple-500/10 text-purple-500 border-purple-500/20' },
+  {
+    id: 'INFO' as const,
+    label: 'Information',
+    labelMg: 'Fampahafantarana',
+    icon: Info,
+    badgeCls: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20',
+  },
+  {
+    id: 'MAINTENANCE' as const,
+    label: 'Maintenance',
+    labelMg: 'Fikojakojana',
+    icon: Wrench,
+    badgeCls: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
+  },
+  {
+    id: 'NEW_FEATURE' as const,
+    label: 'Nouveauté',
+    labelMg: 'Vaovao',
+    icon: Flame,
+    badgeCls: 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20',
+  },
 ];
 
-/**
- * Page d'administration des annonces système bilingues (malgache/français).
- * Permet la création, modification, suppression et activation/désactivation des bannières in-app.
- */
+const inputCls =
+  'w-full px-2.5 py-1.5 rounded-md bg-[var(--input-bg)] border border-[var(--input-border)] text-xs text-[var(--foreground)] placeholder-[var(--text-subtle)] focus:outline-none focus:border-[var(--accent)] transition';
+
 export default function AnnouncementsAdminPage() {
+  const { toast } = useToast();
   const [announcements, setAnnouncements] = useState<SystemAnnouncement[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const { toast } = useToast();
+
+  // Filtres
+  const [search, setSearch] = useState('');
+  const [selectedType, setSelectedType] = useState<string>('ALL');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'INACTIVE'>('ALL');
 
   // Modal création / édition
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
+
+  // Modal suppression
+  const [deletingItem, setDeletingItem] = useState<SystemAnnouncement | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // Onglet de prévisualisation de langue sur les cartes
+  const [cardLang, setCardLang] = useState<Record<string, 'FR' | 'MG'>>({});
 
   // Form State
   const [titleMg, setTitleMg] = useState('');
@@ -117,7 +152,7 @@ export default function AnnouncementsAdminPage() {
     setModalError(null);
 
     if (!titleMg.trim() || !messageMg.trim() || !titleFr.trim() || !messageFr.trim()) {
-      setModalError('Tous les champs de titre et de message sont obligatoires.');
+      setModalError('Tous les champs de titre et de message (FR et MG) sont requis.');
       return;
     }
 
@@ -163,13 +198,11 @@ export default function AnnouncementsAdminPage() {
   const handleToggleActive = async (ann: SystemAnnouncement) => {
     const nextState = !ann.isActive;
     try {
-      // Mise à jour optimiste dans l'UI
       setAnnouncements((prev) =>
         prev.map((item) => {
           if (item.id === ann.id) {
             return { ...item, isActive: nextState };
           }
-          // Si on active celle-ci, désactiver les autres
           if (nextState) {
             return { ...item, isActive: false };
           }
@@ -181,7 +214,7 @@ export default function AnnouncementsAdminPage() {
         method: 'PATCH',
         body: JSON.stringify({ isActive: nextState }),
       });
-      toast.success(nextState ? 'Annonce activée.' : 'Annonce désactivée.');
+      toast.success(nextState ? 'Annonce activée sur l’application.' : 'Annonce désactivée.');
       await loadAnnouncements();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Erreur de modification.';
@@ -190,167 +223,298 @@ export default function AnnouncementsAdminPage() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!window.confirm('Voulez-vous vraiment supprimer cette annonce ?')) return;
+  const executeDelete = async () => {
+    if (!deletingItem) return;
     try {
-      await fetchApi(`/announcements/${id}`, { method: 'DELETE' });
+      setIsDeleting(true);
+      await fetchApi(`/announcements/${deletingItem.id}`, { method: 'DELETE' });
       toast.success('Annonce supprimée avec succès.');
+      setDeletingItem(null);
       await loadAnnouncements();
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Erreur de suppression.';
+      const msg = err instanceof Error ? err.message : 'Erreur lors de la suppression.';
       toast.error(msg);
+    } finally {
+      setIsDeleting(false);
     }
+  };
+
+  // Filtrage
+  const filteredAnnouncements = useMemo(() => {
+    return announcements.filter((ann) => {
+      // Type
+      if (selectedType !== 'ALL' && ann.type !== selectedType) return false;
+
+      // Statut
+      if (statusFilter === 'ACTIVE' && !ann.isActive) return false;
+      if (statusFilter === 'INACTIVE' && ann.isActive) return false;
+
+      // Recherche
+      if (search.trim()) {
+        const q = search.toLowerCase();
+        const matchFr =
+          ann.titleFr?.toLowerCase().includes(q) || ann.messageFr?.toLowerCase().includes(q);
+        const matchMg =
+          ann.titleMg?.toLowerCase().includes(q) || ann.messageMg?.toLowerCase().includes(q);
+        if (!matchFr && !matchMg) return false;
+      }
+
+      return true;
+    });
+  }, [announcements, selectedType, statusFilter, search]);
+
+  const activeAnnouncement = useMemo(() => {
+    return announcements.find((a) => a.isActive);
+  }, [announcements]);
+
+  const toggleCardLang = (id: string) => {
+    setCardLang((prev) => ({
+      ...prev,
+      [id]: prev[id] === 'MG' ? 'FR' : 'MG',
+    }));
   };
 
   return (
     <AdminShell>
-      <div className="space-y-6">
-        {/* En-tête */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[var(--sidebar-border)] pb-5">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-orange-500/10 text-orange-500 flex items-center justify-center border border-orange-500/20">
-              <Megaphone size={20} />
+      <div className="w-full space-y-4 pb-8">
+        {/* En-tête standardisé */}
+        <PageHeader
+          title="Annonces Système"
+          description="Modales d'information, maintenance et nouveautés diffusées au démarrage de l'application mobile."
+          badge={`${announcements.length} annonce${announcements.length > 1 ? 's' : ''}${
+            activeAnnouncement ? ' · 1 active' : ''
+          }`}
+          icon={Megaphone}
+          actions={
+            <button
+              type="button"
+              onClick={() => void loadAnnouncements()}
+              title="Actualiser"
+              className="p-1.5 rounded-md border border-[var(--card-border)] bg-[var(--card)] hover:bg-[var(--card-hover)] text-[var(--text-muted)] hover:text-[var(--foreground)] transition cursor-pointer"
+            >
+              <RotateCcw size={14} className={isLoading ? 'animate-spin' : ''} />
+            </button>
+          }
+          primaryAction={{
+            label: 'Nouvelle Annonce',
+            icon: <Plus size={14} />,
+            onClick: handleOpenCreateModal,
+          }}
+        />
+
+        {/* Barre d'outils unifiée */}
+        <div className="bg-[var(--card)] rounded-xl border border-[var(--card-border)] p-3 space-y-3">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+            <div className="flex-1 max-w-lg">
+              <SearchBar
+                value={search}
+                onChange={setSearch}
+                placeholder="Rechercher par titre ou contenu (FR ou MG)..."
+                totalCount={filteredAnnouncements.length}
+              />
             </div>
-            <div>
-              <h1 className="text-xl font-bold font-display" style={{ color: 'var(--foreground)' }}>
-                Annonces Système
-              </h1>
-              <p className="text-xs mt-1" style={{ color: 'var(--sidebar-muted)' }}>
-                Gérez les modales d&apos;information, maintenance et nouveautés au démarrage de l&apos;application mobile
-              </p>
+
+            {/* Pilules de statut actif */}
+            <div className="flex items-center gap-1 p-0.5 rounded-lg bg-[var(--input-bg)] border border-[var(--card-border)] shrink-0 self-start sm:self-auto">
+              {(
+                [
+                  { id: 'ALL', label: 'Toutes' },
+                  { id: 'ACTIVE', label: 'Actives' },
+                  { id: 'INACTIVE', label: 'Inactives' },
+                ] as const
+              ).map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setStatusFilter(tab.id)}
+                  className={`px-2.5 py-1 rounded-md text-xs font-medium transition cursor-pointer ${
+                    statusFilter === tab.id
+                      ? 'bg-[var(--card)] text-[var(--foreground)] border border-[var(--card-border)] shadow-xs'
+                      : 'text-[var(--text-muted)] hover:text-[var(--foreground)]'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
             </div>
           </div>
-          <div className="flex items-center gap-2">
+
+          {/* Pilules de types d'annonces */}
+          <div className="flex items-center gap-1.5 flex-wrap pt-2 border-t border-[var(--card-border)]">
             <button
-              onClick={() => void loadAnnouncements()}
-              className="w-10 h-10 rounded-xl flex items-center justify-center transition-colors hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer"
-              style={{ color: 'var(--sidebar-muted)' }}
-              title="Rafraîchir"
+              type="button"
+              onClick={() => setSelectedType('ALL')}
+              className={`px-2.5 py-1 rounded-md text-xs font-medium transition cursor-pointer ${
+                selectedType === 'ALL'
+                  ? 'bg-[var(--foreground)] text-[var(--background)]'
+                  : 'bg-[var(--input-bg)] border border-[var(--card-border)] text-[var(--text-muted)] hover:text-[var(--foreground)]'
+              }`}
             >
-              <RotateCcw size={18} className={isLoading ? 'animate-spin' : ''} />
+              Tous les types
             </button>
-            <button
-              onClick={handleOpenCreateModal}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90 shadow-sm cursor-pointer"
-              style={{ background: 'var(--accent)' }}
-            >
-              <Plus size={16} />
-              Nouvelle Annonce
-            </button>
+            {ANNOUNCEMENT_TYPES.map((t) => {
+              const Icon = t.icon;
+              const isSel = selectedType === t.id;
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => setSelectedType(t.id)}
+                  className={`px-2.5 py-1 rounded-md text-xs font-medium transition flex items-center gap-1.5 cursor-pointer ${
+                    isSel
+                      ? 'bg-[var(--foreground)] text-[var(--background)]'
+                      : 'bg-[var(--input-bg)] border border-[var(--card-border)] text-[var(--text-muted)] hover:text-[var(--foreground)]'
+                  }`}
+                >
+                  <Icon size={12} />
+                  <span>{t.label}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
 
         {/* Liste des annonces */}
         {isLoading && announcements.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 gap-3">
-            <Loader2 size={24} className="animate-spin text-zinc-400" />
-            <p className="text-sm font-medium text-zinc-500">Chargement des annonces...</p>
+          <div className="bg-[var(--card)] rounded-xl border border-[var(--card-border)] p-6">
+            <LoadingState message="Chargement des annonces système..." />
           </div>
-        ) : announcements.length === 0 ? (
-          <div
-            className="flex flex-col items-center justify-center py-20 px-4 text-center border border-dashed rounded-2xl"
-            style={{ borderColor: 'var(--sidebar-border)' }}
-          >
-            <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4 bg-zinc-500/5 text-zinc-400">
-              <Megaphone size={32} />
-            </div>
-            <h3 className="text-lg font-bold mb-1" style={{ color: 'var(--foreground)' }}>
-              Aucune annonce enregistrée
-            </h3>
-            <p className="text-sm mb-6 max-w-sm" style={{ color: 'var(--sidebar-muted)' }}>
-              Créez une annonce pour informer les utilisateurs des nouveautés ou de maintenances planifiées.
-            </p>
-            <button
-              onClick={handleOpenCreateModal}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-colors cursor-pointer"
-              style={{ background: 'var(--sidebar-accent)', color: 'var(--foreground)' }}
-            >
-              <Plus size={16} />
-              Créer la première annonce
-            </button>
+        ) : filteredAnnouncements.length === 0 ? (
+          <div className="bg-[var(--card)] rounded-xl border border-[var(--card-border)] p-4">
+            <EmptyState
+              title="Aucune annonce trouvée"
+              description={
+                search || selectedType !== 'ALL' || statusFilter !== 'ALL'
+                  ? 'Aucune annonce ne correspond à vos filtres de recherche.'
+                  : 'Créez une annonce pour avertir les utilisateurs des nouveautés ou maintenances.'
+              }
+              action={{
+                label: 'Créer une annonce',
+                icon: <Plus size={14} />,
+                onClick: handleOpenCreateModal,
+              }}
+            />
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {announcements.map((ann) => {
-              const catConfig = ANNOUNCEMENT_TYPES.find((c) => c.id === ann.type) || ANNOUNCEMENT_TYPES[0];
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+            {filteredAnnouncements.map((ann) => {
+              const catConfig =
+                ANNOUNCEMENT_TYPES.find((c) => c.id === ann.type) || ANNOUNCEMENT_TYPES[0];
               const CatIcon = catConfig.icon;
+              const currentLang = cardLang[ann.id] || 'FR';
 
               return (
                 <div
                   key={ann.id}
-                  className="flex flex-col rounded-2xl border transition-all hover:shadow-sm p-5 gap-4"
-                  style={{
-                    borderColor: ann.isActive ? 'var(--accent)' : 'var(--sidebar-border)',
-                    background: 'var(--card-bg)',
-                    opacity: ann.isActive ? 1 : 0.75,
-                  }}
+                  className={`bg-[var(--card)] rounded-xl border transition-all flex flex-col justify-between overflow-hidden ${
+                    ann.isActive
+                      ? 'border-[var(--accent)] ring-1 ring-[var(--accent)]/30 shadow-xs'
+                      : 'border-[var(--card-border)] hover:border-[var(--card-border)]'
+                  }`}
                 >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center border shrink-0 ${catConfig.bg}`}>
-                      <CatIcon size={18} />
+                  {/* Bandeau d'en-tête de carte */}
+                  <div className="p-3.5 pb-2.5 flex items-start justify-between gap-2 border-b border-[var(--card-border)]">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span
+                        className={`text-[10.5px] font-medium px-2 py-0.5 rounded-md border flex items-center gap-1 ${catConfig.badgeCls}`}
+                      >
+                        <CatIcon size={11} />
+                        <span>{catConfig.label}</span>
+                      </span>
+
+                      <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[var(--input-bg)] border border-[var(--input-border)] text-[var(--text-subtle)]">
+                        v{ann.version}
+                      </span>
+
+                      {ann.isActive && (
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                          <span>Active</span>
+                        </span>
+                      )}
                     </div>
-                    <div className="flex items-center gap-1">
+
+                    <div className="flex items-center gap-1 shrink-0">
                       <button
-                        onClick={() => void handleToggleActive(ann)}
-                        className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
-                          ann.isActive
-                            ? 'text-emerald-500 hover:bg-emerald-500/10'
-                            : 'text-zinc-400 hover:bg-zinc-500/10'
-                        }`}
-                        title={ann.isActive ? 'Désactiver' : 'Activer'}
-                      >
-                        {ann.isActive ? <ToggleRight size={24} /> : <ToggleLeft size={24} />}
-                      </button>
-                      <button
+                        type="button"
                         onClick={() => handleEdit(ann)}
-                        className="p-1.5 rounded-lg text-zinc-400 hover:text-blue-500 hover:bg-blue-500/10 transition-colors cursor-pointer"
-                        title="Modifier"
+                        title="Modifier l'annonce"
+                        className="p-1 rounded-md border border-[var(--card-border)] bg-[var(--input-bg)] hover:bg-[var(--card-hover)] text-[var(--text-muted)] hover:text-[var(--foreground)] transition cursor-pointer"
                       >
-                        <Pencil size={18} />
+                        <Pencil size={12} />
                       </button>
                       <button
-                        onClick={() => void handleDelete(ann.id)}
-                        className="p-1.5 rounded-lg text-zinc-400 hover:text-red-500 hover:bg-red-500/10 transition-colors cursor-pointer"
-                        title="Supprimer"
+                        type="button"
+                        onClick={() => setDeletingItem(ann)}
+                        title="Supprimer l'annonce"
+                        className="p-1 rounded-md border border-red-200 dark:border-red-900/40 bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/50 transition cursor-pointer"
                       >
-                        <Trash2 size={18} />
+                        <Trash2 size={12} />
                       </button>
                     </div>
                   </div>
 
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      {ann.isActive && (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                          <CheckCircle size={10} /> Active
-                        </span>
-                      )}
-                      <span className="text-[10px] font-mono text-[var(--sidebar-muted)] px-1.5 py-0.5 rounded bg-[var(--sidebar-bg)]">
-                        v{ann.version}
+                  {/* Corps de la carte */}
+                  <div className="p-3.5 space-y-2 flex-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[10px] font-mono uppercase tracking-wider text-[var(--text-subtle)]">
+                        {currentLang === 'FR' ? 'Version Française' : 'Dikan-teny Malagasy'}
                       </span>
+                      <button
+                        type="button"
+                        onClick={() => toggleCardLang(ann.id)}
+                        className="text-[10.5px] font-mono px-1.5 py-0.5 rounded border border-[var(--card-border)] bg-[var(--input-bg)] hover:bg-[var(--card-hover)] text-[var(--text-muted)] hover:text-[var(--foreground)] transition flex items-center gap-1 cursor-pointer"
+                        title="Basculer l'aperçu entre Français et Malagasy"
+                      >
+                        <Languages size={10} />
+                        <span>{currentLang === 'FR' ? 'Afficher MG' : 'Afficher FR'}</span>
+                      </button>
                     </div>
-                    <h3 className="font-bold text-base line-clamp-1" style={{ color: 'var(--foreground)' }}>
-                      {ann.titleFr}
-                    </h3>
-                    <p className="text-xs font-medium mt-0.5 line-clamp-1" style={{ color: 'var(--accent)' }}>
-                      {ann.titleMg}
+
+                    <div>
+                      <h3 className="text-xs font-semibold text-[var(--foreground)] leading-snug">
+                        {currentLang === 'FR' ? ann.titleFr : ann.titleMg}
+                      </h3>
+                      {currentLang === 'FR' ? (
+                        <p className="text-[11px] text-[var(--accent)] font-medium mt-0.5 line-clamp-1">
+                          {ann.titleMg}
+                        </p>
+                      ) : (
+                        <p className="text-[11px] text-[var(--text-muted)] italic mt-0.5 line-clamp-1">
+                          {ann.titleFr}
+                        </p>
+                      )}
+                    </div>
+
+                    <p className="text-xs text-[var(--text-muted)] line-clamp-3 leading-relaxed">
+                      {currentLang === 'FR' ? ann.messageFr : ann.messageMg}
                     </p>
                   </div>
 
-                  <div className="flex-1 text-sm line-clamp-3" style={{ color: 'var(--sidebar-muted)' }}>
-                    <p>{ann.messageFr}</p>
-                  </div>
+                  {/* Pied de carte avec interrupteur rapide et date */}
+                  <div className="px-3.5 py-2.5 bg-[var(--input-bg)]/40 border-t border-[var(--card-border)] flex items-center justify-between gap-2">
+                    <button
+                      type="button"
+                      onClick={() => void handleToggleActive(ann)}
+                      className={`text-xs font-medium px-2 py-1 rounded-md border flex items-center gap-1.5 transition cursor-pointer ${
+                        ann.isActive
+                          ? 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 border-emerald-300 dark:border-emerald-800'
+                          : 'bg-[var(--card)] text-[var(--text-muted)] border-[var(--card-border)] hover:text-[var(--foreground)]'
+                      }`}
+                    >
+                      <CheckCircle2 size={12} className={ann.isActive ? 'text-emerald-500' : 'text-zinc-400'} />
+                      <span>{ann.isActive ? 'Diffusée in-app' : 'Activer'}</span>
+                    </button>
 
-                  <div className="flex items-center justify-between mt-2 pt-3 border-t text-[11px]" style={{ borderColor: 'var(--sidebar-border)' }}>
-                    <span className="font-medium" style={{ color: 'var(--sidebar-muted)' }}>
-                      {catConfig.label.split('/')[0].trim()}
-                    </span>
-                    <span className="font-mono text-[10px]" style={{ color: 'var(--sidebar-muted)' }}>
-                      {new Date(ann.updatedAt || ann.createdAt).toLocaleDateString('fr-FR', {
-                        day: '2-digit',
-                        month: 'short',
-                        year: 'numeric',
-                      })}
+                    <span className="text-[10px] font-mono text-[var(--text-subtle)] flex items-center gap-1">
+                      <Calendar size={10} />
+                      <span>
+                        {new Date(ann.updatedAt || ann.createdAt).toLocaleDateString('fr-FR', {
+                          day: '2-digit',
+                          month: 'short',
+                          year: 'numeric',
+                        })}
+                      </span>
                     </span>
                   </div>
                 </div>
@@ -358,236 +522,187 @@ export default function AnnouncementsAdminPage() {
             })}
           </div>
         )}
-      </div>
 
-      {/* MODAL CRÉATION / ÉDITION INTÉGRÉ AVEC FORMULAIRE NATIF */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 overflow-y-auto flex items-start justify-center p-4 pt-6 sm:pt-10 md:pt-12">
-          <div
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm"
-            onClick={() => !isSubmitting && setIsModalOpen(false)}
-          />
-          <div
-            className="relative w-full max-w-2xl rounded-2xl flex flex-col shadow-2xl max-h-[calc(100vh-3rem)] sm:max-h-[calc(100vh-5.5rem)] animate-in fade-in slide-in-from-top-3 duration-150 overflow-hidden"
-            style={{ background: 'var(--background)', border: '1px solid var(--sidebar-border)' }}
-          >
-            <form onSubmit={handleSubmit} className="flex flex-col h-full max-h-[inherit]">
-              {/* Header Modal */}
-              <div className="flex items-center justify-between p-5 border-b shrink-0" style={{ borderColor: 'var(--sidebar-border)' }}>
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-orange-500/10 text-orange-500 flex items-center justify-center">
-                    <Megaphone size={18} />
-                  </div>
-                  <div>
-                    <h2 className="font-bold text-lg" style={{ color: 'var(--foreground)' }}>
-                      {editingId ? "Modifier l'annonce" : 'Créer une annonce'}
-                    </h2>
-                    <p className="text-xs" style={{ color: 'var(--sidebar-muted)' }}>
-                      Configurez le message diffusé aux utilisateurs au démarrage de l&apos;application
-                    </p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => !isSubmitting && setIsModalOpen(false)}
-                  className="p-2 rounded-xl transition-colors hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer"
-                  style={{ color: 'var(--sidebar-muted)' }}
-                  disabled={isSubmitting}
-                >
-                  <X size={20} />
-                </button>
-              </div>
-
-              {/* Corps du Formulaire */}
-              <div className="p-5 overflow-y-auto flex-1 space-y-5">
-                {modalError && (
-                  <div className="flex items-center gap-2 p-3.5 rounded-xl border border-red-500/20 bg-red-500/10 text-red-600 dark:text-red-400 text-xs font-medium">
-                    <AlertCircle size={16} className="shrink-0" />
-                    <span>{modalError}</span>
-                  </div>
-                )}
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--sidebar-muted)' }}>
-                      Type d&apos;annonce
-                    </label>
-                    <select
-                      value={type}
-                      onChange={(e) => setType(e.target.value as 'INFO' | 'MAINTENANCE' | 'NEW_FEATURE')}
-                      className="w-full px-4 py-2.5 rounded-xl text-sm font-medium border focus:outline-none focus:ring-2 focus:ring-offset-1 transition-all"
-                      style={{
-                        background: 'var(--card-bg)',
-                        borderColor: 'var(--sidebar-border)',
-                        color: 'var(--foreground)',
-                      }}
-                      required
-                    >
-                      {ANNOUNCEMENT_TYPES.map((t) => (
-                        <option key={t.id} value={t.id}>
-                          {t.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--sidebar-muted)' }}>
-                      Numéro de version
-                    </label>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="number"
-                        min="1"
-                        value={version}
-                        onChange={(e) => setVersion(Math.max(1, parseInt(e.target.value, 10) || 1))}
-                        className="w-full px-4 py-2.5 rounded-xl text-sm font-medium border focus:outline-none focus:ring-2 focus:ring-offset-1 transition-all"
-                        style={{
-                          background: 'var(--card-bg)',
-                          borderColor: 'var(--sidebar-border)',
-                          color: 'var(--foreground)',
-                        }}
-                        required
-                      />
-                    </div>
-                    <span className="text-[10px]" style={{ color: 'var(--sidebar-muted)' }}>
-                      Augmenter la version pour réafficher la modale aux utilisateurs l&apos;ayant déjà fermée.
-                    </span>
-                  </div>
-                </div>
-
-                {/* Section Français */}
-                <div className="space-y-4 pt-2 border-t" style={{ borderColor: 'var(--sidebar-border)' }}>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--sidebar-muted)' }}>
-                      Titre (Français) <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={titleFr}
-                      onChange={(e) => setTitleFr(e.target.value)}
-                      placeholder="Ex: Mise à jour majeure disponible"
-                      className="w-full px-4 py-2.5 rounded-xl text-sm font-medium border focus:outline-none focus:ring-2 focus:ring-offset-1 transition-all"
-                      style={{
-                        background: 'var(--card-bg)',
-                        borderColor: 'var(--sidebar-border)',
-                        color: 'var(--foreground)',
-                      }}
-                      required
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--sidebar-muted)' }}>
-                      Message (Français) <span className="text-red-500">*</span>
-                    </label>
-                    <textarea
-                      value={messageFr}
-                      onChange={(e) => setMessageFr(e.target.value)}
-                      placeholder="Ex: Découvrez les nouveaux contes et légendes de Madagascar..."
-                      rows={3}
-                      className="w-full px-4 py-3 rounded-xl text-sm border focus:outline-none focus:ring-2 focus:ring-offset-1 transition-all resize-none"
-                      style={{
-                        background: 'var(--card-bg)',
-                        borderColor: 'var(--sidebar-border)',
-                        color: 'var(--foreground)',
-                      }}
-                      required
-                    />
-                  </div>
-                </div>
-
-                {/* Section Malgache */}
-                <div className="space-y-4 pt-3 border-t" style={{ borderColor: 'var(--sidebar-border)' }}>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--sidebar-muted)' }}>
-                      Titre (Malgache) <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={titleMg}
-                      onChange={(e) => setTitleMg(e.target.value)}
-                      placeholder="Ex: Fanavaozana vaovao misy"
-                      className="w-full px-4 py-2.5 rounded-xl text-sm font-medium border focus:outline-none focus:ring-2 focus:ring-offset-1 transition-all"
-                      style={{
-                        background: 'var(--card-bg)',
-                        borderColor: 'var(--sidebar-border)',
-                        color: 'var(--accent)',
-                      }}
-                      required
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--sidebar-muted)' }}>
-                      Message (Malgache) <span className="text-red-500">*</span>
-                    </label>
-                    <textarea
-                      value={messageMg}
-                      onChange={(e) => setMessageMg(e.target.value)}
-                      placeholder="Ex: Fantaro ireo angano sy tantara vaovao malagasy..."
-                      rows={3}
-                      className="w-full px-4 py-3 rounded-xl text-sm border focus:outline-none focus:ring-2 focus:ring-offset-1 transition-all resize-none"
-                      style={{
-                        background: 'var(--card-bg)',
-                        borderColor: 'var(--sidebar-border)',
-                        color: 'var(--accent)',
-                      }}
-                      required
-                    />
-                  </div>
-                </div>
-
-                {/* Statut d'activation */}
-                <div className="flex items-center gap-3 p-4 rounded-xl border" style={{ background: 'var(--sidebar-bg)', borderColor: 'var(--sidebar-border)' }}>
-                  <button
-                    type="button"
-                    onClick={() => setIsActive(!isActive)}
-                    className={`p-1 rounded-full transition-colors cursor-pointer ${
-                      isActive ? 'text-emerald-500' : 'text-zinc-400'
-                    }`}
-                  >
-                    {isActive ? <ToggleRight size={32} /> : <ToggleLeft size={32} />}
-                  </button>
-                  <div>
-                    <div className="text-sm font-bold" style={{ color: 'var(--foreground)' }}>
-                      Annonce Active
-                    </div>
-                    <div className="text-xs" style={{ color: 'var(--sidebar-muted)' }}>
-                      Si cochée, cette annonce deviendra l&apos;unique annonce active affichée sur l&apos;application.
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Footer Modal avec Boutons natifs */}
-              <div
-                className="p-5 border-t flex items-center justify-end gap-3 shrink-0"
-                style={{ borderColor: 'var(--sidebar-border)', background: 'var(--card-bg)' }}
+        {/* Modal Création / Édition Standardisée */}
+        <Modal
+          isOpen={isModalOpen}
+          onClose={() => !isSubmitting && setIsModalOpen(false)}
+          title={editingId ? "Modifier l'annonce système" : 'Créer une annonce système'}
+          subtitle="Configurez le message diffusé aux utilisateurs au démarrage de l'application."
+          maxWidth="xl"
+          footer={
+            <div className="flex items-center justify-end gap-2 w-full">
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(false)}
+                disabled={isSubmitting}
+                className="px-3 py-1.5 rounded-md border border-[var(--card-border)] bg-[var(--card)] text-[var(--text-muted)] hover:bg-[var(--card-hover)] text-xs transition cursor-pointer"
               >
-                <button
-                  type="button"
-                  onClick={() => !isSubmitting && setIsModalOpen(false)}
-                  className="px-5 py-2.5 rounded-xl text-sm font-semibold transition-colors cursor-pointer"
-                  style={{ color: 'var(--foreground)', background: 'var(--sidebar-bg)' }}
-                  disabled={isSubmitting}
-                >
-                  Annuler
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold text-white transition-all shadow-sm hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                  style={{ background: 'var(--accent)' }}
-                >
-                  {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
-                  {editingId ? 'Enregistrer les modifications' : "Créer l'annonce"}
-                </button>
+                Annuler
+              </button>
+              <button
+                type="button"
+                onClick={(e) => void handleSubmit(e)}
+                disabled={isSubmitting}
+                className="px-3.5 py-1.5 rounded-md bg-[var(--foreground)] text-[var(--background)] text-xs font-medium hover:opacity-90 transition disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 size={13} className="animate-spin" />
+                    <span>Enregistrement...</span>
+                  </>
+                ) : (
+                  <span>{editingId ? 'Enregistrer les modifications' : "Publier l'annonce"}</span>
+                )}
+              </button>
+            </div>
+          }
+        >
+          <form onSubmit={handleSubmit} className="space-y-3.5">
+            {modalError && (
+              <div className="flex items-center gap-2 p-2.5 rounded-lg border border-red-500/20 bg-red-500/10 text-red-600 dark:text-red-400 text-xs font-medium">
+                <AlertCircle size={14} className="shrink-0" />
+                <span>{modalError}</span>
               </div>
-            </form>
-          </div>
-        </div>
-      )}
+            )}
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-[var(--text-muted)] mb-1">
+                  Type d&apos;annonce *
+                </label>
+                <select
+                  value={type}
+                  onChange={(e) =>
+                    setType(e.target.value as 'INFO' | 'MAINTENANCE' | 'NEW_FEATURE')
+                  }
+                  className={inputCls}
+                  required
+                >
+                  {ANNOUNCEMENT_TYPES.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.label} ({t.labelMg})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-[var(--text-muted)] mb-1">
+                  Numéro de version *
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  value={version}
+                  onChange={(e) => setVersion(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                  className={inputCls}
+                  required
+                />
+                <span className="text-[10px] text-[var(--text-subtle)] mt-0.5 block">
+                  Augmenter pour réafficher à ceux l&apos;ayant déjà fermée.
+                </span>
+              </div>
+            </div>
+
+            {/* Statut actif */}
+            <div className="p-3 rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] flex items-center justify-between gap-3">
+              <div>
+                <div className="text-xs font-medium text-[var(--foreground)]">
+                  Annonce active sur l&apos;application
+                </div>
+                <div className="text-[11px] text-[var(--text-muted)]">
+                  Si activée, elle remplacera toute autre annonce active dans l&apos;application mobile.
+                </div>
+              </div>
+              <input
+                type="checkbox"
+                checked={isActive}
+                onChange={(e) => setIsActive(e.target.checked)}
+                className="rounded border-[var(--input-border)] text-emerald-600 focus:ring-emerald-500 w-4 h-4 cursor-pointer"
+              />
+            </div>
+
+            {/* Bloc Français */}
+            <div className="p-3 rounded-lg border border-[var(--card-border)] bg-[var(--card)] space-y-2.5">
+              <div className="text-[10px] font-mono uppercase tracking-wider text-[var(--text-subtle)] font-medium">
+                Contenu en Français
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-[var(--text-muted)] mb-1">
+                  Titre (Français) *
+                </label>
+                <input
+                  type="text"
+                  value={titleFr}
+                  onChange={(e) => setTitleFr(e.target.value)}
+                  placeholder="Ex: Mise à jour majeure disponible"
+                  className={inputCls}
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-[var(--text-muted)] mb-1">
+                  Message (Français) *
+                </label>
+                <textarea
+                  rows={2}
+                  value={messageFr}
+                  onChange={(e) => setMessageFr(e.target.value)}
+                  placeholder="Ex: Découvrez les nouveaux contes et proverbes de Madagascar..."
+                  className={inputCls}
+                  required
+                />
+              </div>
+            </div>
+
+            {/* Bloc Malgache */}
+            <div className="p-3 rounded-lg border border-[var(--card-border)] bg-[var(--card)] space-y-2.5">
+              <div className="text-[10px] font-mono uppercase tracking-wider text-[var(--text-subtle)] font-medium">
+                Contenu en Malagasy
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-[var(--text-muted)] mb-1">
+                  Titre (Malgache) *
+                </label>
+                <input
+                  type="text"
+                  value={titleMg}
+                  onChange={(e) => setTitleMg(e.target.value)}
+                  placeholder="Ex: Fanavaozana vaovao misy"
+                  className={inputCls}
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-[var(--text-muted)] mb-1">
+                  Message (Malgache) *
+                </label>
+                <textarea
+                  rows={2}
+                  value={messageMg}
+                  onChange={(e) => setMessageMg(e.target.value)}
+                  placeholder="Ex: Fantaro ireo angano sy ohabolana vaovao malagasy..."
+                  className={inputCls}
+                  required
+                />
+              </div>
+            </div>
+          </form>
+        </Modal>
+
+        {/* Modal Confirmation de Suppression Standardisée */}
+        <ConfirmModal
+          isOpen={!!deletingItem}
+          onClose={() => setDeletingItem(null)}
+          onConfirm={executeDelete}
+          title="Supprimer l'annonce système"
+          description={`Êtes-vous sûr de vouloir supprimer définitivement l'annonce « ${deletingItem?.titleFr} » ? Cette action est irréversible.`}
+          confirmText="Supprimer"
+          isLoading={isDeleting}
+          variant="danger"
+        />
+      </div>
     </AdminShell>
   );
 }

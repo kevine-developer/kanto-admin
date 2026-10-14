@@ -14,6 +14,8 @@ import type {
 import type { GenericHistoryFormData } from '../types/forms';
 import type { TabKey } from '../types/tabs';
 
+import { slugify } from '@/lib/utils/media';
+
 /** Convertit un texte multiligne en tableau de strings non vides */
 const parseLines = (text?: string): string[] =>
   (text ?? '').split('\n').map((l) => l.trim()).filter(Boolean);
@@ -119,9 +121,42 @@ export function useHistoireCrud({
       const id = editingItemId ?? '';
       const payload = normalizePayload(formValues);
 
-      if (!id && !isEditMode && activeTab !== 'emblems') {
-        toast.error('Veuillez renseigner un identifiant unique (slug) pour cet élément.');
-        return;
+      // En création, auto-générer l'identifiant (slug) s'il n'est pas renseigné manuellement
+      if (!isEditMode && activeTab !== 'emblems') {
+        const currentSlug = (payload.id ?? '').trim();
+        if (!currentSlug) {
+          switch (activeTab) {
+            case 'presidents':
+              payload.id = slugify(payload.name || '') || `president-${Date.now().toString(36)}`;
+              break;
+            case 'provinces':
+              payload.id = `province-${slugify(payload.province || payload.chefLieu || '') || Date.now().toString(36)}`;
+              break;
+            case 'banknotes': {
+              const ar = Number(payload.valueAriary) || 0;
+              const fmg = Number(payload.valueFmg) || 0;
+              payload.id =
+                ar > 0
+                  ? `billet-${ar}`
+                  : fmg > 0
+                    ? `billet-${fmg}f`
+                    : `billet-${slugify(payload.titleFr || '') || Date.now().toString(36)}`;
+              break;
+            }
+            case 'nature':
+              payload.id = slugify(payload.nameFr || '') || `nature-${Date.now().toString(36)}`;
+              break;
+            case 'dates':
+              payload.id = slugify(`${payload.year || ''}-${payload.titleFr || ''}`) || `date-${Date.now().toString(36)}`;
+              break;
+            case 'lessons':
+              payload.id = slugify(payload.titleFr || '') || `lesson-${Date.now().toString(36)}`;
+              break;
+            default:
+              payload.id = `${activeTab}-${Date.now().toString(36)}`;
+              break;
+          }
+        }
       }
 
       if (isEditMode) delete payload.id;

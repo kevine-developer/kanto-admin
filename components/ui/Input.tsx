@@ -21,11 +21,11 @@ export function Input({
   const inputId = id || (label ? label.toLowerCase().replace(/\s+/g, '-') : undefined);
 
   return (
-    <div className="space-y-1.5 w-full">
+    <div className="space-y-1 w-full">
       {label && (
         <label
           htmlFor={inputId}
-          className="block text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]"
+          className="block text-[11px] font-medium uppercase tracking-wider text-[var(--text-subtle)]"
         >
           {label}
         </label>
@@ -33,23 +33,23 @@ export function Input({
 
       <div className="relative">
         {leftIcon && (
-          <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-subtle)] pointer-events-none">
+          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-subtle)] pointer-events-none">
             {leftIcon}
           </div>
         )}
         <input
           id={inputId}
-          className={`w-full py-3 px-4 rounded-xl kanto-input text-base placeholder-[var(--text-subtle)] ${
-            leftIcon ? 'pl-12' : ''
+          className={`w-full py-2 px-3 rounded-lg kanto-input text-xs placeholder-[var(--text-subtle)] ${
+            leftIcon ? 'pl-9' : ''
           } ${error ? 'border-red-500 focus:border-red-500' : ''} ${className}`}
           {...props}
         />
       </div>
 
       {error ? (
-        <div className="text-xs font-semibold text-red-600 dark:text-red-400">{error}</div>
+        <div className="text-[11px] font-semibold text-red-600 dark:text-red-400">{error}</div>
       ) : helperText ? (
-        <div className="text-xs text-[var(--text-subtle)]">{helperText}</div>
+        <div className="text-[10px] text-[var(--text-subtle)]">{helperText}</div>
       ) : null}
     </div>
   );
@@ -73,11 +73,11 @@ export function Textarea({
   const inputId = id || (label ? label.toLowerCase().replace(/\s+/g, '-') : undefined);
 
   return (
-    <div className="space-y-1.5 w-full">
+    <div className="space-y-1 w-full">
       {label && (
         <label
           htmlFor={inputId}
-          className="block text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]"
+          className="block text-[11px] font-medium uppercase tracking-wider text-[var(--text-subtle)]"
         >
           {label}
         </label>
@@ -86,16 +86,16 @@ export function Textarea({
       <textarea
         id={inputId}
         rows={rows}
-        className={`w-full p-4 rounded-xl kanto-input text-base placeholder-[var(--text-subtle)] leading-relaxed ${
+        className={`w-full p-2.5 rounded-lg kanto-input text-xs placeholder-[var(--text-subtle)] leading-relaxed ${
           error ? 'border-red-500 focus:border-red-500' : ''
         } ${className}`}
         {...props}
       />
 
       {error ? (
-        <div className="text-xs font-semibold text-red-600 dark:text-red-400">{error}</div>
+        <div className="text-[11px] font-semibold text-red-600 dark:text-red-400">{error}</div>
       ) : helperText ? (
-        <div className="text-xs text-[var(--text-subtle)]">{helperText}</div>
+        <div className="text-[10px] text-[var(--text-subtle)]">{helperText}</div>
       ) : null}
     </div>
   );
@@ -121,11 +121,11 @@ export function Select({
   const inputId = id || (label ? label.toLowerCase().replace(/\s+/g, '-') : undefined);
 
   return (
-    <div className="space-y-1.5 w-full">
+    <div className="space-y-1 w-full">
       {label && (
         <label
           htmlFor={inputId}
-          className="block text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]"
+          className="block text-[11px] font-medium uppercase tracking-wider text-[var(--text-subtle)]"
         >
           {label}
         </label>
@@ -133,7 +133,7 @@ export function Select({
 
       <select
         id={inputId}
-        className={`w-full p-3.5 rounded-xl kanto-input text-base font-medium text-[var(--foreground)] ${
+        className={`w-full py-2 px-2.5 rounded-lg kanto-input text-xs font-medium text-[var(--foreground)] ${
           error ? 'border-red-500 focus:border-red-500' : ''
         } ${className}`}
         {...props}
@@ -148,9 +148,9 @@ export function Select({
       </select>
 
       {error ? (
-        <div className="text-xs font-semibold text-red-600 dark:text-red-400">{error}</div>
+        <div className="text-[11px] font-semibold text-red-600 dark:text-red-400">{error}</div>
       ) : helperText ? (
-        <div className="text-xs text-[var(--text-subtle)]">{helperText}</div>
+        <div className="text-[10px] text-[var(--text-subtle)]">{helperText}</div>
       ) : null}
     </div>
   );

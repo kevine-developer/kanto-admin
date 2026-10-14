@@ -27,8 +27,6 @@ import {
   LogOut,
   Trash2,
   Loader2,
-  Type,
-  Info,
   Mail,
   Send,
   KeyRound,
@@ -36,8 +34,6 @@ import {
   EyeOff,
   Lock,
   Check,
-  ChevronDown,
-  ChevronUp,
   X,
   Smartphone,
 } from 'lucide-react';
@@ -88,16 +84,22 @@ const EMAIL_TEMPLATES = [
   },
 ];
 
+type SettingsTab = 'general' | 'security' | 'system';
+
 /**
  * Page de configuration générale et paramètres de l'administration Kanto.
- * Gère le thème, le zoom d'affichage, les préférences de sidebar et le diagnostic d'API.
+ * Interface restructurée en onglets épurés : Général, Sécurité & Système.
  */
 export default function SettingsPage() {
-  const { theme, resolvedTheme, setTheme, zoomLevel, setZoomLevel, resetZoom } = useTheme();
+  const router = useRouter();
+  const { theme, setTheme, zoomLevel, setZoomLevel, resetZoom } = useTheme();
   const { data: session } = useSession();
   const { toast } = useToast();
 
   const user = session?.user as AuthUser | undefined;
+
+  // Onglet actif
+  const [activeTab, setActiveTab] = useState<SettingsTab>('general');
 
   // État de test API
   const [isPingingApi, setIsPingingApi] = useState(false);
@@ -122,6 +124,72 @@ export default function SettingsPage() {
     template: string;
   } | null>(null);
 
+  // État de modification du mot de passe
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmNewPassword, setShowConfirmNewPassword] = useState(false);
+  const [revokeOtherSessions, setRevokeOtherSessions] = useState(true);
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+
+  // État de la sidebar mémorisée
+  const [defaultCollapsed, setDefaultCollapsed] = useState<boolean>(true);
+
+  useEffect(() => {
+    const saved = localStorage.getItem('kanto-sidebar-collapsed');
+    if (saved !== null) {
+      setDefaultCollapsed(saved === 'true');
+    }
+  }, []);
+
+  const handleToggleDefaultSidebar = () => {
+    const next = !defaultCollapsed;
+    setDefaultCollapsed(next);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('kanto-sidebar-collapsed', String(next));
+      toast.success('Préférence de la barre latérale enregistrée');
+    }
+  };
+
+  const handleClearCache = () => {
+    if (typeof window !== 'undefined') {
+      try {
+        sessionStorage.clear();
+        toast.success('Cache de session purgé avec succès');
+      } catch {
+        toast.error('Erreur lors de la purge du cache');
+      }
+    }
+  };
+
+  const testApiConnection = async () => {
+    setIsPingingApi(true);
+    const start = performance.now();
+    try {
+      await fetchApi('/contes?limit=1');
+      const latency = Math.round(performance.now() - start);
+      setApiStatus({
+        tested: true,
+        success: true,
+        latencyMs: latency,
+        message: `Opérationnelle (${latency}ms)`,
+      });
+      toast.success(`Connexion API réussie (${latency}ms)`);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Impossible de joindre le backend';
+      setApiStatus({
+        tested: true,
+        success: false,
+        message: msg,
+      });
+      toast.error(`Échec connexion API : ${msg}`);
+    } finally {
+      setIsPingingApi(false);
+    }
+  };
+
   const handleSendTestEmail = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     const email = testEmailAddress.trim() || user?.email || '';
@@ -132,7 +200,7 @@ export default function SettingsPage() {
     try {
       setIsSendingTestEmail(true);
       const res = await systemService.sendTestEmail(email, selectedTemplate);
-      toast.success(res.message || `Email envoyé avec succès à ${email} !`);
+      toast.success(res.message || `Email envoyé à ${email} !`);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Échec d'envoi de l'email";
       toast.error(msg);
@@ -149,23 +217,12 @@ export default function SettingsPage() {
       setPreviewData(data);
       setIsPreviewModalOpen(true);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Échec de chargement de la prévisualisation';
+      const msg = err instanceof Error ? err.message : 'Échec de prévisualisation';
       toast.error(msg);
     } finally {
       setIsPreviewLoading(false);
     }
   };
-
-  // État de changement de mot de passe administrateur
-  const [isPasswordFormOpen, setIsPasswordFormOpen] = useState(false);
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmNewPassword, setConfirmNewPassword] = useState('');
-  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [showConfirmNewPassword, setShowConfirmNewPassword] = useState(false);
-  const [revokeOtherSessions, setRevokeOtherSessions] = useState(true);
-  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
 
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -195,11 +252,10 @@ export default function SettingsPage() {
         return;
       }
 
-      toast.success('Votre mot de passe a été mis à jour avec succès !');
+      toast.success('Mot de passe mis à jour avec succès');
       setCurrentPassword('');
       setNewPassword('');
       setConfirmNewPassword('');
-      setIsPasswordFormOpen(false);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Une erreur imprévue est survenue';
       toast.error(msg);
@@ -207,66 +263,6 @@ export default function SettingsPage() {
       setIsUpdatingPassword(false);
     }
   };
-
-  // État de la sidebar mémorisée
-  const [defaultCollapsed, setDefaultCollapsed] = useState<boolean>(true);
-
-  useEffect(() => {
-    const saved = localStorage.getItem('kanto-sidebar-collapsed');
-    if (saved !== null) {
-      setDefaultCollapsed(saved === 'true');
-    }
-  }, []);
-
-  const handleToggleDefaultSidebar = () => {
-    const next = !defaultCollapsed;
-    setDefaultCollapsed(next);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('kanto-sidebar-collapsed', String(next));
-      toast.success('Préférence de la barre latérale mise à jour');
-    }
-  };
-
-  const handleClearCache = () => {
-    if (typeof window !== 'undefined') {
-      try {
-        sessionStorage.clear();
-        toast.success('Cache de session et données temporaires purgés avec succès');
-      } catch {
-        toast.error('Erreur lors de la purge du cache');
-      }
-    }
-  };
-
-  const testApiConnection = async () => {
-    setIsPingingApi(true);
-    const start = performance.now();
-    try {
-      // Test de connectivité vers l'API
-      await fetchApi('/contes?limit=1');
-      const end = performance.now();
-      const latency = Math.round(end - start);
-      setApiStatus({
-        tested: true,
-        success: true,
-        latencyMs: latency,
-        message: `API opérationnelle (${latency}ms)`,
-      });
-      toast.success(`Connexion API réussie (${latency}ms)`);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Impossible de joindre le backend';
-      setApiStatus({
-        tested: true,
-        success: false,
-        message: msg,
-      });
-      toast.error(`Échec de connexion API : ${msg}`);
-    } finally {
-      setIsPingingApi(false);
-    }
-  };
-
-  const router = useRouter();
 
   const handleLogout = async () => {
     try {
@@ -277,283 +273,291 @@ export default function SettingsPage() {
     }
   };
 
+  const TABS = [
+    { id: 'general' as const, label: 'Général & Affichage', icon: Sliders },
+    { id: 'security' as const, label: 'Compte & Sécurité', icon: ShieldCheck },
+    { id: 'system' as const, label: 'Système & Services', icon: Server },
+  ];
+
   return (
     <AdminShell>
-      <div className="space-y-6 max-w-5xl mx-auto pb-12">
+      <div className="space-y-6 max-w-4xl mx-auto pb-12">
         {/* En-tête de la page */}
         <PageHeader
           title="Paramètres & Configuration"
-          description="Personnalisation de l'affichage, ergonomie visuelle, état des services et gestion de votre session."
+          description="Personnalisation de l'affichage, sécurité de session et supervision des services."
           icon={Sliders}
           actions={
-            <div className="flex items-center gap-2">
-              <button
-                onClick={testApiConnection}
-                disabled={isPingingApi}
-                className="px-3 py-1.5 rounded-lg border border-[var(--card-border)] bg-[var(--card)] hover:bg-[var(--card-hover)] text-xs font-semibold text-[var(--foreground)] transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-60 shadow-xs"
-                title="Vérifier la communication avec le backend NestJS"
-              >
-                {isPingingApi ? (
-                  <Loader2 size={13} className="animate-spin text-[var(--accent)]" />
-                ) : (
-                  <Activity size={13} className="text-[var(--accent)]" />
-                )}
-                <span>Diagnostiquer l&apos;API</span>
-              </button>
-            </div>
+            <button
+              onClick={testApiConnection}
+              disabled={isPingingApi}
+              className="px-3 py-1.5 rounded-lg border border-[var(--card-border)] bg-[var(--card)] hover:bg-[var(--card-hover)] text-xs font-semibold text-[var(--foreground)] transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-60 shadow-xs"
+              title="Vérifier la connectivité avec le backend NestJS"
+            >
+              {isPingingApi ? (
+                <Loader2 size={13} className="animate-spin text-[var(--accent)]" />
+              ) : (
+                <Activity size={13} className="text-[var(--accent)]" />
+              )}
+              <span>Diagnostiquer l&apos;API</span>
+            </button>
           }
         />
 
-        {/* ── 1. APPARENCE & THÈME VISUEL ─────────────────────────── */}
-        <section className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)] flex items-center gap-1.5">
-              <Sun size={14} className="text-[var(--accent)]" />
-              <span>Apparence &amp; Thème Visuel</span>
-            </h2>
-            <span className="text-[11px] font-mono text-[var(--text-subtle)]">
-              Actif : {resolvedTheme === 'dark' ? 'Mode Sombre' : 'Mode Clair'}
-            </span>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {/* Carte Clair */}
-            <button
-              onClick={() => setTheme('light')}
-              className={`p-4 rounded-xl border text-left transition-all cursor-pointer flex flex-col gap-3 relative overflow-hidden ${
-                theme === 'light'
-                  ? 'border-[var(--accent)] bg-[var(--card)] shadow-sm ring-2 ring-[var(--accent)]/20'
-                  : 'border-[var(--card-border)] bg-[var(--card)] hover:border-[var(--text-subtle)] hover:bg-[var(--card-hover)]'
-              }`}
-            >
-              <div className="flex items-center justify-between w-full">
-                <div className="w-8 h-8 rounded-lg bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600">
-                  <Sun size={16} />
-                </div>
-                {theme === 'light' && (
-                  <span className="w-2 h-2 rounded-full bg-[var(--accent)]" />
-                )}
-              </div>
-              <div>
-                <div className="text-xs font-bold text-[var(--foreground)]">Thème Clair</div>
-                <div className="text-[11px] text-[var(--text-muted)] mt-0.5">
-                  Idéal en journée et pour une lecture nette à fort contraste.
-                </div>
-              </div>
-            </button>
-
-            {/* Carte Sombre */}
-            <button
-              onClick={() => setTheme('dark')}
-              className={`p-4 rounded-xl border text-left transition-all cursor-pointer flex flex-col gap-3 relative overflow-hidden ${
-                theme === 'dark'
-                  ? 'border-[var(--accent)] bg-[var(--card)] shadow-sm ring-2 ring-[var(--accent)]/20'
-                  : 'border-[var(--card-border)] bg-[var(--card)] hover:border-[var(--text-subtle)] hover:bg-[var(--card-hover)]'
-              }`}
-            >
-              <div className="flex items-center justify-between w-full">
-                <div className="w-8 h-8 rounded-lg bg-slate-900 border border-slate-700 flex items-center justify-center text-emerald-400">
-                  <Moon size={16} />
-                </div>
-                {theme === 'dark' && (
-                  <span className="w-2 h-2 rounded-full bg-[var(--accent)]" />
-                )}
-              </div>
-              <div>
-                <div className="text-xs font-bold text-[var(--foreground)]">Thème Sombre</div>
-                <div className="text-[11px] text-[var(--text-muted)] mt-0.5">
-                  Confort visuel nocturne, repos oculaire et économie d&apos;énergie.
-                </div>
-              </div>
-            </button>
-
-            {/* Carte Système */}
-            <button
-              onClick={() => setTheme('system')}
-              className={`p-4 rounded-xl border text-left transition-all cursor-pointer flex flex-col gap-3 relative overflow-hidden ${
-                theme === 'system'
-                  ? 'border-[var(--accent)] bg-[var(--card)] shadow-sm ring-2 ring-[var(--accent)]/20'
-                  : 'border-[var(--card-border)] bg-[var(--card)] hover:border-[var(--text-subtle)] hover:bg-[var(--card-hover)]'
-              }`}
-            >
-              <div className="flex items-center justify-between w-full">
-                <div className="w-8 h-8 rounded-lg bg-[var(--input-bg)] border border-[var(--card-border)] flex items-center justify-center text-[var(--text-muted)]">
-                  <Laptop size={16} />
-                </div>
-                {theme === 'system' && (
-                  <span className="w-2 h-2 rounded-full bg-[var(--accent)]" />
-                )}
-              </div>
-              <div>
-                <div className="text-xs font-bold text-[var(--foreground)]">Automatique (OS)</div>
-                <div className="text-[11px] text-[var(--text-muted)] mt-0.5">
-                  S&apos;adapte automatiquement aux réglages de votre système d&apos;exploitation.
-                </div>
-              </div>
-            </button>
-          </div>
-        </section>
-
-        {/* ── 2. ZOOM & ERGONOMIE TYPOGRAPHIQUE ─────────────────────── */}
-        <section className="p-5 rounded-2xl border border-[var(--card-border)] bg-[var(--card)] space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[var(--card-border)] pb-3">
-            <div>
-              <h2 className="text-sm font-bold text-[var(--foreground)] flex items-center gap-2">
-                <ZoomIn size={16} className="text-[var(--accent)]" />
-                <span>Échelle Typographique &amp; Facteur de Zoom</span>
-              </h2>
-              <p className="text-xs text-[var(--text-muted)] mt-0.5">
-                Ajustez la taille du texte et la densité des composants pour un confort de lecture personnalisé.
-              </p>
-            </div>
-            <div className="flex items-center gap-2 self-start sm:self-auto">
-              <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-md bg-[var(--accent-light)] text-[var(--accent-text)]">
-                {zoomLevel}%
-              </span>
+        {/* ── BARRE D'ONGLETS MINIMALISTE ────────────────────────────── */}
+        <div className="flex items-center gap-1 p-1 rounded-xl bg-[var(--input-bg)] border border-[var(--card-border)] w-fit">
+          {TABS.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
               <button
-                onClick={resetZoom}
-                title="Rétablir à 100%"
-                className="p-1.5 rounded-md border border-[var(--card-border)] hover:bg-[var(--card-hover)] text-[var(--text-muted)] hover:text-[var(--foreground)] transition cursor-pointer"
-              >
-                <RotateCcw size={13} />
-              </button>
-            </div>
-          </div>
-
-          {/* Contrôles Zoom Slider & Stepper */}
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setZoomLevel(zoomLevel - 5)}
-              disabled={zoomLevel <= 80}
-              className="p-2 rounded-lg border border-[var(--card-border)] bg-[var(--card)] hover:bg-[var(--card-hover)] text-[var(--foreground)] disabled:opacity-30 transition cursor-pointer"
-              title="Réduire"
-            >
-              <ZoomOut size={16} />
-            </button>
-
-            <div className="flex-1 flex items-center gap-3 px-3 py-2 rounded-xl bg-[var(--input-bg)] border border-[var(--card-border)]">
-              <input
-                type="range"
-                min="80"
-                max="135"
-                step="5"
-                value={zoomLevel}
-                onChange={(e) => setZoomLevel(parseInt(e.target.value, 10))}
-                className="w-full accent-[var(--accent)] cursor-pointer"
-              />
-            </div>
-
-            <button
-              onClick={() => setZoomLevel(zoomLevel + 5)}
-              disabled={zoomLevel >= 135}
-              className="p-2 rounded-lg border border-[var(--card-border)] bg-[var(--card)] hover:bg-[var(--card-hover)] text-[var(--foreground)] disabled:opacity-30 transition cursor-pointer"
-              title="Agrandir"
-            >
-              <ZoomIn size={16} />
-            </button>
-          </div>
-
-          {/* Raccourcis Presets rapides */}
-          <div className="flex flex-wrap gap-2 pt-1">
-            {[
-              { label: 'Compact (85%)', val: 85 },
-              { label: 'Standard (100%)', val: 100 },
-              { label: 'Confort (110%)', val: 110 },
-              { label: 'Grand (125%)', val: 125 },
-            ].map((p) => (
-              <button
-                key={p.val}
-                onClick={() => setZoomLevel(p.val)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition cursor-pointer ${
-                  zoomLevel === p.val
-                    ? 'border-[var(--accent)] bg-[var(--accent-light)] text-[var(--accent-text)] font-semibold'
-                    : 'border-[var(--card-border)] bg-[var(--card)] text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--card-hover)]'
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                  isActive
+                    ? 'bg-[var(--card)] text-[var(--foreground)] shadow-xs'
+                    : 'text-[var(--text-muted)] hover:text-[var(--foreground)]'
                 }`}
               >
-                {p.label}
+                <Icon size={14} className={isActive ? 'text-[var(--accent)]' : ''} />
+                <span>{tab.label}</span>
               </button>
-            ))}
-          </div>
+            );
+          })}
+        </div>
 
-          {/* Aperçu en direct */}
-          <div className="p-3.5 rounded-xl border border-[var(--card-border)] bg-[var(--input-bg)] space-y-1">
-            <div className="text-[10px] font-mono uppercase tracking-wider text-[var(--text-subtle)] flex items-center gap-1">
-              <Type size={11} className="text-[var(--accent)]" />
-              <span>Aperçu en direct du patrimoine typographique</span>
-            </div>
-            <div className="text-xs font-semibold text-[var(--foreground)]">
-              « Ny fahaizana toy ny ketsa : kolokoloy mba haniry »
-            </div>
-            <div className="text-[11px] text-[var(--text-muted)] italic">
-              Le savoir est comme le plant de riz : cultivez-le pour qu&apos;il grandisse et porte ses fruits.
-            </div>
-          </div>
-        </section>
-
-        {/* ── 3. COMPTE ADMINISTRATEUR & SESSION ───────────────────── */}
-        <section className="p-5 rounded-2xl border border-[var(--card-border)] bg-[var(--card)] space-y-4">
-          <div className="flex items-center justify-between border-b border-[var(--card-border)] pb-3">
-            <div>
-              <h2 className="text-sm font-bold text-[var(--foreground)] flex items-center gap-2">
-                <User size={16} className="text-[var(--accent)]" />
-                <span>Session &amp; Profil Administrateur</span>
-              </h2>
-              <p className="text-xs text-[var(--text-muted)] mt-0.5">
-                Informations du compte authentifié pour les actions d&apos;écriture et de modération.
-              </p>
-            </div>
-            <span className="px-2.5 py-1 rounded-full text-[10px] font-mono font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center gap-1.5">
-              <ShieldCheck size={12} />
-              <span>{user?.role || 'ADMIN'}</span>
-            </span>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-            <div className="p-3 rounded-xl border border-[var(--card-border)] bg-[var(--input-bg)] space-y-1">
-              <div className="text-[10px] font-mono uppercase text-[var(--text-subtle)]">Nom complet</div>
-              <div className="font-semibold text-[var(--foreground)]">
-                {user?.name || 'Administrateur Principal'}
-              </div>
-            </div>
-
-            <div className="p-3 rounded-xl border border-[var(--card-border)] bg-[var(--input-bg)] space-y-1">
-              <div className="text-[10px] font-mono uppercase text-[var(--text-subtle)]">Adresse courriel</div>
-              <div className="font-mono font-medium text-[var(--foreground)]">
-                {user?.email || 'admin@kanto.mg'}
-              </div>
-            </div>
-          </div>
-
-          {/* Bloc Modification du mot de passe */}
-          <div className="rounded-xl border border-[var(--card-border)] bg-[var(--input-bg)] overflow-hidden transition-all">
-            <button
-              type="button"
-              onClick={() => setIsPasswordFormOpen(!isPasswordFormOpen)}
-              className="w-full p-3.5 flex items-center justify-between text-left hover:bg-[var(--card-hover)] transition-colors cursor-pointer"
-            >
-              <div className="flex items-center gap-2.5">
-                <div className="w-7 h-7 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center shrink-0">
-                  <KeyRound size={15} />
+        {/* ── CONTENU : ONGLET 1 (GÉNÉRAL & AFFICHAGE) ───────────────── */}
+        {activeTab === 'general' && (
+          <div className="space-y-4 animate-in fade-in duration-150">
+            {/* 1. Thème d'affichage */}
+            <div className="p-4 rounded-xl border border-[var(--card-border)] bg-[var(--card)] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <div className="text-xs font-bold text-[var(--foreground)] flex items-center gap-1.5">
+                  <Sun size={14} className="text-[var(--accent)]" />
+                  <span>Thème d&apos;affichage</span>
                 </div>
+                <div className="text-[11px] text-[var(--text-muted)] mt-0.5">
+                  Sélectionnez le mode visuel de la console d&apos;administration.
+                </div>
+              </div>
+
+              {/* Sélecteur de thème en pilules compactes */}
+              <div className="flex items-center p-1 rounded-lg bg-[var(--input-bg)] border border-[var(--card-border)] self-start sm:self-auto">
+                <button
+                  type="button"
+                  onClick={() => setTheme('light')}
+                  className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium transition cursor-pointer ${
+                    theme === 'light'
+                      ? 'bg-[var(--card)] text-[var(--foreground)] font-semibold shadow-xs'
+                      : 'text-[var(--text-muted)] hover:text-[var(--foreground)]'
+                  }`}
+                >
+                  <Sun size={13} className="text-amber-500" />
+                  <span>Clair</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setTheme('dark')}
+                  className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium transition cursor-pointer ${
+                    theme === 'dark'
+                      ? 'bg-[var(--card)] text-[var(--foreground)] font-semibold shadow-xs'
+                      : 'text-[var(--text-muted)] hover:text-[var(--foreground)]'
+                  }`}
+                >
+                  <Moon size={13} className="text-emerald-400" />
+                  <span>Sombre</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setTheme('system')}
+                  className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium transition cursor-pointer ${
+                    theme === 'system'
+                      ? 'bg-[var(--card)] text-[var(--foreground)] font-semibold shadow-xs'
+                      : 'text-[var(--text-muted)] hover:text-[var(--foreground)]'
+                  }`}
+                >
+                  <Laptop size={13} className="text-[var(--text-muted)]" />
+                  <span>Système</span>
+                </button>
+              </div>
+            </div>
+
+            {/* 2. Facteur de Zoom & Densité */}
+            <div className="p-4 rounded-xl border border-[var(--card-border)] bg-[var(--card)] space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-xs font-bold text-[var(--foreground)] flex items-center gap-1.5">
+                    <ZoomIn size={14} className="text-[var(--accent)]" />
+                    <span>Densité de l&apos;interface &amp; Zoom</span>
+                  </div>
+                  <div className="text-[11px] text-[var(--text-muted)] mt-0.5">
+                    Ajustez l&apos;échelle globale des textes et composants.
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-md bg-[var(--accent-light)] text-[var(--accent-text)]">
+                    {zoomLevel}%
+                  </span>
+                  <button
+                    onClick={resetZoom}
+                    title="Rétablir à 100%"
+                    className="p-1 rounded-md border border-[var(--card-border)] hover:bg-[var(--card-hover)] text-[var(--text-muted)] hover:text-[var(--foreground)] transition cursor-pointer"
+                  >
+                    <RotateCcw size={12} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Slider et contrôles compacts */}
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setZoomLevel(Math.max(80, zoomLevel - 5))}
+                  disabled={zoomLevel <= 80}
+                  className="p-1.5 rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] hover:bg-[var(--card-hover)] text-[var(--foreground)] disabled:opacity-30 transition cursor-pointer"
+                  title="Réduire"
+                >
+                  <ZoomOut size={14} />
+                </button>
+
+                <div className="flex-1 flex items-center px-2.5 py-1.5 rounded-lg bg-[var(--input-bg)] border border-[var(--card-border)]">
+                  <input
+                    type="range"
+                    min="80"
+                    max="130"
+                    step="5"
+                    value={zoomLevel}
+                    onChange={(e) => setZoomLevel(parseInt(e.target.value, 10))}
+                    className="w-full accent-[var(--accent)] cursor-pointer"
+                  />
+                </div>
+
+                <button
+                  onClick={() => setZoomLevel(Math.min(130, zoomLevel + 5))}
+                  disabled={zoomLevel >= 130}
+                  className="p-1.5 rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] hover:bg-[var(--card-hover)] text-[var(--foreground)] disabled:opacity-30 transition cursor-pointer"
+                  title="Agrandir"
+                >
+                  <ZoomIn size={14} />
+                </button>
+
+                {/* Préréglages rapides */}
+                <div className="hidden sm:flex items-center gap-1.5 pl-2 border-l border-[var(--card-border)]">
+                  {[85, 100, 115, 130].map((val) => (
+                    <button
+                      key={val}
+                      onClick={() => setZoomLevel(val)}
+                      className={`px-2 py-1 rounded text-[11px] font-medium border transition cursor-pointer ${
+                        zoomLevel === val
+                          ? 'border-[var(--accent)] bg-[var(--accent-light)] text-[var(--accent-text)] font-semibold'
+                          : 'border-[var(--card-border)] bg-[var(--input-bg)] text-[var(--text-muted)] hover:text-[var(--foreground)]'
+                      }`}
+                    >
+                      {val}%
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* 3. Navigation & Maintenance Locale */}
+            <div className="p-4 rounded-xl border border-[var(--card-border)] bg-[var(--card)] divide-y divide-[var(--card-border)]">
+              {/* Sidebar compacte */}
+              <div className="flex items-center justify-between pb-3">
                 <div>
                   <div className="text-xs font-semibold text-[var(--foreground)]">
-                    Modifier mon mot de passe administrateur
+                    Barre latérale compacte par défaut
                   </div>
-                  <div className="text-[11px] text-[var(--text-muted)]">
-                    Définissez une nouvelle clé d&apos;accès sécurisée pour votre compte Kanto
+                  <div className="text-[11px] text-[var(--text-muted)] mt-0.5">
+                    Conserver le menu rétracté (58px) pour maximiser l&apos;espace utile.
+                  </div>
+                </div>
+
+                <button
+                  onClick={handleToggleDefaultSidebar}
+                  className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-hidden ${
+                    defaultCollapsed ? 'bg-[var(--accent)]' : 'bg-neutral-300 dark:bg-neutral-700'
+                  }`}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-xs ring-0 transition duration-200 ease-in-out ${
+                      defaultCollapsed ? 'translate-x-4' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              {/* Purge du cache */}
+              <div className="flex items-center justify-between pt-3">
+                <div>
+                  <div className="text-xs font-semibold text-[var(--foreground)]">
+                    Mémoire cache et données locales
+                  </div>
+                  <div className="text-[11px] text-[var(--text-muted)] mt-0.5">
+                    Purger les données de session temporaires en cas de désynchronisation.
+                  </div>
+                </div>
+
+                <button
+                  onClick={handleClearCache}
+                  className="px-3 py-1.5 rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] hover:bg-[var(--card-hover)] text-xs font-medium text-[var(--text-muted)] hover:text-[var(--foreground)] transition cursor-pointer flex items-center gap-1.5 shadow-xs"
+                >
+                  <Trash2 size={13} />
+                  <span>Purger le cache</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── CONTENU : ONGLET 2 (COMPTE & SÉCURITÉ) ─────────────────── */}
+        {activeTab === 'security' && (
+          <div className="space-y-4 animate-in fade-in duration-150">
+            {/* Profil connecté */}
+            <div className="p-4 rounded-xl border border-[var(--card-border)] bg-[var(--card)] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-full bg-[var(--accent-light)] border border-[var(--accent-border)] flex items-center justify-center text-[var(--accent-text)] shrink-0">
+                  <User size={18} />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-[var(--foreground)]">
+                      {user?.name || 'Administrateur'}
+                    </span>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                      {user?.role || 'ADMIN'}
+                    </span>
+                  </div>
+                  <div className="text-[11px] text-[var(--text-muted)] font-mono mt-0.5">
+                    {user?.email || 'admin@kanto.mg'}
                   </div>
                 </div>
               </div>
-              <div className="text-[var(--text-muted)]">
-                {isPasswordFormOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-              </div>
-            </button>
 
-            {isPasswordFormOpen && (
-              <form
-                onSubmit={handleChangePassword}
-                className="p-4 border-t border-[var(--card-border)] bg-[var(--card)] space-y-3.5 animate-in fade-in duration-200"
+              <button
+                onClick={handleLogout}
+                className="px-3 py-1.5 rounded-lg border border-red-200 dark:border-red-900/40 bg-red-50/50 dark:bg-red-950/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer self-start sm:self-auto"
               >
+                <LogOut size={13} />
+                <span>Se déconnecter</span>
+              </button>
+            </div>
+
+            {/* Modification du mot de passe */}
+            <div className="p-4 rounded-xl border border-[var(--card-border)] bg-[var(--card)] space-y-4">
+              <div>
+                <div className="text-xs font-bold text-[var(--foreground)] flex items-center gap-1.5">
+                  <KeyRound size={14} className="text-[var(--accent)]" />
+                  <span>Modifier mon mot de passe administrateur</span>
+                </div>
+                <div className="text-[11px] text-[var(--text-muted)] mt-0.5">
+                  Définissez une clé d&apos;accès sécurisée pour votre compte Kanto.
+                </div>
+              </div>
+
+              <form onSubmit={handleChangePassword} className="space-y-3">
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   {/* Mot de passe actuel */}
                   <div className="space-y-1">
@@ -561,7 +565,7 @@ export default function SettingsPage() {
                       Mot de passe actuel
                     </label>
                     <div className="relative">
-                      <Lock size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-subtle)]" />
+                      <Lock size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-subtle)]" />
                       <input
                         type={showCurrentPassword ? 'text' : 'password'}
                         required
@@ -569,15 +573,14 @@ export default function SettingsPage() {
                         onChange={(e) => setCurrentPassword(e.target.value)}
                         placeholder="••••••••••••"
                         autoComplete="current-password"
-                        className="w-full pl-8 pr-8 py-2 rounded-lg text-xs bg-[var(--input-bg)] border border-[var(--input-border)] text-[var(--foreground)] outline-none focus:border-[var(--accent)]"
+                        className="w-full pl-8 pr-7 py-1.5 rounded-lg text-xs bg-[var(--input-bg)] border border-[var(--input-border)] text-[var(--foreground)] outline-none focus:border-[var(--accent)]"
                       />
                       <button
                         type="button"
                         onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--text-subtle)] hover:text-[var(--foreground)] p-1 cursor-pointer"
-                        aria-label="Afficher ou masquer"
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--text-subtle)] hover:text-[var(--foreground)] p-0.5 cursor-pointer"
                       >
-                        {showCurrentPassword ? <EyeOff size={13} /> : <Eye size={13} />}
+                        {showCurrentPassword ? <EyeOff size={12} /> : <Eye size={12} />}
                       </button>
                     </div>
                   </div>
@@ -588,7 +591,7 @@ export default function SettingsPage() {
                       Nouveau mot de passe
                     </label>
                     <div className="relative">
-                      <Lock size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-subtle)]" />
+                      <Lock size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-subtle)]" />
                       <input
                         type={showNewPassword ? 'text' : 'password'}
                         required
@@ -596,15 +599,14 @@ export default function SettingsPage() {
                         onChange={(e) => setNewPassword(e.target.value)}
                         placeholder="Min. 8 caractères"
                         autoComplete="new-password"
-                        className="w-full pl-8 pr-8 py-2 rounded-lg text-xs bg-[var(--input-bg)] border border-[var(--input-border)] text-[var(--foreground)] outline-none focus:border-[var(--accent)]"
+                        className="w-full pl-8 pr-7 py-1.5 rounded-lg text-xs bg-[var(--input-bg)] border border-[var(--input-border)] text-[var(--foreground)] outline-none focus:border-[var(--accent)]"
                       />
                       <button
                         type="button"
                         onClick={() => setShowNewPassword(!showNewPassword)}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--text-subtle)] hover:text-[var(--foreground)] p-1 cursor-pointer"
-                        aria-label="Afficher ou masquer"
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--text-subtle)] hover:text-[var(--foreground)] p-0.5 cursor-pointer"
                       >
-                        {showNewPassword ? <EyeOff size={13} /> : <Eye size={13} />}
+                        {showNewPassword ? <EyeOff size={12} /> : <Eye size={12} />}
                       </button>
                     </div>
                   </div>
@@ -612,10 +614,10 @@ export default function SettingsPage() {
                   {/* Confirmation */}
                   <div className="space-y-1">
                     <label className="text-[11px] font-semibold text-[var(--foreground)]">
-                      Confirmer le nouveau
+                      Confirmation
                     </label>
                     <div className="relative">
-                      <Lock size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-subtle)]" />
+                      <Lock size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-subtle)]" />
                       <input
                         type={showConfirmNewPassword ? 'text' : 'password'}
                         required
@@ -623,21 +625,20 @@ export default function SettingsPage() {
                         onChange={(e) => setConfirmNewPassword(e.target.value)}
                         placeholder="••••••••••••"
                         autoComplete="new-password"
-                        className="w-full pl-8 pr-8 py-2 rounded-lg text-xs bg-[var(--input-bg)] border border-[var(--input-border)] text-[var(--foreground)] outline-none focus:border-[var(--accent)]"
+                        className="w-full pl-8 pr-7 py-1.5 rounded-lg text-xs bg-[var(--input-bg)] border border-[var(--input-border)] text-[var(--foreground)] outline-none focus:border-[var(--accent)]"
                       />
                       <button
                         type="button"
                         onClick={() => setShowConfirmNewPassword(!showConfirmNewPassword)}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--text-subtle)] hover:text-[var(--foreground)] p-1 cursor-pointer"
-                        aria-label="Afficher ou masquer"
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--text-subtle)] hover:text-[var(--foreground)] p-0.5 cursor-pointer"
                       >
-                        {showConfirmNewPassword ? <EyeOff size={13} /> : <Eye size={13} />}
+                        {showConfirmNewPassword ? <EyeOff size={12} /> : <Eye size={12} />}
                       </button>
                     </div>
                   </div>
                 </div>
 
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-[var(--card-border)]">
                   <label className="flex items-center gap-2 text-[11px] text-[var(--text-muted)] cursor-pointer">
                     <input
                       type="checkbox"
@@ -645,340 +646,199 @@ export default function SettingsPage() {
                       onChange={(e) => setRevokeOtherSessions(e.target.checked)}
                       className="accent-[var(--accent)] rounded"
                     />
-                    <span>Révoquer automatiquement les autres sessions ouvertes sur d&apos;autres navigateurs</span>
+                    <span>Révoquer les autres sessions ouvertes sur d&apos;autres appareils</span>
                   </label>
 
-                  <div className="flex items-center gap-2 self-end sm:self-auto">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsPasswordFormOpen(false);
-                        setCurrentPassword('');
-                        setNewPassword('');
-                        setConfirmNewPassword('');
-                      }}
-                      className="px-3 py-1.5 text-xs text-[var(--text-muted)] hover:text-[var(--foreground)] cursor-pointer"
-                    >
-                      Annuler
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={isUpdatingPassword || newPassword.length < 8 || newPassword !== confirmNewPassword}
-                      className="px-3 py-1.5 rounded-lg bg-[var(--accent)] text-white text-xs font-semibold hover:opacity-90 transition disabled:opacity-50 flex items-center gap-1.5 cursor-pointer shadow-xs"
-                    >
-                      {isUpdatingPassword ? (
-                        <>
-                          <Loader2 size={12} className="animate-spin" />
-                          <span>Mise à jour...</span>
-                        </>
-                      ) : (
-                        <>
-                          <Check size={12} />
-                          <span>Enregistrer le mot de passe</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
+                  <button
+                    type="submit"
+                    disabled={isUpdatingPassword || newPassword.length < 8 || newPassword !== confirmNewPassword}
+                    className="px-3.5 py-1.5 rounded-lg bg-[var(--accent)] text-white text-xs font-semibold hover:opacity-90 transition disabled:opacity-50 flex items-center gap-1.5 cursor-pointer shadow-xs self-end sm:self-auto"
+                  >
+                    {isUpdatingPassword ? (
+                      <>
+                        <Loader2 size={12} className="animate-spin" />
+                        <span>Mise à jour...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Check size={12} />
+                        <span>Enregistrer le mot de passe</span>
+                      </>
+                    )}
+                  </button>
                 </div>
               </form>
-            )}
-          </div>
-
-          <div className="flex items-center justify-between pt-2">
-            <div className="flex items-center gap-1.5 text-xs text-[var(--text-muted)]">
-              <Info size={13} className="text-[var(--accent)]" />
-              <span>Authentification sécurisée par Better-Auth &amp; Session HTTP Only.</span>
-            </div>
-
-            <button
-              onClick={handleLogout}
-              className="px-3 py-1.5 rounded-lg border border-red-200 dark:border-red-900/50 bg-red-50/50 dark:bg-red-950/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer shadow-xs"
-            >
-              <LogOut size={13} />
-              <span>Se déconnecter</span>
-            </button>
-          </div>
-        </section>
-
-        {/* ── 4. INFRASTRUCTURE & SERVICES CLOUD ───────────────────── */}
-        <section className="p-5 rounded-2xl border border-[var(--card-border)] bg-[var(--card)] space-y-4">
-          <div className="flex items-center justify-between border-b border-[var(--card-border)] pb-3">
-            <div>
-              <h2 className="text-sm font-bold text-[var(--foreground)] flex items-center gap-2">
-                <Server size={16} className="text-[var(--accent)]" />
-                <span>Services Connectés &amp; Moteurs IA</span>
-              </h2>
-              <p className="text-xs text-[var(--text-muted)] mt-0.5">
-                État des composants d&apos;arrière-plan, du moteur TTS Gemini et du stockage CDN.
-              </p>
             </div>
           </div>
+        )}
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {/* Backend NestJS */}
-            <div className="p-3.5 rounded-xl border border-[var(--card-border)] bg-[var(--input-bg)] flex items-start gap-3">
-              <div className="p-2 rounded-lg bg-[var(--card)] border border-[var(--card-border)] text-[var(--accent)] shrink-0">
-                <Server size={16} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between gap-1">
-                  <div className="text-xs font-bold text-[var(--foreground)]">API NestJS</div>
-                  {!apiStatus.tested ? (
-                    <span className="inline-flex items-center gap-1 text-[10px] font-mono font-medium text-[var(--text-muted)]">
-                      <span className="w-1.5 h-1.5 rounded-full bg-stone-400" />
-                      Non testé
-                    </span>
-                  ) : apiStatus.success ? (
-                    <span className="inline-flex items-center gap-1 text-[10px] font-mono font-medium text-emerald-600 dark:text-emerald-400">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                      Connecté
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1 text-[10px] font-mono font-medium text-rose-600 dark:text-rose-400">
-                      <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
-                      Indisponible
-                    </span>
-                  )}
-                </div>
-                <div className="text-[11px] font-mono text-[var(--text-muted)] truncate mt-0.5">
-                  http://localhost:3000
-                </div>
-                {apiStatus.tested && (
-                  <div className="text-[10px] font-medium text-[var(--accent)] mt-1">
-                    {apiStatus.message}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Google Gemini TTS */}
-            <div className="p-3.5 rounded-xl border border-[var(--card-border)] bg-[var(--input-bg)] flex items-start gap-3">
-              <div className="p-2 rounded-lg bg-[var(--card)] border border-[var(--card-border)] text-purple-500 shrink-0">
-                <Mic size={16} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between gap-1">
-                  <div className="text-xs font-bold text-[var(--foreground)]">Google Gemini TTS</div>
-                  <span className="text-[10px] font-mono font-medium text-purple-600 dark:text-purple-400">
-                    Actif
-                  </span>
-                </div>
-                <div className="text-[11px] text-[var(--text-muted)] mt-0.5">
-                  Synthèse vocale des contes et phonothèque Malagasy &amp; Français.
-                </div>
-              </div>
-            </div>
-
-            {/* Cloudinary CDN */}
-            <div className="p-3.5 rounded-xl border border-[var(--card-border)] bg-[var(--input-bg)] flex items-start gap-3">
-              <div className="p-2 rounded-lg bg-[var(--card)] border border-[var(--card-border)] text-sky-500 shrink-0">
-                <Cloud size={16} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between gap-1">
-                  <div className="text-xs font-bold text-[var(--foreground)]">Cloudinary CDN</div>
-                  <span className="text-[10px] font-mono font-medium text-sky-600 dark:text-sky-400">
-                    Distribué
-                  </span>
-                </div>
-                <div className="text-[11px] text-[var(--text-muted)] mt-0.5">
-                  Hébergement haute disponibilité des audios et médias culturels.
-                </div>
-              </div>
-            </div>
-
-            {/* PostgreSQL & Prisma */}
-            <div className="p-3.5 rounded-xl border border-[var(--card-border)] bg-[var(--input-bg)] flex items-start gap-3">
-              <div className="p-2 rounded-lg bg-[var(--card)] border border-[var(--card-border)] text-blue-500 shrink-0">
-                <Database size={16} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between gap-1">
-                  <div className="text-xs font-bold text-[var(--foreground)]">PostgreSQL &amp; Prisma</div>
-                  <span className="text-[10px] font-mono font-medium text-blue-600 dark:text-blue-400">
-                    Prisma 7
-                  </span>
-                </div>
-                <div className="text-[11px] text-[var(--text-muted)] mt-0.5">
-                  Base relationnelle du conservatoire et registre des sagesses.
-                </div>
-              </div>
-            </div>
-
-            {/* Service Email Resend & Console de Test */}
-            <div className="p-4 rounded-xl border border-[var(--card-border)] bg-[var(--input-bg)] flex flex-col gap-3.5 sm:col-span-2">
-              <div className="flex items-start gap-3">
-                <div className="p-2 rounded-lg bg-[var(--card)] border border-[var(--card-border)] text-emerald-500 shrink-0">
-                  <Mail size={16} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between gap-1">
-                    <div className="text-xs font-bold text-[var(--foreground)]">
-                      Service Email (Resend) &amp; Console de Test
-                    </div>
-                    <span className="text-[10px] font-mono font-medium text-emerald-600 dark:text-emerald-400">
-                      Charte Kanto Active
-                    </span>
+        {/* ── CONTENU : ONGLET 3 (SYSTÈME & SERVICES) ────────────────── */}
+        {activeTab === 'system' && (
+          <div className="space-y-4 animate-in fade-in duration-150">
+            {/* Diagnostic API & Services */}
+            <div className="p-4 rounded-xl border border-[var(--card-border)] bg-[var(--card)] space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-xs font-bold text-[var(--foreground)] flex items-center gap-1.5">
+                    <Server size={14} className="text-[var(--accent)]" />
+                    <span>État de l&apos;Infrastructure Kanto</span>
                   </div>
                   <div className="text-[11px] text-[var(--text-muted)] mt-0.5">
-                    Testez la délivrabilité et visualisez en direct tous les modèles d&apos;e-mails de l&apos;application sans emoji.
+                    Vue d&apos;ensemble des services cloud et de la base de données.
                   </div>
                 </div>
+
+                {apiStatus.tested && (
+                  <span
+                    className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold border ${
+                      apiStatus.success
+                        ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                        : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
+                    }`}
+                  >
+                    API {apiStatus.message}
+                  </span>
+                )}
               </div>
 
-              {/* Formulaire complet de test et prévisualisation */}
-              <div className="p-3.5 rounded-lg border border-[var(--card-border)] bg-[var(--card)] space-y-3">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {/* Choix du modèle */}
-                  <div className="space-y-1">
-                    <label className="text-[11px] font-semibold text-[var(--foreground)] flex items-center justify-between">
-                      <span>Modèle d&apos;e-mail à tester</span>
-                      <span className="text-[10px] text-[var(--accent)] font-normal">7 modèles prêts</span>
-                    </label>
-                    <select
-                      value={selectedTemplate}
-                      onChange={(e) => setSelectedTemplate(e.target.value)}
-                      className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] text-[var(--foreground)] focus:outline-hidden focus:border-[var(--accent)] cursor-pointer"
-                    >
-                      {EMAIL_TEMPLATES.map((tmpl) => (
-                        <option key={tmpl.id} value={tmpl.id}>
-                          {tmpl.label}
-                        </option>
-                      ))}
-                    </select>
-                    <p className="text-[10px] text-[var(--text-subtle)] truncate">
-                      {EMAIL_TEMPLATES.find((t) => t.id === selectedTemplate)?.desc}
-                    </p>
+              {/* 4 cartes compactes de services */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1">
+                <div className="p-2.5 rounded-lg bg-[var(--input-bg)] border border-[var(--card-border)] space-y-1">
+                  <div className="flex items-center justify-between">
+                    <Server size={14} className="text-emerald-500" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                   </div>
-
-                  {/* Adresse destinataire */}
-                  <div className="space-y-1">
-                    <label className="text-[11px] font-semibold text-[var(--foreground)] flex items-center justify-between">
-                      <span>Adresse de destination</span>
-                      {user?.email && (
-                        <button
-                          type="button"
-                          onClick={() => setTestEmailAddress(user.email || '')}
-                          className="text-[10px] text-[var(--accent)] hover:underline cursor-pointer"
-                        >
-                          Mon email ({user.email})
-                        </button>
-                      )}
-                    </label>
-                    <input
-                      type="email"
-                      value={testEmailAddress}
-                      onChange={(e) => setTestEmailAddress(e.target.value)}
-                      placeholder={user?.email || 'admin@kanto.mg'}
-                      className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] text-[var(--foreground)] placeholder:text-[var(--text-subtle)] focus:outline-hidden focus:border-[var(--accent)]"
-                    />
-                  </div>
+                  <div className="text-xs font-semibold text-[var(--foreground)]">API NestJS</div>
+                  <div className="text-[10px] text-[var(--text-muted)] truncate">Port 3000 • Core</div>
                 </div>
 
-                {/* Actions */}
-                <div className="flex flex-wrap items-center justify-end gap-2 pt-1 border-t border-[var(--card-border)]">
-                  <button
-                    type="button"
-                    onClick={handlePreviewEmail}
-                    disabled={isPreviewLoading}
-                    className="px-3 py-1.5 rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] hover:bg-[var(--card-hover)] text-[var(--foreground)] text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer shadow-xs disabled:opacity-50"
-                  >
-                    {isPreviewLoading ? (
-                      <Loader2 size={13} className="animate-spin text-[var(--accent)]" />
-                    ) : (
-                      <Eye size={13} className="text-[var(--accent)]" />
-                    )}
-                    <span>Aperçu en direct</span>
-                  </button>
+                <div className="p-2.5 rounded-lg bg-[var(--input-bg)] border border-[var(--card-border)] space-y-1">
+                  <div className="flex items-center justify-between">
+                    <Mic size={14} className="text-purple-500" />
+                    <span className="text-[10px] font-mono font-bold text-purple-500">IA</span>
+                  </div>
+                  <div className="text-xs font-semibold text-[var(--foreground)]">Gemini TTS</div>
+                  <div className="text-[10px] text-[var(--text-muted)] truncate">Synthèse vocale</div>
+                </div>
 
-                  <button
-                    type="button"
-                    onClick={() => handleSendTestEmail()}
-                    disabled={isSendingTestEmail}
-                    className="px-3.5 py-1.5 rounded-lg bg-[var(--accent)] text-white text-xs font-semibold hover:opacity-90 transition disabled:opacity-50 flex items-center gap-1.5 cursor-pointer shadow-xs"
-                  >
-                    {isSendingTestEmail ? (
-                      <Loader2 size={13} className="animate-spin" />
-                    ) : (
-                      <Send size={13} />
-                    )}
-                    <span>{isSendingTestEmail ? 'Envoi en cours...' : 'Envoyer l’email réel'}</span>
-                  </button>
+                <div className="p-2.5 rounded-lg bg-[var(--input-bg)] border border-[var(--card-border)] space-y-1">
+                  <div className="flex items-center justify-between">
+                    <Cloud size={14} className="text-sky-500" />
+                    <span className="text-[10px] font-mono font-bold text-sky-500">CDN</span>
+                  </div>
+                  <div className="text-xs font-semibold text-[var(--foreground)]">Cloudinary</div>
+                  <div className="text-[10px] text-[var(--text-muted)] truncate">Médias &amp; Audios</div>
+                </div>
+
+                <div className="p-2.5 rounded-lg bg-[var(--input-bg)] border border-[var(--card-border)] space-y-1">
+                  <div className="flex items-center justify-between">
+                    <Database size={14} className="text-blue-500" />
+                    <span className="text-[10px] font-mono font-bold text-blue-500">v7</span>
+                  </div>
+                  <div className="text-xs font-semibold text-[var(--foreground)]">PostgreSQL</div>
+                  <div className="text-[10px] text-[var(--text-muted)] truncate">Prisma ORM</div>
                 </div>
               </div>
             </div>
-          </div>
-        </section>
 
-        {/* ── 5. PRÉFÉRENCES SYSTÈME & CACHE ───────────────────────── */}
-        <section className="p-5 rounded-2xl border border-[var(--card-border)] bg-[var(--card)] space-y-4">
-          <div className="border-b border-[var(--card-border)] pb-3">
-            <h2 className="text-sm font-bold text-[var(--foreground)]">
-              Préférences Système &amp; Maintenance Locale
-            </h2>
-            <p className="text-xs text-[var(--text-muted)] mt-0.5">
-              Gérez le comportement par défaut de votre interface et la mémoire locale du navigateur.
-            </p>
-          </div>
-
-          <div className="space-y-3">
-            {/* Option Sidebar Collapsed */}
-            <div className="flex items-center justify-between p-3 rounded-xl border border-[var(--card-border)] bg-[var(--input-bg)]">
+            {/* Console de test d'e-mails (Resend) */}
+            <div className="p-4 rounded-xl border border-[var(--card-border)] bg-[var(--card)] space-y-3">
               <div>
-                <div className="text-xs font-semibold text-[var(--foreground)]">
-                  Mode compact par défaut pour la barre latérale
+                <div className="text-xs font-bold text-[var(--foreground)] flex items-center gap-1.5">
+                  <Mail size={14} className="text-[var(--accent)]" />
+                  <span>Supervision &amp; Test des Modèles d&apos;E-mails (Resend)</span>
                 </div>
                 <div className="text-[11px] text-[var(--text-muted)] mt-0.5">
-                  Conserver la barre latérale rétractée (58px) pour maximiser l&apos;espace de travail.
+                  Vérifiez la mise en page et la délivrabilité des notifications officielles Kanto.
                 </div>
               </div>
-              <button
-                onClick={handleToggleDefaultSidebar}
-                className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-hidden ${
-                  defaultCollapsed ? 'bg-[var(--accent)]' : 'bg-neutral-300 dark:bg-neutral-700'
-                }`}
-              >
-                <span
-                  className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-xs ring-0 transition duration-200 ease-in-out ${
-                    defaultCollapsed ? 'translate-x-4' : 'translate-x-0'
-                  }`}
-                />
-              </button>
-            </div>
 
-            {/* Option Purge du Cache */}
-            <div className="flex items-center justify-between p-3 rounded-xl border border-[var(--card-border)] bg-[var(--input-bg)]">
-              <div>
-                <div className="text-xs font-semibold text-[var(--foreground)]">
-                  Purger le cache local de l&apos;application
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                {/* Choix du modèle */}
+                <div className="space-y-1">
+                  <label className="text-[11px] font-semibold text-[var(--foreground)]">
+                    Modèle d&apos;e-mail
+                  </label>
+                  <select
+                    value={selectedTemplate}
+                    onChange={(e) => setSelectedTemplate(e.target.value)}
+                    className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] text-[var(--foreground)] focus:outline-hidden focus:border-[var(--accent)] cursor-pointer"
+                  >
+                    {EMAIL_TEMPLATES.map((tmpl) => (
+                      <option key={tmpl.id} value={tmpl.id}>
+                        {tmpl.label}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-                <div className="text-[11px] text-[var(--text-muted)] mt-0.5">
-                  Réinitialise les états temporaires en cas de désynchronisation de l&apos;interface.
+
+                {/* Adresse destinataire */}
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[11px] font-semibold text-[var(--foreground)]">
+                      Adresse de test
+                    </label>
+                    {user?.email && (
+                      <button
+                        type="button"
+                        onClick={() => setTestEmailAddress(user.email || '')}
+                        className="text-[10px] text-[var(--accent)] hover:underline cursor-pointer"
+                      >
+                        Mon email
+                      </button>
+                    )}
+                  </div>
+                  <input
+                    type="email"
+                    value={testEmailAddress}
+                    onChange={(e) => setTestEmailAddress(e.target.value)}
+                    placeholder={user?.email || 'admin@kanto.mg'}
+                    className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] text-[var(--foreground)] focus:outline-hidden focus:border-[var(--accent)]"
+                  />
                 </div>
               </div>
-              <button
-                onClick={handleClearCache}
-                className="px-3 py-1.5 rounded-lg border border-[var(--card-border)] bg-[var(--card)] hover:bg-[var(--card-hover)] text-xs font-medium text-[var(--text-muted)] hover:text-[var(--foreground)] transition cursor-pointer flex items-center gap-1.5 shadow-xs"
-              >
-                <Trash2 size={13} />
-                <span>Purger</span>
-              </button>
+
+              {/* Actions d'aperçu et d'envoi */}
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-[var(--card-border)]">
+                <button
+                  type="button"
+                  onClick={handlePreviewEmail}
+                  disabled={isPreviewLoading}
+                  className="px-3 py-1.5 rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] hover:bg-[var(--card-hover)] text-[var(--foreground)] text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer shadow-xs disabled:opacity-50"
+                >
+                  {isPreviewLoading ? (
+                    <Loader2 size={13} className="animate-spin text-[var(--accent)]" />
+                  ) : (
+                    <Eye size={13} className="text-[var(--accent)]" />
+                  )}
+                  <span>Aperçu HTML</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleSendTestEmail()}
+                  disabled={isSendingTestEmail}
+                  className="px-3.5 py-1.5 rounded-lg bg-[var(--accent)] text-white text-xs font-semibold hover:opacity-90 transition disabled:opacity-50 flex items-center gap-1.5 cursor-pointer shadow-xs"
+                >
+                  {isSendingTestEmail ? (
+                    <Loader2 size={13} className="animate-spin" />
+                  ) : (
+                    <Send size={13} />
+                  )}
+                  <span>{isSendingTestEmail ? 'Envoi...' : 'Envoyer test réel'}</span>
+                </button>
+              </div>
             </div>
           </div>
-        </section>
-
-        {/* Footer info Kanto */}
-        <div className="text-center text-[11px] font-mono text-[var(--text-subtle)] pt-2">
-          Kanto Conservatoire Malagasy • Admin Console v1.0.0 • Architecture Next.js &amp; NestJS
-        </div>
+        )}
       </div>
 
       {/* ── MODALE D'APERÇU D'EMAIL KANTO EN DIRECT ───────────────── */}
       {isPreviewModalOpen && previewData && (
         <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5 animate-in fade-in duration-200">
-          <div className="w-full max-w-4xl h-[92vh] bg-[var(--card)] border border-[var(--card-border)] rounded-2xl flex flex-col shadow-2xl overflow-hidden">
+          <div className="w-full max-w-4xl h-[90vh] bg-[var(--card)] border border-[var(--card-border)] rounded-2xl flex flex-col shadow-2xl overflow-hidden">
             {/* Header de la modale */}
-            <div className="px-5 py-3.5 border-b border-[var(--card-border)] bg-[var(--input-bg)] flex items-center justify-between shrink-0">
+            <div className="px-5 py-3 border-b border-[var(--card-border)] bg-[var(--input-bg)] flex items-center justify-between shrink-0">
               <div className="min-w-0 pr-3">
                 <div className="flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
@@ -987,7 +847,7 @@ export default function SettingsPage() {
                   </span>
                 </div>
                 <div className="text-[11px] text-[var(--text-muted)] truncate mt-0.5 font-mono">
-                  Modèle : {previewData.template} • Destinataire simulé : {testEmailAddress.trim() || user?.email || 'admin@kanto.mg'}
+                  Modèle : {previewData.template}
                 </div>
               </div>
 
@@ -1016,7 +876,7 @@ export default function SettingsPage() {
                     }`}
                   >
                     <Smartphone size={13} />
-                    <span className="hidden sm:inline">Mobile (375px)</span>
+                    <span className="hidden sm:inline">Mobile</span>
                   </button>
                 </div>
 
@@ -1026,7 +886,7 @@ export default function SettingsPage() {
                   className="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--card-hover)] transition cursor-pointer"
                   aria-label="Fermer"
                 >
-                  <X size={18} />
+                  <X size={16} />
                 </button>
               </div>
             </div>
@@ -1038,22 +898,22 @@ export default function SettingsPage() {
                 style={{
                   width: previewDevice === 'mobile' ? '375px' : '600px',
                   maxWidth: '100%',
-                  minHeight: '650px',
+                  minHeight: '600px',
                 }}
               >
                 <iframe
                   title="Prévisualisation Email"
                   srcDoc={previewData.html}
-                  className="w-full h-[75vh] border-0"
+                  className="w-full h-[70vh] border-0"
                   sandbox="allow-same-origin allow-popups"
                 />
               </div>
             </div>
 
-            {/* Pied de la modale avec action d'envoi direct */}
-            <div className="px-5 py-3 border-t border-[var(--card-border)] bg-[var(--card)] flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
-              <div className="text-[11px] text-[var(--text-muted)] text-center sm:text-left">
-                Design Kanto officiel : Zéro emoji • Typographie Plus Jakarta Sans • Badge Google Play Bêta exclusif
+            {/* Pied de la modale */}
+            <div className="px-5 py-2.5 border-t border-[var(--card-border)] bg-[var(--card)] flex items-center justify-between gap-3 shrink-0">
+              <div className="text-[11px] text-[var(--text-muted)] hidden sm:block">
+                Charte graphique officielle Kanto
               </div>
 
               <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
@@ -1075,7 +935,7 @@ export default function SettingsPage() {
                   className="px-3.5 py-1.5 rounded-lg bg-[var(--accent)] text-white text-xs font-semibold hover:opacity-90 transition disabled:opacity-50 flex items-center gap-1.5 cursor-pointer shadow-xs"
                 >
                   <Send size={13} />
-                  <span>Envoyer cet e-mail réel</span>
+                  <span>Envoyer réel</span>
                 </button>
               </div>
             </div>

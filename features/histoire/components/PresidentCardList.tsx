@@ -22,9 +22,9 @@ function PresidentCard({
   onDelete: () => void;
 }) {
   return (
-    <div className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-2xl p-5 shadow-sm flex flex-col justify-between space-y-4 hover:shadow-md transition-shadow relative overflow-hidden">
-      <div className="flex gap-4 items-start">
-        <div className="w-20 h-28 rounded-xl overflow-hidden bg-stone-100 dark:bg-stone-800 flex-shrink-0 border border-stone-200 dark:border-stone-700 shadow-inner">
+    <div className="bg-[var(--card)] border border-[var(--card-border)] rounded-xl p-4 shadow-xs flex flex-col justify-between space-y-3 hover:border-[var(--accent)] transition-colors overflow-hidden">
+      <div className="flex gap-3 items-start">
+        <div className="w-18 h-24 rounded-lg overflow-hidden bg-[var(--input-bg)] flex-shrink-0 border border-[var(--card-border)] shadow-xs flex items-center justify-center">
           {item.imageUrl ? (
             <img
               src={resolveMediaUrl(item.imageUrl)}
@@ -32,41 +32,41 @@ function PresidentCard({
               className="w-full h-full object-cover"
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-stone-400">
-              <Crown size={28} />
+            <div className="text-[var(--text-subtle)]">
+              <Crown size={24} />
             </div>
           )}
         </div>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+          <div className="flex items-center gap-1.5 mb-1 flex-wrap">
             <span
-              className="inline-block px-2.5 py-0.5 text-xs font-bold rounded-md text-white shadow-xs"
+              className="inline-block px-2 py-0.5 text-[10px] font-bold rounded-md text-white shadow-xs"
               style={{ backgroundColor: item.badgeColor || '#2A6B3D' }}
             >
               {item.republic}
             </span>
             <span
-              className={`text-[10px] px-2 py-0.5 rounded font-semibold uppercase ${
+              className={`text-[10px] px-1.5 py-0.5 rounded-md font-bold uppercase ${
                 item.status === 'PUBLISHED'
-                  ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
-                  : 'bg-stone-200 text-stone-700 dark:bg-stone-800 dark:text-stone-300'
+                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                  : 'bg-[var(--input-bg)] text-[var(--text-muted)] border border-[var(--input-border)]'
               }`}
             >
               {item.status}
             </span>
           </div>
-          <h3 className="font-bold text-stone-900 dark:text-white text-base truncate">{item.name}</h3>
-          <p className="text-xs text-stone-500 dark:text-stone-400 font-mono">{item.period}</p>
-          <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-1 font-semibold">{item.titleFr}</p>
-          <p className="text-[11px] text-stone-500 dark:text-stone-400 italic">🇲🇬 {item.titleMg}</p>
+          <h3 className="font-bold text-[var(--foreground)] text-sm truncate">{item.name}</h3>
+          <p className="text-[11px] text-[var(--text-muted)] font-mono">{item.period}</p>
+          <p className="text-xs text-[var(--accent)] mt-0.5 font-semibold truncate">{item.titleFr}</p>
+          <p className="text-[11px] text-[var(--text-muted)] italic truncate">🇲🇬 {item.titleMg}</p>
         </div>
       </div>
 
       {item.quoteFr && (
-        <div className="bg-stone-50 dark:bg-stone-800/60 p-3 rounded-xl border-l-3 border-emerald-500 space-y-1">
-          <p className="text-xs italic text-stone-700 dark:text-stone-300 font-serif">« {item.quoteFr} »</p>
+        <div className="bg-[var(--input-bg)] p-2.5 rounded-lg border-l-2 border-[var(--accent)] space-y-0.5">
+          <p className="text-xs italic text-[var(--foreground)] font-serif leading-snug">« {item.quoteFr} »</p>
           {item.quoteMg && (
-            <p className="text-[11px] text-stone-500 dark:text-stone-400 italic font-serif">
+            <p className="text-[10.5px] text-[var(--text-muted)] italic font-serif">
               🇲🇬 « {item.quoteMg} »
             </p>
           )}
@@ -74,12 +74,12 @@ function PresidentCard({
       )}
 
       {Array.isArray(item.achievementsFr) && item.achievementsFr.length > 0 && (
-        <div className="space-y-1 pt-1">
-          <p className="text-[11px] font-bold text-stone-500 dark:text-stone-400 uppercase tracking-wider flex items-center gap-1">
-            <Award size={12} />
+        <div className="space-y-1">
+          <p className="text-[10.5px] font-bold text-[var(--text-muted)] uppercase tracking-wider flex items-center gap-1">
+            <Award size={12} className="text-[var(--accent)]" />
             <span>Faits majeurs ({item.achievementsFr.length})</span>
           </p>
-          <ul className="text-xs text-stone-600 dark:text-stone-300 list-disc list-inside space-y-0.5 line-clamp-2">
+          <ul className="text-xs text-[var(--foreground)] list-disc list-inside space-y-0.5 line-clamp-2">
             {item.achievementsFr.slice(0, 2).map((ach, idx) => (
               <li key={idx} className="truncate">{ach}</li>
             ))}
@@ -87,22 +87,22 @@ function PresidentCard({
         </div>
       )}
 
-      <div className="flex items-center justify-between pt-3 border-t border-stone-100 dark:border-stone-800 text-xs text-stone-400">
-        <span className="font-mono text-[11px]">Ordre: #{item.orderIndex}</span>
-        <div className="flex items-center gap-1.5">
+      <div className="flex items-center justify-between pt-2.5 border-t border-[var(--card-border)] text-xs text-[var(--text-muted)]">
+        <span className="font-mono text-[10.5px]">Ordre: #{item.orderIndex}</span>
+        <div className="flex items-center gap-1">
           <button
             onClick={onEdit}
-            className="p-1.5 text-stone-600 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 rounded-lg transition-colors"
+            className="p-1.5 text-[var(--text-muted)] hover:text-[var(--accent)] hover:bg-[var(--input-bg)] rounded-lg transition-colors cursor-pointer"
             title="Modifier"
           >
-            <Edit2 size={16} />
+            <Edit2 size={14} />
           </button>
           <button
             onClick={onDelete}
-            className="p-1.5 text-stone-600 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition-colors"
+            className="p-1.5 text-[var(--text-muted)] hover:text-rose-500 hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer"
             title="Supprimer"
           >
-            <Trash2 size={16} />
+            <Trash2 size={14} />
           </button>
         </div>
       </div>
@@ -115,12 +115,13 @@ export function PresidentCardList({ items, onEdit, onDelete }: PresidentCardList
     return (
       <EmptyState
         title="Aucun président trouvé"
-        description="Créez une nouvelle fiche président de la République."
+        description="Ajoutez un chef d'État ou dirigeant malgache."
       />
     );
   }
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
       {items.map((item) => (
         <PresidentCard
           key={item.id}

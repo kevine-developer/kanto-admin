@@ -7,8 +7,10 @@ import {
   Shield,
   Plus,
   Trash2,
+  Sparkles,
 } from 'lucide-react';
 import { Modal, Field, Input, ImageUploadDropzone } from '@/components/ui';
+import { slugify } from '@/lib/utils/media';
 import type { ProvinceSymbol, ContentStatus, HistoryItem } from '@/types/history';
 import type { GenericHistoryFormData } from '../types/forms';
 import type { TabKey } from '../types/tabs';
@@ -138,13 +140,32 @@ export function HistoireModal({
         {activeTab === 'presidents' && (
           <>
             {!editingItem && (
-              <Field label="Identifiant unique (slug, ex: tsiranana)" required>
-                <Input
-                  value={formValues.id || ''}
-                  onChange={(e) => setFormValues((prev) => ({ ...prev, id: e.target.value }))}
-                  placeholder="tsiranana, ramanantsoa, ratsiraka..."
-                  required
-                />
+              <Field
+                label="Identifiant unique (slug)"
+                hint="✨ Généré automatiquement depuis le nom du président. Modifiable si souhaité."
+              >
+                <div className="flex items-center gap-2">
+                  <Input
+                    value={formValues.id || ''}
+                    onChange={(e) => setFormValues((prev) => ({ ...prev, id: e.target.value }))}
+                    placeholder="ex: philibert-tsiranana"
+                    className="font-mono text-xs"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (formValues.name) {
+                        setFormValues((prev) => ({ ...prev, id: slugify(prev.name || '') }));
+                      }
+                    }}
+                    className="px-3 py-2 rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 text-xs font-semibold text-stone-700 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-700 transition-colors shrink-0 flex items-center gap-1 cursor-pointer"
+                    title="Régénérer automatiquement à partir du nom"
+                  >
+                    <Sparkles size={13} className="text-emerald-500" />
+                    <span>Auto</span>
+                  </button>
+                </div>
               </Field>
             )}
 
@@ -152,7 +173,19 @@ export function HistoireModal({
               <Field label="Nom complet du Président" required>
                 <Input
                   value={formValues.name || ''}
-                  onChange={(e) => setFormValues((prev) => ({ ...prev, name: e.target.value }))}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setFormValues((prev) => {
+                      const next = { ...prev, name: val };
+                      if (!editingItem) {
+                        const prevAuto = prev.name ? slugify(prev.name) : '';
+                        if (!prev.id || prev.id === prevAuto) {
+                          next.id = slugify(val);
+                        }
+                      }
+                      return next;
+                    });
+                  }}
                   placeholder="Philibert Tsiranana"
                   required
                 />
@@ -379,13 +412,32 @@ export function HistoireModal({
         {activeTab === 'provinces' && (
           <>
             {!editingItem && (
-              <Field label="Identifiant unique (slug, ex: province-antananarivo)" required>
-                <Input
-                  value={formValues.id || ''}
-                  onChange={(e) => setFormValues((prev) => ({ ...prev, id: e.target.value }))}
-                  placeholder="province-antananarivo"
-                  required
-                />
+              <Field
+                label="Identifiant unique (slug)"
+                hint="✨ Généré automatiquement depuis le nom de la province (ex: province-antananarivo)."
+              >
+                <div className="flex items-center gap-2">
+                  <Input
+                    value={formValues.id || ''}
+                    onChange={(e) => setFormValues((prev) => ({ ...prev, id: e.target.value }))}
+                    placeholder="province-antananarivo"
+                    className="font-mono text-xs"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (formValues.province) {
+                        setFormValues((prev) => ({ ...prev, id: `province-${slugify(prev.province || '')}` }));
+                      }
+                    }}
+                    className="px-3 py-2 rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 text-xs font-semibold text-stone-700 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-700 transition-colors shrink-0 flex items-center gap-1 cursor-pointer"
+                    title="Régénérer automatiquement"
+                  >
+                    <Sparkles size={13} className="text-emerald-500" />
+                    <span>Auto</span>
+                  </button>
+                </div>
               </Field>
             )}
 
@@ -393,7 +445,19 @@ export function HistoireModal({
               <Field label="Nom de la Province" required>
                 <Input
                   value={formValues.province || ''}
-                  onChange={(e) => setFormValues((prev) => ({ ...prev, province: e.target.value }))}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setFormValues((prev) => {
+                      const next = { ...prev, province: val };
+                      if (!editingItem) {
+                        const prevAuto = prev.province ? `province-${slugify(prev.province)}` : '';
+                        if (!prev.id || prev.id === prevAuto) {
+                          next.id = val ? `province-${slugify(val)}` : '';
+                        }
+                      }
+                      return next;
+                    });
+                  }}
                   placeholder="Antananarivo, Fianarantsoa..."
                   required
                 />
@@ -707,15 +771,39 @@ export function HistoireModal({
 
               {!editingItem && (
                 <Field
-                  label="Identifiant unique (slug, ex: billet-20000, billet-colonial-1000f)"
-                  required
+                  label="Identifiant unique (slug)"
+                  hint="✨ Déduit automatiquement selon la valeur et l'émission (ex: billet-20000)."
                 >
-                  <Input
-                    value={formValues.id || ''}
-                    onChange={(e) => setFormValues((prev) => ({ ...prev, id: e.target.value }))}
-                    placeholder="ex: billet-5000, billet-colonial-500f"
-                    required
-                  />
+                  <div className="flex items-center gap-2">
+                    <Input
+                      value={formValues.id || ''}
+                      onChange={(e) => setFormValues((prev) => ({ ...prev, id: e.target.value }))}
+                      placeholder="ex: billet-20000, billet-colonial-1000f"
+                      className="font-mono text-xs"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const ar = Number(formValues.valueAriary) || 0;
+                        const fmg = Number(formValues.valueFmg) || 0;
+                        const autoId =
+                          ar > 0
+                            ? `billet-${ar}`
+                            : fmg > 0
+                              ? currentEra === 'COLONIAL'
+                                ? `billet-colonial-${fmg}f`
+                                : `billet-fmg-${fmg}`
+                              : `billet-${slugify(formValues.titleFr || '') || 'nouveau'}`;
+                        setFormValues((prev) => ({ ...prev, id: autoId }));
+                      }}
+                      className="px-3 py-2 rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 text-xs font-semibold text-stone-700 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-700 transition-colors shrink-0 flex items-center gap-1 cursor-pointer"
+                      title="Régénérer automatiquement"
+                    >
+                      <Sparkles size={13} className="text-emerald-500" />
+                      <span>Auto</span>
+                    </button>
+                  </div>
                 </Field>
               )}
 
@@ -1118,19 +1206,51 @@ export function HistoireModal({
         {activeTab === 'nature' && (
           <>
             {!editingItem && (
-              <Field label="Identifiant (slug, ex: ravinala)" required>
-                <Input
-                  value={formValues.id || ''}
-                  onChange={(e) => setFormValues((prev) => ({ ...prev, id: e.target.value }))}
-                  required
-                />
+              <Field
+                label="Identifiant unique (slug)"
+                hint="✨ Généré automatiquement depuis le nom commun (ex: ravinala)."
+              >
+                <div className="flex items-center gap-2">
+                  <Input
+                    value={formValues.id || ''}
+                    onChange={(e) => setFormValues((prev) => ({ ...prev, id: e.target.value }))}
+                    placeholder="ex: ravinala"
+                    className="font-mono text-xs"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (formValues.nameFr) {
+                        setFormValues((prev) => ({ ...prev, id: slugify(prev.nameFr || '') }));
+                      }
+                    }}
+                    className="px-3 py-2 rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 text-xs font-semibold text-stone-700 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-700 transition-colors shrink-0 flex items-center gap-1 cursor-pointer"
+                    title="Régénérer automatiquement"
+                  >
+                    <Sparkles size={13} className="text-emerald-500" />
+                    <span>Auto</span>
+                  </button>
+                </div>
               </Field>
             )}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <Field label="Nom commun (FR)" required>
                 <Input
                   value={formValues.nameFr || ''}
-                  onChange={(e) => setFormValues((prev) => ({ ...prev, nameFr: e.target.value }))}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setFormValues((prev) => {
+                      const next = { ...prev, nameFr: val };
+                      if (!editingItem) {
+                        const prevAuto = prev.nameFr ? slugify(prev.nameFr) : '';
+                        if (!prev.id || prev.id === prevAuto) {
+                          next.id = slugify(val);
+                        }
+                      }
+                      return next;
+                    });
+                  }}
                   required
                 />
               </Field>
@@ -1240,19 +1360,49 @@ export function HistoireModal({
         {activeTab === 'dates' && (
           <>
             {!editingItem && (
-              <Field label="Identifiant (slug, ex: date-1960-06-26)" required>
-                <Input
-                  value={formValues.id || ''}
-                  onChange={(e) => setFormValues((prev) => ({ ...prev, id: e.target.value }))}
-                  required
-                />
+              <Field
+                label="Identifiant unique (slug)"
+                hint="✨ Généré automatiquement depuis l'année et le titre (ex: date-1960-independance)."
+              >
+                <div className="flex items-center gap-2">
+                  <Input
+                    value={formValues.id || ''}
+                    onChange={(e) => setFormValues((prev) => ({ ...prev, id: e.target.value }))}
+                    placeholder="ex: date-1960-06-26"
+                    className="font-mono text-xs"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const yr = formValues.year || '';
+                      const ttl = formValues.titleFr || '';
+                      const base = yr ? (ttl ? `${yr}-${ttl}` : `${yr}`) : ttl;
+                      setFormValues((prev) => ({ ...prev, id: base ? `date-${slugify(base)}` : '' }));
+                    }}
+                    className="px-3 py-2 rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 text-xs font-semibold text-stone-700 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-700 transition-colors shrink-0 flex items-center gap-1 cursor-pointer"
+                    title="Régénérer automatiquement"
+                  >
+                    <Sparkles size={13} className="text-emerald-500" />
+                    <span>Auto</span>
+                  </button>
+                </div>
               </Field>
             )}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <Field label="Année (ex: 1960)" required>
                 <Input
                   value={formValues.year || ''}
-                  onChange={(e) => setFormValues((prev) => ({ ...prev, year: e.target.value }))}
+                  onChange={(e) => {
+                    const yr = e.target.value;
+                    setFormValues((prev) => {
+                      const next = { ...prev, year: yr };
+                      if (!editingItem && yr && !prev.id) {
+                        next.id = `date-${slugify(yr)}`;
+                      }
+                      return next;
+                    });
+                  }}
                   required
                 />
               </Field>
@@ -1277,7 +1427,18 @@ export function HistoireModal({
               <Field label="Titre de l'événement (FR)" required>
                 <Input
                   value={formValues.titleFr || ''}
-                  onChange={(e) => setFormValues((prev) => ({ ...prev, titleFr: e.target.value }))}
+                  onChange={(e) => {
+                    const ttl = e.target.value;
+                    setFormValues((prev) => {
+                      const next = { ...prev, titleFr: ttl };
+                      if (!editingItem && (!prev.id || prev.id.startsWith('date-'))) {
+                        const yr = prev.year || '';
+                        const base = yr ? `${yr}-${ttl}` : ttl;
+                        if (base) next.id = `date-${slugify(base)}`;
+                      }
+                      return next;
+                    });
+                  }}
                   required
                 />
               </Field>
@@ -1344,19 +1505,51 @@ export function HistoireModal({
         {activeTab === 'lessons' && (
           <>
             {!editingItem && (
-              <Field label="Identifiant (slug, ex: billets-monnaies)" required>
-                <Input
-                  value={formValues.id || ''}
-                  onChange={(e) => setFormValues((prev) => ({ ...prev, id: e.target.value }))}
-                  required
-                />
+              <Field
+                label="Identifiant unique (slug)"
+                hint="✨ Généré automatiquement depuis le titre (ex: billets-monnaies)."
+              >
+                <div className="flex items-center gap-2">
+                  <Input
+                    value={formValues.id || ''}
+                    onChange={(e) => setFormValues((prev) => ({ ...prev, id: e.target.value }))}
+                    placeholder="ex: billets-monnaies"
+                    className="font-mono text-xs"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (formValues.titleFr) {
+                        setFormValues((prev) => ({ ...prev, id: slugify(prev.titleFr || '') }));
+                      }
+                    }}
+                    className="px-3 py-2 rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 text-xs font-semibold text-stone-700 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-700 transition-colors shrink-0 flex items-center gap-1 cursor-pointer"
+                    title="Régénérer automatiquement"
+                  >
+                    <Sparkles size={13} className="text-emerald-500" />
+                    <span>Auto</span>
+                  </button>
+                </div>
               </Field>
             )}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <Field label="Titre (FR)" required>
                 <Input
                   value={formValues.titleFr || ''}
-                  onChange={(e) => setFormValues((prev) => ({ ...prev, titleFr: e.target.value }))}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setFormValues((prev) => {
+                      const next = { ...prev, titleFr: val };
+                      if (!editingItem) {
+                        const prevAuto = prev.titleFr ? slugify(prev.titleFr) : '';
+                        if (!prev.id || prev.id === prevAuto) {
+                          next.id = slugify(val);
+                        }
+                      }
+                      return next;
+                    });
+                  }}
                   required
                 />
               </Field>

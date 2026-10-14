@@ -21,47 +21,47 @@ export function HistoryDateCardList({ items, onEdit, onDelete }: HistoryDateCard
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2.5">
       {items.map((item) => (
         <div
           key={item.id}
-          className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-2xl p-4 shadow-sm flex items-start justify-between gap-4"
+          className="bg-[var(--card)] border border-[var(--card-border)] rounded-xl p-3.5 shadow-xs flex items-start justify-between gap-3 hover:border-[var(--accent)] transition-colors"
         >
-          <div className="flex gap-4 items-start">
-            <div className="w-16 h-16 rounded-xl bg-emerald-100 dark:bg-emerald-950/50 flex flex-col items-center justify-center flex-shrink-0 text-emerald-800 dark:text-emerald-300 font-bold shadow-xs">
-              <span className="text-lg leading-none">{item.year}</span>
-              <span className="text-xs font-normal mt-0.5">Année</span>
+          <div className="flex gap-3 items-start min-w-0">
+            <div className="w-14 h-14 rounded-lg bg-[var(--accent-light)] border border-[var(--accent-border)] flex flex-col items-center justify-center flex-shrink-0 text-[var(--accent-text)] font-bold shadow-xs">
+              <span className="text-base font-mono leading-none">{item.year}</span>
+              <span className="text-[10px] font-normal mt-0.5 opacity-80">Année</span>
             </div>
-            <div className="space-y-1">
+            <div className="space-y-0.5 min-w-0">
               <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold px-2 py-0.5 rounded bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-300">
+                <span className="text-[10.5px] font-semibold px-2 py-0.2 rounded-md bg-[var(--input-bg)] text-[var(--text-muted)] border border-[var(--input-border)]">
                   {item.exactDate}
                 </span>
-                <span className="text-xs text-stone-400 font-mono">#{item.orderIndex}</span>
+                <span className="text-[10.5px] text-[var(--text-muted)] font-mono">#{item.orderIndex}</span>
               </div>
-              <h4 className="font-bold text-stone-900 dark:text-white text-base">
+              <h4 className="font-bold text-[var(--foreground)] text-sm truncate">
                 {item.titleFr}
               </h4>
-              <p className="text-xs text-stone-600 dark:text-stone-300 max-w-3xl">
+              <p className="text-xs text-[var(--text-muted)] line-clamp-2 leading-relaxed">
                 {item.summaryFr}
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5 flex-shrink-0">
+          <div className="flex items-center gap-1 flex-shrink-0">
             <button
               onClick={() => onEdit(item)}
-              className="p-1.5 text-stone-600 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 rounded-lg transition-colors"
+              className="p-1.5 text-[var(--text-muted)] hover:text-[var(--accent)] hover:bg-[var(--input-bg)] rounded-lg transition-colors cursor-pointer"
               title="Modifier"
             >
-              <Edit2 size={16} />
+              <Edit2 size={14} />
             </button>
             <button
               onClick={() => onDelete(item)}
-              className="p-1.5 text-stone-600 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition-colors"
+              className="p-1.5 text-[var(--text-muted)] hover:text-rose-500 hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer"
               title="Supprimer"
             >
-              <Trash2 size={16} />
+              <Trash2 size={14} />
             </button>
           </div>
         </div>

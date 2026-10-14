@@ -5,11 +5,7 @@
 
 import type { ProvinceSymbol } from '@/types/history';
 
-export type BanknoteSeriesKey =
-  | 'SERIE_2017'
-  | 'SERIE_2003'
-  | 'SERIE_FMG'
-  | 'COLONIAL';
+
 
 // ─── Formulaire Président ─────────────────────────────────────────────────────
 export interface PresidentFormData {

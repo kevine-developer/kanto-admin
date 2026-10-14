@@ -2,12 +2,14 @@
 
 import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Plus, RefreshCw } from 'lucide-react';
+import { Plus, RotateCcw, Landmark } from 'lucide-react';
 import { AdminShell } from '@/components/layout/AdminShell';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { LoadingState, ConfirmModal } from '@/components/ui';
 import { useToast } from '@/lib/hooks/useToast';
 import { historyService } from '@/services/history.service';
+
+import type { BanknoteItem } from '@/types/history';
 
 import {
   VALID_TAB_KEYS,
@@ -19,6 +21,7 @@ import {
   HistoireTabBar,
   HistoireFilterBar,
   HistoireModal,
+  BanknoteModal,
   PresidentCardList,
   NationalEmblemTable,
   ProvinceCardList,
@@ -107,32 +110,45 @@ function HistoireAdminContent() {
     }
   };
 
+  const totalItemsCount =
+    data.presidents.length +
+    data.nationalEmblems.length +
+    data.provinces.length +
+    data.banknotes.length +
+    data.natureEmblems.length +
+    data.historyDates.length +
+    data.lessons.length;
+
   return (
     <AdminShell>
-      <div className="w-full space-y-6 pb-12">
-        {/* En-tête de page */}
+      <div className="w-full space-y-4 max-w-6xl mx-auto pb-12">
+        {/* En-tête de page standardisé */}
         <PageHeader
           title="Histoire & Patrimoine National"
-          description="Gestion du musée virtuel malgache : chefs d'État, sceaux républicains, provinces & blasons, numismatique, biodiversité, grandes dates et civisme."
+          description="Musée virtuel malgache : chefs d'État, sceaux républicains, provinces & blasons, numismatique, biodiversité, grandes dates et civisme."
+          icon={Landmark}
+          badge={
+            <span className="text-xs px-2.5 py-1 rounded-lg font-mono font-medium border border-[var(--card-border)] bg-[var(--card)] text-[var(--foreground)] shadow-xs">
+              {totalItemsCount} trésor{totalItemsCount !== 1 ? 's' : ''}
+            </span>
+          }
           actions={
             <div className="flex flex-wrap items-center gap-2">
               <button
                 onClick={() => handleSyncDefaults(false)}
-                disabled={isSeeding}
-                className="flex items-center gap-2 px-3.5 py-2.5 bg-stone-100 hover:bg-stone-200 dark:bg-stone-800 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 text-sm font-semibold rounded-xl transition-all cursor-pointer disabled:opacity-50"
-                title="Synchronise les données officielles et le musée des billets si vide"
+                disabled={isSeeding || isLoading}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[var(--card-border)] bg-[var(--card)] hover:bg-[var(--card-hover)] text-xs font-semibold text-[var(--foreground)] transition cursor-pointer shadow-xs disabled:opacity-50"
+                title="Synchroniser les données officielles si vides"
               >
-                <RefreshCw size={15} className={isSeeding ? 'animate-spin' : ''} />
-                <span>
-                  {isSeeding ? 'Synchronisation...' : 'Synchroniser le patrimoine'}
-                </span>
+                <RotateCcw size={13} className={isSeeding ? 'animate-spin' : ''} />
+                <span>{isSeeding ? 'Synchronisation...' : 'Synchroniser'}</span>
               </button>
 
               <button
                 onClick={modal.openCreate}
-                className="flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-xl shadow-sm transition-all cursor-pointer"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--accent)] text-white text-xs font-semibold hover:opacity-90 transition cursor-pointer shadow-xs"
               >
-                <Plus size={16} />
+                <Plus size={14} />
                 <span>{getAddButtonLabel(activeTab)}</span>
               </button>
             </div>
@@ -238,21 +254,30 @@ function HistoireAdminContent() {
           </div>
         )}
 
-        {/* Modale CRUD unifiée */}
-        <HistoireModal
-          isOpen={modal.isModalOpen}
-          onClose={modal.close}
-          activeTab={activeTab}
-          editingItem={modal.editingItem}
-          formValues={modal.formValues}
-          setFormValues={modal.setFormValues}
-          isSubmitting={modal.isSubmitting}
-          onSubmit={handleSave}
-          addSymbol={modal.addSymbol}
-          updateSymbol={modal.updateSymbol}
-          removeSymbol={modal.removeSymbol}
-          applyColorPreset={modal.applyColorPreset}
-        />
+        {/* Modale CRUD unifiée : BanknoteModal dédiée pour les billets, HistoireModal pour les autres */}
+        {activeTab === 'banknotes' ? (
+          <BanknoteModal
+            isOpen={modal.isModalOpen}
+            onClose={modal.close}
+            editingItem={modal.editingItem as BanknoteItem | null}
+            onSuccess={loadAll}
+          />
+        ) : (
+          <HistoireModal
+            isOpen={modal.isModalOpen}
+            onClose={modal.close}
+            activeTab={activeTab}
+            editingItem={modal.editingItem}
+            formValues={modal.formValues}
+            setFormValues={modal.setFormValues}
+            isSubmitting={modal.isSubmitting}
+            onSubmit={handleSave}
+            addSymbol={modal.addSymbol}
+            updateSymbol={modal.updateSymbol}
+            removeSymbol={modal.removeSymbol}
+            applyColorPreset={modal.applyColorPreset}
+          />
+        )}
 
         {/* Modale de confirmation de suppression */}
         <ConfirmModal

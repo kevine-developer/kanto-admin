@@ -97,3 +97,5 @@ export const EMPTY_PROVINCE_SYMBOL = {
   meaningFr: '',
   meaningMg: '',
 } as const;
+
+export * from './banknotes';

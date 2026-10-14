@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { AdminShell } from '@/components/layout/AdminShell';
+import { PageHeader } from '@/components/layout/PageHeader';
 import { useToast } from '@/lib/hooks/useToast';
 import {
   betaTestersService,
@@ -16,15 +17,12 @@ import {
   Send,
   XCircle,
   Search,
-  RefreshCw,
+  RotateCcw,
   Copy,
-  Download,
   Trash2,
-  Check,
   Smartphone,
   Loader2,
   X,
-  Play,
 } from 'lucide-react';
 
 const STATUS_CONFIG: Record<
@@ -34,26 +32,26 @@ const STATUS_CONFIG: Record<
   PENDING: {
     label: 'En attente',
     bg: 'bg-amber-500/10',
-    text: 'text-amber-400',
-    border: 'border-amber-500/30',
+    text: 'text-amber-600 dark:text-amber-400',
+    border: 'border-amber-500/25',
   },
   APPROVED: {
     label: 'Approuvé',
     bg: 'bg-blue-500/10',
-    text: 'text-blue-400',
-    border: 'border-blue-500/30',
+    text: 'text-blue-600 dark:text-blue-400',
+    border: 'border-blue-500/25',
   },
   INVITED: {
-    label: 'Invité (Lien envoyé)',
+    label: 'Invité (Envoyé)',
     bg: 'bg-emerald-500/10',
-    text: 'text-emerald-400',
-    border: 'border-emerald-500/30',
+    text: 'text-emerald-600 dark:text-emerald-400',
+    border: 'border-emerald-500/25',
   },
   REJECTED: {
     label: 'Refusé',
     bg: 'bg-rose-500/10',
-    text: 'text-rose-400',
-    border: 'border-rose-500/30',
+    text: 'text-rose-600 dark:text-rose-400',
+    border: 'border-rose-500/25',
   },
 };
 
@@ -76,19 +74,16 @@ export default function BetaTestersPage() {
   const [selectedStatus, setSelectedStatus] = useState<TesterStatus | 'ALL'>('ALL');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [totalCount, setTotalCount] = useState(0);
 
-  // Modale d'envoi individuel
+  // Modales
   const [inviteModalTester, setInviteModalTester] = useState<BetaTester | null>(null);
   const [inviteWebLink, setInviteWebLink] = useState(DEFAULT_PLAY_WEB_LINK);
   const [inviteAppLink, setInviteAppLink] = useState(DEFAULT_PLAY_APP_LINK);
   const [isSendingInvite, setIsSendingInvite] = useState(false);
 
-  // Modale d'envoi groupé
   const [isBulkInviteModalOpen, setIsBulkInviteModalOpen] = useState(false);
   const [isSendingBulk, setIsSendingBulk] = useState(false);
 
-  // Modale d'export Google Play
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [exportedEmailsText, setExportedEmailsText] = useState('');
   const [exportedCount, setExportedCount] = useState(0);
@@ -107,13 +102,11 @@ export default function BetaTestersPage() {
 
       setTesters(res.data);
       setTotalPages(res.totalPages || 1);
-      setTotalCount(res.total);
       if (res.stats) {
         setStats(res.stats);
       }
     } catch (err: unknown) {
-      const msg =
-        err instanceof Error ? err.message : 'Erreur lors du chargement des testeurs.';
+      const msg = err instanceof Error ? err.message : 'Erreur de chargement des testeurs.';
       toast.error(msg);
     } finally {
       setIsLoading(false);
@@ -124,47 +117,35 @@ export default function BetaTestersPage() {
     loadData();
   }, [loadData]);
 
-  // Changer le statut d'un testeur
   const handleStatusChange = async (id: string, newStatus: TesterStatus) => {
     try {
       await betaTestersService.updateStatus(id, newStatus);
       toast.success(`Statut mis à jour : ${STATUS_CONFIG[newStatus].label}`);
       loadData();
     } catch (err: unknown) {
-      const msg =
-        err instanceof Error ? err.message : 'Erreur lors de la mise à jour du statut.';
+      const msg = err instanceof Error ? err.message : 'Erreur de mise à jour du statut.';
       toast.error(msg);
     }
   };
 
-  // Supprimer un testeur
   const handleDelete = async (tester: BetaTester) => {
-    if (
-      !confirm(
-        `Êtes-vous sûr de vouloir supprimer ${tester.email} de la liste des testeurs ?`
-      )
-    ) {
-      return;
-    }
+    if (!confirm(`Supprimer ${tester.email} de la liste ?`)) return;
     try {
       await betaTestersService.deleteTester(tester.id);
-      toast.success('Testeur supprimé avec succès.');
+      toast.success('Testeur supprimé.');
       loadData();
     } catch (err: unknown) {
-      const msg =
-        err instanceof Error ? err.message : 'Erreur lors de la suppression.';
+      const msg = err instanceof Error ? err.message : 'Erreur de suppression.';
       toast.error(msg);
     }
   };
 
-  // Ouvrir la modale d'envoi individuel
   const openInviteModal = (tester: BetaTester) => {
     setInviteModalTester(tester);
     setInviteWebLink(tester.playLinkSent || DEFAULT_PLAY_WEB_LINK);
     setInviteAppLink(DEFAULT_PLAY_APP_LINK);
   };
 
-  // Envoyer l'invitation individuelle
   const handleSendInvite = async () => {
     if (!inviteModalTester) return;
     try {
@@ -177,15 +158,13 @@ export default function BetaTestersPage() {
       setInviteModalTester(null);
       loadData();
     } catch (err: unknown) {
-      const msg =
-        err instanceof Error ? err.message : "Erreur lors de l'envoi de l'invitation.";
+      const msg = err instanceof Error ? err.message : "Erreur lors de l'envoi.";
       toast.error(msg);
     } finally {
       setIsSendingInvite(false);
     }
   };
 
-  // Envoyer l'invitation groupée à tous les testeurs approuvés
   const handleBulkInvite = async () => {
     try {
       setIsSendingBulk(true);
@@ -197,15 +176,13 @@ export default function BetaTestersPage() {
       setIsBulkInviteModalOpen(false);
       loadData();
     } catch (err: unknown) {
-      const msg =
-        err instanceof Error ? err.message : "Erreur lors de l'envoi groupé.";
+      const msg = err instanceof Error ? err.message : "Erreur lors de l'envoi groupé.";
       toast.error(msg);
     } finally {
       setIsSendingBulk(false);
     }
   };
 
-  // Ouvrir la modale d'export Google Play
   const openExportModal = async (statusFilter?: TesterStatus) => {
     try {
       const res = await betaTestersService.exportEmails(statusFilter);
@@ -213,363 +190,281 @@ export default function BetaTestersPage() {
       setExportedCount(res.count);
       setIsExportModalOpen(true);
     } catch (err: unknown) {
-      const msg =
-        err instanceof Error ? err.message : "Erreur lors de l'exportation des emails.";
+      const msg = err instanceof Error ? err.message : "Erreur d'exportation des emails.";
       toast.error(msg);
     }
   };
 
-  // Copier le texte d'export
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
-    toast.success('Liste des emails copiée dans le presse-papier !');
+    toast.success('Emails copiés dans le presse-papier !');
   };
 
   return (
     <AdminShell>
-      <div className="space-y-6">
-        {/* En-tête de page */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-white tracking-tight">
-              Bêta-Testeurs Google Play
-            </h1>
-            <p className="text-sm text-slate-400 mt-1">
-              Gestion des candidatures, validation des comptes Gmail et distribution des liens du test fermé Play Store.
-            </p>
-          </div>
-        </div>
-        {/* Cartes Métriques */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-          <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-4 flex items-center gap-3 shadow-sm">
-            <div className="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center text-slate-300">
-              <Users className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-xs text-slate-400 font-medium">Total Inscrits</p>
-              <p className="text-xl font-bold text-white">{stats.total}</p>
-            </div>
-          </div>
+      <div className="space-y-5 max-w-5xl mx-auto pb-12">
+        {/* En-tête de page standardisé */}
+        <PageHeader
+          title="Bêta-Testeurs Google Play"
+          description="Validation des candidatures, comptes Gmail et distribution des liens du test fermé."
+          icon={Smartphone}
+          actions={
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                onClick={() => openExportModal(selectedStatus === 'ALL' ? undefined : selectedStatus)}
+                className="px-3 py-1.5 rounded-lg border border-[var(--card-border)] bg-[var(--card)] hover:bg-[var(--card-hover)] text-xs font-semibold text-[var(--foreground)] flex items-center gap-1.5 transition cursor-pointer shadow-xs"
+                title="Copier les emails pour la Google Play Console"
+              >
+                <Copy size={13} className="text-[var(--accent)]" />
+                <span>Exporter Google Play</span>
+              </button>
 
-          <div
-            onClick={() => setSelectedStatus('PENDING')}
-            className={`cursor-pointer bg-slate-900/60 border rounded-xl p-4 flex items-center gap-3 transition-all ${
+              {stats.approved > 0 && (
+                <button
+                  onClick={() => setIsBulkInviteModalOpen(true)}
+                  className="px-3 py-1.5 rounded-lg bg-[var(--accent)] text-white text-xs font-semibold hover:opacity-90 flex items-center gap-1.5 transition cursor-pointer shadow-xs"
+                >
+                  <Send size={13} />
+                  <span>Inviter les {stats.approved} approuvés</span>
+                </button>
+              )}
+
+              <button
+                onClick={loadData}
+                disabled={isLoading}
+                className="p-1.5 rounded-lg border border-[var(--card-border)] bg-[var(--card)] hover:bg-[var(--card-hover)] text-[var(--text-muted)] hover:text-[var(--foreground)] transition cursor-pointer shadow-xs"
+                title="Actualiser"
+              >
+                <RotateCcw size={13} className={isLoading ? 'animate-spin' : ''} />
+              </button>
+            </div>
+          }
+        />
+
+        {/* 5 Métriques & Filtres instantanés */}
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
+          <button
+            type="button"
+            onClick={() => { setSelectedStatus('ALL'); setPage(1); }}
+            className={`p-3 rounded-xl border text-left transition cursor-pointer ${
+              selectedStatus === 'ALL'
+                ? 'border-[var(--accent)] bg-[var(--accent-light)] shadow-xs'
+                : 'border-[var(--card-border)] bg-[var(--card)] hover:bg-[var(--card-hover)]'
+            }`}
+          >
+            <div className="text-[11px] text-[var(--text-muted)] flex items-center justify-between">
+              <span>Total</span>
+              <Users size={12} />
+            </div>
+            <div className="text-base font-bold font-mono text-[var(--foreground)] mt-0.5">{stats.total}</div>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => { setSelectedStatus('PENDING'); setPage(1); }}
+            className={`p-3 rounded-xl border text-left transition cursor-pointer ${
               selectedStatus === 'PENDING'
-                ? 'border-amber-500/80 bg-amber-500/5'
-                : 'border-slate-800 hover:border-slate-700'
+                ? 'border-amber-500 bg-amber-500/10 shadow-xs'
+                : 'border-[var(--card-border)] bg-[var(--card)] hover:bg-[var(--card-hover)]'
             }`}
           >
-            <div className="w-10 h-10 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
-              <Clock className="w-5 h-5" />
+            <div className="text-[11px] text-[var(--text-muted)] flex items-center justify-between">
+              <span>En attente</span>
+              <Clock size={12} className="text-amber-500" />
             </div>
-            <div>
-              <p className="text-xs text-slate-400 font-medium">En Attente</p>
-              <p className="text-xl font-bold text-amber-400">{stats.pending}</p>
-            </div>
-          </div>
+            <div className="text-base font-bold font-mono text-amber-600 dark:text-amber-400 mt-0.5">{stats.pending}</div>
+          </button>
 
-          <div
-            onClick={() => setSelectedStatus('APPROVED')}
-            className={`cursor-pointer bg-slate-900/60 border rounded-xl p-4 flex items-center gap-3 transition-all ${
+          <button
+            type="button"
+            onClick={() => { setSelectedStatus('APPROVED'); setPage(1); }}
+            className={`p-3 rounded-xl border text-left transition cursor-pointer ${
               selectedStatus === 'APPROVED'
-                ? 'border-blue-500/80 bg-blue-500/5'
-                : 'border-slate-800 hover:border-slate-700'
+                ? 'border-blue-500 bg-blue-500/10 shadow-xs'
+                : 'border-[var(--card-border)] bg-[var(--card)] hover:bg-[var(--card-hover)]'
             }`}
           >
-            <div className="w-10 h-10 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
-              <CheckCircle2 className="w-5 h-5" />
+            <div className="text-[11px] text-[var(--text-muted)] flex items-center justify-between">
+              <span>Approuvés</span>
+              <CheckCircle2 size={12} className="text-blue-500" />
             </div>
-            <div>
-              <p className="text-xs text-slate-400 font-medium">Approuvés</p>
-              <p className="text-xl font-bold text-blue-400">{stats.approved}</p>
-            </div>
-          </div>
+            <div className="text-base font-bold font-mono text-blue-600 dark:text-blue-400 mt-0.5">{stats.approved}</div>
+          </button>
 
-          <div
-            onClick={() => setSelectedStatus('INVITED')}
-            className={`cursor-pointer bg-slate-900/60 border rounded-xl p-4 flex items-center gap-3 transition-all ${
+          <button
+            type="button"
+            onClick={() => { setSelectedStatus('INVITED'); setPage(1); }}
+            className={`p-3 rounded-xl border text-left transition cursor-pointer ${
               selectedStatus === 'INVITED'
-                ? 'border-emerald-500/80 bg-emerald-500/5'
-                : 'border-slate-800 hover:border-slate-700'
+                ? 'border-emerald-500 bg-emerald-500/10 shadow-xs'
+                : 'border-[var(--card-border)] bg-[var(--card)] hover:bg-[var(--card-hover)]'
             }`}
           >
-            <div className="w-10 h-10 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
-              <Send className="w-5 h-5" />
+            <div className="text-[11px] text-[var(--text-muted)] flex items-center justify-between">
+              <span>Invités</span>
+              <Send size={12} className="text-emerald-500" />
             </div>
-            <div>
-              <p className="text-xs text-slate-400 font-medium">Liens Envoyés</p>
-              <p className="text-xl font-bold text-emerald-400">{stats.invited}</p>
-            </div>
-          </div>
+            <div className="text-base font-bold font-mono text-emerald-600 dark:text-emerald-400 mt-0.5">{stats.invited}</div>
+          </button>
 
-          <div
-            onClick={() => setSelectedStatus('REJECTED')}
-            className={`cursor-pointer bg-slate-900/60 border rounded-xl p-4 flex items-center gap-3 transition-all ${
+          <button
+            type="button"
+            onClick={() => { setSelectedStatus('REJECTED'); setPage(1); }}
+            className={`p-3 rounded-xl border text-left transition cursor-pointer ${
               selectedStatus === 'REJECTED'
-                ? 'border-rose-500/80 bg-rose-500/5'
-                : 'border-slate-800 hover:border-slate-700'
+                ? 'border-rose-500 bg-rose-500/10 shadow-xs'
+                : 'border-[var(--card-border)] bg-[var(--card)] hover:bg-[var(--card-hover)]'
             }`}
           >
-            <div className="w-10 h-10 rounded-lg bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400">
-              <XCircle className="w-5 h-5" />
+            <div className="text-[11px] text-[var(--text-muted)] flex items-center justify-between">
+              <span>Refusés</span>
+              <XCircle size={12} className="text-rose-500" />
             </div>
-            <div>
-              <p className="text-xs text-slate-400 font-medium">Refusés</p>
-              <p className="text-xl font-bold text-rose-400">{stats.rejected}</p>
-            </div>
-          </div>
+            <div className="text-base font-bold font-mono text-rose-600 dark:text-rose-400 mt-0.5">{stats.rejected}</div>
+          </button>
         </div>
 
-        {/* Barre d'outils et actions */}
-        <div className="bg-slate-900/70 border border-slate-800 rounded-xl p-4 flex flex-col md:flex-row gap-4 items-stretch md:items-center justify-between shadow-sm">
-          {/* Recherche & Filtre */}
-          <div className="flex flex-1 flex-col sm:flex-row gap-3">
-            <div className="relative flex-1">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                placeholder="Rechercher par email, nom ou smartphone..."
-                value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value);
-                  setPage(1);
-                }}
-                className="w-full bg-slate-950 border border-slate-800 rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition-colors"
-              />
-            </div>
-
-            <select
-              value={selectedStatus}
+        {/* Barre de recherche compacte */}
+        <div className="p-3 rounded-xl border border-[var(--card-border)] bg-[var(--card)] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+          <div className="relative flex-1">
+            <Search size={14} className="text-[var(--text-muted)] absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              placeholder="Rechercher par email, nom ou modèle de smartphone..."
+              value={search}
               onChange={(e) => {
-                setSelectedStatus(e.target.value as TesterStatus | 'ALL');
+                setSearch(e.target.value);
                 setPage(1);
               }}
-              className="bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-300 focus:outline-none focus:border-emerald-500"
-            >
-              <option value="ALL">Tous les statuts ({stats.total})</option>
-              <option value="PENDING">En attente ({stats.pending})</option>
-              <option value="APPROVED">Approuvés ({stats.approved})</option>
-              <option value="INVITED">Invités / Liens envoyés ({stats.invited})</option>
-              <option value="REJECTED">Refusés ({stats.rejected})</option>
-            </select>
+              className="w-full pl-8 pr-3 py-1.5 rounded-lg text-xs bg-[var(--input-bg)] border border-[var(--input-border)] text-[var(--foreground)] outline-none focus:border-[var(--accent)]"
+            />
           </div>
 
-          {/* Boutons d'actions majeures */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <button
-              onClick={() => openExportModal(selectedStatus === 'ALL' ? undefined : selectedStatus)}
-              className="inline-flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-lg px-3.5 py-2 text-sm font-semibold transition-colors"
-              title="Copier les emails pour la Google Play Console"
-            >
-              <Copy className="w-4 h-4 text-emerald-400" />
-              <span>Exporter Google Play</span>
-            </button>
-
-            {stats.approved > 0 && (
-              <button
-                onClick={() => setIsBulkInviteModalOpen(true)}
-                className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg px-3.5 py-2 text-sm font-semibold shadow-sm shadow-emerald-950 transition-colors"
-              >
-                <Send className="w-4 h-4" />
-                <span>Inviter les {stats.approved} approuvés</span>
-              </button>
-            )}
-
-            <button
-              onClick={loadData}
-              className="p-2 text-slate-400 hover:text-white bg-slate-800/80 hover:bg-slate-800 rounded-lg border border-slate-700 transition-colors"
-              title="Actualiser"
-            >
-              <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
-            </button>
+          <div className="text-xs text-[var(--text-muted)] shrink-0 font-medium">
+            {testers.length} affichés sur {stats.total} testeurs
           </div>
         </div>
 
-        {/* Tableau des testeurs */}
-        <div className="bg-slate-900/60 border border-slate-800 rounded-xl overflow-hidden shadow-sm">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm text-slate-300">
-              <thead className="bg-slate-950/80 text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-800">
-                <tr>
-                  <th className="px-5 py-3.5">Candidat &amp; Google Account</th>
-                  <th className="px-5 py-3.5">Smartphone Android</th>
-                  <th className="px-5 py-3.5">Statut</th>
-                  <th className="px-5 py-3.5">Date Inscription</th>
-                  <th className="px-5 py-3.5">Envois Play Store</th>
-                  <th className="px-5 py-3.5 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800/60">
-                {isLoading ? (
-                  <tr>
-                    <td colSpan={6} className="px-5 py-12 text-center text-slate-500">
-                      <div className="inline-flex items-center gap-2">
-                        <Loader2 className="w-5 h-5 animate-spin text-emerald-500" />
-                        <span>Chargement des testeurs...</span>
-                      </div>
-                    </td>
+        {/* Tableau épuré des testeurs */}
+        <div className="rounded-xl border border-[var(--card-border)] bg-[var(--card)] overflow-hidden">
+          {isLoading ? (
+            <div className="py-16 flex flex-col items-center justify-center gap-2 text-[var(--text-muted)]">
+              <Loader2 size={18} className="animate-spin text-[var(--accent)]" />
+              <span className="text-xs">Chargement des testeurs...</span>
+            </div>
+          ) : testers.length === 0 ? (
+            <div className="py-16 text-center text-[var(--text-muted)]">
+              <Smartphone size={24} className="mx-auto mb-2 opacity-30" />
+              <p className="text-xs font-medium">Aucun testeur ne correspond à vos critères</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="border-b border-[var(--card-border)] bg-[var(--input-bg)] text-[var(--text-muted)] font-semibold text-[11px]">
+                    <th className="px-4 py-2.5">Candidat &amp; Google Account</th>
+                    <th className="px-4 py-2.5">Smartphone</th>
+                    <th className="px-4 py-2.5">Statut</th>
+                    <th className="px-4 py-2.5">Date</th>
+                    <th className="px-4 py-2.5 text-right">Actions</th>
                   </tr>
-                ) : testers.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="px-5 py-12 text-center text-slate-500">
-                      Aucun candidat testeur ne correspond aux critères sélectionnés.
-                    </td>
-                  </tr>
-                ) : (
-                  testers.map((t) => (
-                    <tr
-                      key={t.id}
-                      className="hover:bg-slate-800/30 transition-colors"
-                    >
-                      {/* Candidat */}
-                      <td className="px-5 py-4">
-                        <div className="font-semibold text-white">
-                          {t.fullName || 'Anonyme'}
-                        </div>
-                        <div className="inline-flex items-center gap-1.5 text-xs text-slate-400 font-mono mt-0.5">
-                          <span>{t.email}</span>
-                          <button
-                            onClick={() => {
-                              navigator.clipboard.writeText(t.email);
-                              toast.success('Email copié !');
-                            }}
-                            className="text-slate-500 hover:text-slate-300 p-0.5"
-                            title="Copier l'email"
-                          >
-                            <Copy className="w-3 h-3" />
-                          </button>
-                        </div>
-                        {t.notes && (
-                          <div className="text-xs text-slate-400 italic mt-1 line-clamp-1">
-                            « {t.notes} »
+                </thead>
+                <tbody className="divide-y divide-[var(--card-border)]">
+                  {testers.map((t) => {
+                    const statusObj = STATUS_CONFIG[t.status];
+                    return (
+                      <tr key={t.id} className="hover:bg-[var(--card-hover)] transition-colors">
+                        <td className="px-4 py-3">
+                          <div className="font-semibold text-[var(--foreground)]">{t.fullName || 'Anonyme'}</div>
+                          <div className="flex items-center gap-1.5 text-[11px] font-mono text-[var(--text-muted)] mt-0.5">
+                            <span>{t.email}</span>
+                            <button
+                              onClick={() => {
+                                navigator.clipboard.writeText(t.email);
+                                toast.success('Email copié !');
+                              }}
+                              className="text-[var(--text-subtle)] hover:text-[var(--foreground)] p-0.5"
+                              title="Copier l'email"
+                            >
+                              <Copy size={11} />
+                            </button>
                           </div>
-                        )}
-                      </td>
+                        </td>
 
-                      {/* Appareil */}
-                      <td className="px-5 py-4">
-                        <div className="flex items-center gap-1.5 text-xs text-slate-300">
-                          <Smartphone className="w-3.5 h-3.5 text-slate-400" />
-                          <span>{t.deviceModel || 'Non spécifié'}</span>
-                        </div>
-                        {t.androidVersion && (
-                          <div className="text-[11px] text-slate-500 ml-5 mt-0.5">
-                            {t.androidVersion}
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          <div className="flex items-center gap-1.5 text-[var(--foreground)]">
+                            <Smartphone size={12} className="text-[var(--text-muted)]" />
+                            <span>{t.deviceModel || 'Non spécifié'}</span>
                           </div>
-                        )}
-                      </td>
+                          {t.androidVersion && (
+                            <div className="text-[10px] text-[var(--text-muted)] ml-4 mt-0.5">{t.androidVersion}</div>
+                          )}
+                        </td>
 
-                      {/* Statut */}
-                      <td className="px-5 py-4">
-                        <select
-                          value={t.status}
-                          onChange={(e) =>
-                            handleStatusChange(t.id, e.target.value as TesterStatus)
-                          }
-                          className={`text-xs font-semibold rounded-md px-2.5 py-1 border transition-colors cursor-pointer ${
-                            STATUS_CONFIG[t.status].bg
-                          } ${STATUS_CONFIG[t.status].text} ${
-                            STATUS_CONFIG[t.status].border
-                          } focus:outline-none`}
-                        >
-                          <option value="PENDING" className="bg-slate-900 text-white">
-                            En attente
-                          </option>
-                          <option value="APPROVED" className="bg-slate-900 text-white">
-                            Approuvé
-                          </option>
-                          <option value="INVITED" className="bg-slate-900 text-white">
-                            Invité (Envoyé)
-                          </option>
-                          <option value="REJECTED" className="bg-slate-900 text-white">
-                            Refusé
-                          </option>
-                        </select>
-                      </td>
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          <select
+                            value={t.status}
+                            onChange={(e) => handleStatusChange(t.id, e.target.value as TesterStatus)}
+                            className={`text-[11px] font-semibold rounded-md px-2 py-0.5 border cursor-pointer outline-none ${statusObj.bg} ${statusObj.text} ${statusObj.border}`}
+                          >
+                            <option value="PENDING">En attente</option>
+                            <option value="APPROVED">Approuvé</option>
+                            <option value="INVITED">Invité (Envoyé)</option>
+                            <option value="REJECTED">Refusé</option>
+                          </select>
+                        </td>
 
-                      {/* Date Inscription */}
-                      <td className="px-5 py-4 text-xs text-slate-400">
-                        {new Date(t.createdAt).toLocaleDateString('fr-FR', {
-                          day: '2-digit',
-                          month: 'short',
-                          year: 'numeric',
-                        })}
-                      </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-[11px] text-[var(--text-muted)]">
+                          {new Date(t.createdAt).toLocaleDateString('fr-FR', {
+                            day: '2-digit',
+                            month: 'short',
+                          })}
+                        </td>
 
-                      {/* Envois Play Store */}
-                      <td className="px-5 py-4">
-                        {t.inviteCount > 0 ? (
-                          <div>
-                            <span className="inline-flex items-center gap-1 text-xs text-emerald-400 font-medium">
-                              <Check className="w-3 h-3" />
-                              <span>{t.inviteCount} envoi(s)</span>
-                            </span>
-                            {t.invitedAt && (
-                              <div className="text-[11px] text-slate-500">
-                                Le{' '}
-                                {new Date(t.invitedAt).toLocaleDateString('fr-FR', {
-                                  day: '2-digit',
-                                  month: 'short',
-                                  hour: '2-digit',
-                                  minute: '2-digit',
-                                })}
-                              </div>
-                            )}
+                        <td className="px-4 py-3 text-right whitespace-nowrap">
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              onClick={() => openInviteModal(t)}
+                              className="px-2 py-1 rounded text-[11px] font-medium border border-[var(--card-border)] bg-[var(--input-bg)] hover:bg-[var(--card-hover)] text-[var(--foreground)] flex items-center gap-1 transition cursor-pointer"
+                              title="Envoyer les liens Play Store"
+                            >
+                              <Send size={11} className="text-[var(--accent)]" />
+                              <span>{t.status === 'INVITED' ? 'Renvoyer' : 'Inviter'}</span>
+                            </button>
+
+                            <button
+                              onClick={() => handleDelete(t)}
+                              className="p-1 rounded text-red-500 hover:bg-red-500/10 transition cursor-pointer"
+                              title="Supprimer"
+                            >
+                              <Trash2 size={13} />
+                            </button>
                           </div>
-                        ) : (
-                          <span className="text-xs text-slate-500">Jamais envoyé</span>
-                        )}
-                      </td>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
 
-                      {/* Actions */}
-                      <td className="px-5 py-4 text-right">
-                        <div className="inline-flex items-center gap-1">
-                          <button
-                            onClick={() => openInviteModal(t)}
-                            className="inline-flex items-center gap-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-lg px-2.5 py-1 text-xs font-semibold transition-colors"
-                            title="Envoyer le lien Google Play"
-                          >
-                            <Send className="w-3 h-3" />
-                            <span>{t.inviteCount > 0 ? 'Renvoyer' : 'Inviter'}</span>
-                          </button>
-
-                          <button
-                            onClick={() => handleDelete(t)}
-                            className="p-1 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors ml-1"
-                            title="Supprimer"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Pagination */}
+          {/* Pagination compacte */}
           {totalPages > 1 && (
-            <div className="bg-slate-950/60 px-5 py-3 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
-              <div>
-                Affichage de {testers.length} sur {totalCount} testeur(s)
-              </div>
-              <div className="flex gap-1">
+            <div className="p-3 border-t border-[var(--card-border)] flex items-center justify-between text-xs text-[var(--text-muted)]">
+              <span>Page {page} sur {totalPages}</span>
+              <div className="flex items-center gap-1.5">
                 <button
                   disabled={page <= 1}
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  className="px-3 py-1 bg-slate-900 border border-slate-800 rounded disabled:opacity-50 hover:bg-slate-800 text-slate-300"
+                  onClick={() => setPage(page - 1)}
+                  className="px-2.5 py-1 rounded border border-[var(--card-border)] bg-[var(--input-bg)] disabled:opacity-40 cursor-pointer"
                 >
                   Précédent
                 </button>
-                <span className="px-3 py-1 text-slate-300 font-medium">
-                  {page} / {totalPages}
-                </span>
                 <button
                   disabled={page >= totalPages}
-                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                  className="px-3 py-1 bg-slate-900 border border-slate-800 rounded disabled:opacity-50 hover:bg-slate-800 text-slate-300"
+                  onClick={() => setPage(page + 1)}
+                  className="px-2.5 py-1 rounded border border-[var(--card-border)] bg-[var(--input-bg)] disabled:opacity-40 cursor-pointer"
                 >
                   Suivant
                 </button>
@@ -579,223 +474,167 @@ export default function BetaTestersPage() {
         </div>
       </div>
 
-      {/* ─── MODALE D'ENVOI INDIVIDUEL GOOGLE PLAY ────────────────────────────── */}
+      {/* ── MODALE INVITATION INDIVIDUELLE ──────────────────────────── */}
       {inviteModalTester && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-150">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl">
-            <div className="px-6 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/60">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
-                  <Play className="w-4 h-4" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-white text-base">
-                    Envoyer l&apos;accès Google Play
-                  </h3>
-                  <p className="text-xs text-slate-400">
-                    Destinataire : {inviteModalTester.email}
-                  </p>
-                </div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="w-full max-w-lg rounded-2xl border border-[var(--card-border)] bg-[var(--card)] shadow-2xl p-5 space-y-4">
+            <div className="flex items-center justify-between border-b border-[var(--card-border)] pb-3">
+              <div>
+                <h3 className="text-xs font-bold text-[var(--foreground)]">Envoyer l&apos;invitation Play Store</h3>
+                <p className="text-[11px] text-[var(--text-muted)] font-mono mt-0.5">{inviteModalTester.email}</p>
               </div>
               <button
+                type="button"
                 onClick={() => setInviteModalTester(null)}
-                className="text-slate-400 hover:text-white p-1"
+                className="p-1 text-[var(--text-muted)] hover:text-[var(--foreground)] cursor-pointer"
               >
-                <X className="w-5 h-5" />
+                <X size={16} />
               </button>
             </div>
 
-            <div className="p-6 space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                  Lien Web d&apos;invitation (Closed Testing)
-                </label>
+            <div className="space-y-3 text-xs">
+              <div className="space-y-1">
+                <label className="font-semibold text-[var(--foreground)]">Lien Web d&apos;acceptation (Étape 1) *</label>
                 <input
                   type="text"
                   value={inviteWebLink}
                   onChange={(e) => setInviteWebLink(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2 text-sm text-white focus:outline-none focus:border-emerald-500 font-mono text-xs"
+                  className="w-full px-2.5 py-1.5 rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] text-[var(--foreground)] font-mono text-[11px]"
                 />
-                <p className="text-[11px] text-slate-500 mt-1">
-                  Lien sur lequel le testeur clique pour accepter le programme avec son compte Google.
-                </p>
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                  Lien direct Google Play Store (App)
-                </label>
+              <div className="space-y-1">
+                <label className="font-semibold text-[var(--foreground)]">Lien direct Play Store (Étape 2) *</label>
                 <input
                   type="text"
                   value={inviteAppLink}
                   onChange={(e) => setInviteAppLink(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2 text-sm text-white focus:outline-none focus:border-emerald-500 font-mono text-xs"
+                  className="w-full px-2.5 py-1.5 rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] text-[var(--foreground)] font-mono text-[11px]"
                 />
-              </div>
-
-              <div className="bg-emerald-950/30 border border-emerald-800/40 rounded-xl p-3.5 text-xs text-emerald-300 flex items-start gap-2.5">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                <div>
-                  L&apos;email officiel sera envoyé via <strong>Resend</strong> avec le guide en 2 étapes illustré (acceptation du test + téléchargement sur le Play Store).
-                </div>
               </div>
             </div>
 
-            <div className="px-6 py-4 border-t border-slate-800 flex justify-end gap-2.5 bg-slate-950/40">
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-[var(--card-border)]">
               <button
+                type="button"
                 onClick={() => setInviteModalTester(null)}
-                className="px-4 py-2 text-sm font-semibold text-slate-400 hover:text-white rounded-lg"
+                className="px-3 py-1.5 rounded-lg border border-[var(--card-border)] text-xs text-[var(--text-muted)] hover:text-[var(--foreground)]"
               >
                 Annuler
               </button>
               <button
-                disabled={isSendingInvite}
+                type="button"
                 onClick={handleSendInvite}
-                className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded-lg px-4 py-2 text-sm font-semibold transition-colors"
+                disabled={isSendingInvite}
+                className="px-3.5 py-1.5 rounded-lg bg-[var(--accent)] text-white text-xs font-semibold hover:opacity-90 flex items-center gap-1.5 shadow-xs"
               >
-                {isSendingInvite ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Envoi en cours...</span>
-                  </>
-                ) : (
-                  <>
-                    <Send className="w-4 h-4" />
-                    <span>Confirmer et Envoyer</span>
-                  </>
-                )}
+                {isSendingInvite ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
+                <span>{isSendingInvite ? 'Envoi...' : "Envoyer l'email"}</span>
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ─── MODALE D'ENVOI GROUPÉ ────────────────────────────────────────────── */}
+      {/* ── MODALE INVITATION GROUPÉE ───────────────────────────────── */}
       {isBulkInviteModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-150">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl">
-            <div className="px-6 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/60">
-              <h3 className="font-bold text-white text-base">
-                Envoi groupé d&apos;invitations ({stats.approved} testeurs)
-              </h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="w-full max-w-lg rounded-2xl border border-[var(--card-border)] bg-[var(--card)] shadow-2xl p-5 space-y-4">
+            <div className="flex items-center justify-between border-b border-[var(--card-border)] pb-3">
+              <div>
+                <h3 className="text-xs font-bold text-[var(--foreground)]">Invitation groupée Play Store</h3>
+                <p className="text-[11px] text-[var(--text-muted)] mt-0.5">
+                  Diffusion aux {stats.approved} testeurs ayant le statut « Approuvé ».
+                </p>
+              </div>
               <button
+                type="button"
                 onClick={() => setIsBulkInviteModalOpen(false)}
-                className="text-slate-400 hover:text-white p-1"
+                className="p-1 text-[var(--text-muted)] hover:text-[var(--foreground)] cursor-pointer"
               >
-                <X className="w-5 h-5" />
+                <X size={16} />
               </button>
             </div>
 
-            <div className="p-6 space-y-4">
-              <p className="text-sm text-slate-300">
-                Vous êtes sur le point d&apos;envoyer l&apos;e-mail officiel d&apos;invitation Google Play à l&apos;ensemble des{' '}
-                <strong className="text-emerald-400">{stats.approved} testeurs actuellement approuvés</strong>.
-              </p>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                  Lien de test Play Store utilisé
-                </label>
+            <div className="space-y-3 text-xs">
+              <div className="space-y-1">
+                <label className="font-semibold text-[var(--foreground)]">Lien Web d&apos;acceptation</label>
                 <input
                   type="text"
                   value={inviteWebLink}
                   onChange={(e) => setInviteWebLink(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white font-mono"
+                  className="w-full px-2.5 py-1.5 rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] text-[var(--foreground)] font-mono text-[11px]"
                 />
               </div>
 
-              <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 text-xs text-amber-300">
-                ⚠️ Assurez-vous d&apos;avoir d&apos;abord ajouté ces adresses email dans votre liste de testeurs sur la <strong>Google Play Console</strong> afin qu&apos;ils puissent y accéder dès réception du mail.
+              <div className="space-y-1">
+                <label className="font-semibold text-[var(--foreground)]">Lien direct Play Store</label>
+                <input
+                  type="text"
+                  value={inviteAppLink}
+                  onChange={(e) => setInviteAppLink(e.target.value)}
+                  className="w-full px-2.5 py-1.5 rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] text-[var(--foreground)] font-mono text-[11px]"
+                />
               </div>
             </div>
 
-            <div className="px-6 py-4 border-t border-slate-800 flex justify-end gap-2.5 bg-slate-950/40">
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-[var(--card-border)]">
               <button
+                type="button"
                 onClick={() => setIsBulkInviteModalOpen(false)}
-                className="px-4 py-2 text-sm font-semibold text-slate-400 hover:text-white rounded-lg"
+                className="px-3 py-1.5 rounded-lg border border-[var(--card-border)] text-xs text-[var(--text-muted)] hover:text-[var(--foreground)]"
               >
                 Annuler
               </button>
               <button
-                disabled={isSendingBulk}
+                type="button"
                 onClick={handleBulkInvite}
-                className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded-lg px-4 py-2 text-sm font-semibold transition-colors"
+                disabled={isSendingBulk}
+                className="px-3.5 py-1.5 rounded-lg bg-[var(--accent)] text-white text-xs font-semibold hover:opacity-90 flex items-center gap-1.5 shadow-xs"
               >
-                {isSendingBulk ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Distribution en cours...</span>
-                  </>
-                ) : (
-                  <>
-                    <Send className="w-4 h-4" />
-                    <span>Lancer la distribution</span>
-                  </>
-                )}
+                {isSendingBulk ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
+                <span>{isSendingBulk ? 'Envoi en cours...' : `Envoyer aux ${stats.approved} testeurs`}</span>
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ─── MODALE D'EXPORTATION GOOGLE PLAY CONSOLE ──────────────────────────── */}
+      {/* ── MODALE EXPORT GOOGLE PLAY ───────────────────────────────── */}
       {isExportModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-150">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-xl overflow-hidden shadow-2xl">
-            <div className="px-6 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/60">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="w-full max-w-lg rounded-2xl border border-[var(--card-border)] bg-[var(--card)] shadow-2xl p-5 space-y-4">
+            <div className="flex items-center justify-between border-b border-[var(--card-border)] pb-3">
               <div>
-                <h3 className="font-bold text-white text-base">
-                  Export Google Play Console ({exportedCount} emails)
-                </h3>
-                <p className="text-xs text-slate-400">
-                  Format séparé par des virgules pour copier/coller direct
-                </p>
+                <h3 className="text-xs font-bold text-[var(--foreground)]">Export pour Google Play Console</h3>
+                <p className="text-[11px] text-[var(--text-muted)] mt-0.5">{exportedCount} adresses email séparées par des virgules</p>
               </div>
               <button
+                type="button"
                 onClick={() => setIsExportModalOpen(false)}
-                className="text-slate-400 hover:text-white p-1"
+                className="p-1 text-[var(--text-muted)] hover:text-[var(--foreground)] cursor-pointer"
               >
-                <X className="w-5 h-5" />
+                <X size={16} />
               </button>
             </div>
 
-            <div className="p-6 space-y-4">
-              <p className="text-xs text-slate-300">
-                Dans Google Play Console &gt; <em>Tests fermés</em> &gt; <em>Gérer les testeurs</em> &gt; Créez ou modifiez votre liste et collez simplement les adresses ci-dessous :
-              </p>
+            <textarea
+              readOnly
+              rows={8}
+              value={exportedEmailsText}
+              className="w-full p-3 rounded-xl border border-[var(--input-border)] bg-[var(--input-bg)] text-[var(--foreground)] font-mono text-[11px] leading-relaxed select-all"
+            />
 
-              <textarea
-                readOnly
-                value={exportedEmailsText}
-                rows={6}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-emerald-400 font-mono focus:outline-none"
-              />
-
-              <div className="flex gap-2">
-                <button
-                  onClick={() => copyToClipboard(exportedEmailsText)}
-                  className="flex-1 inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg py-2.5 text-sm font-semibold transition-colors"
-                >
-                  <Copy className="w-4 h-4" />
-                  <span>Copier tous les emails</span>
-                </button>
-
-                <button
-                  onClick={() => {
-                    const blob = new Blob([exportedEmailsText], { type: 'text/plain' });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `kanto-beta-testers-${new Date().toISOString().slice(0, 10)}.txt`;
-                    a.click();
-                    URL.revokeObjectURL(url);
-                  }}
-                  className="bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-lg px-4 py-2.5 text-sm font-semibold transition-colors inline-flex items-center gap-2"
-                >
-                  <Download className="w-4 h-4" />
-                  <span>Télécharger .txt</span>
-                </button>
-              </div>
+            <div className="flex items-center justify-between pt-2 border-t border-[var(--card-border)]">
+              <span className="text-[11px] text-[var(--text-muted)]">Collez directement dans la section « Test fermé » de Google Play</span>
+              <button
+                type="button"
+                onClick={() => copyToClipboard(exportedEmailsText)}
+                className="px-3.5 py-1.5 rounded-lg bg-[var(--accent)] text-white text-xs font-semibold hover:opacity-90 flex items-center gap-1.5 shadow-xs"
+              >
+                <Copy size={13} />
+                <span>Copier la liste</span>
+              </button>
             </div>
           </div>
         </div>

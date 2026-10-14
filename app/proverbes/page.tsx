@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { AdminShell } from '@/components/layout/AdminShell';
 import { PageHeader } from '@/components/layout/PageHeader';
-import { SearchBar, Pagination, ConfirmModal, LoadingState, EmptyState } from '@/components/ui';
+import { Pagination, ConfirmModal } from '@/components/ui';
 import { useToast } from '@/lib/hooks/useToast';
 import { fetchApi } from '@/lib/api-client';
 import {
@@ -15,6 +15,8 @@ import {
   Bookmark,
   X,
   Loader2,
+  Search,
+  RotateCcw,
 } from 'lucide-react';
 
 interface MalagasyItem {
@@ -47,6 +49,9 @@ interface MalagasyItem {
     notes?: string | null;
   }>;
 }
+
+const inputCls =
+  'w-full px-3 py-1.5 text-xs rounded-lg bg-[var(--input-bg)] border border-[var(--input-border)] text-[var(--foreground)] focus:outline-none focus:border-[var(--accent)] transition placeholder:text-[var(--text-subtle)]';
 
 export default function ProverbesAdminPage() {
   const { toast } = useToast();
@@ -86,7 +91,7 @@ export default function ProverbesAdminPage() {
       setIsLoading(true);
       const params = new URLSearchParams({
         page: String(page),
-        limit: '10',
+        limit: '15',
       });
       if (category !== 'ALL') params.append('category', category);
       if (difficulty !== 'ALL') params.append('difficulty', difficulty);
@@ -184,7 +189,7 @@ export default function ProverbesAdminPage() {
       setIsModalOpen(false);
       void loadItems();
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Erreur lors de l’enregistrement du proverbe';
+      const msg = err instanceof Error ? err.message : 'Erreur lors de l’enregistrement';
       toast.error(msg);
     } finally {
       setIsSubmitting(false);
@@ -230,98 +235,134 @@ export default function ProverbesAdminPage() {
 
   return (
     <AdminShell>
-      <div className="w-full space-y-4 pb-8">
+      <div className="w-full space-y-4 max-w-6xl mx-auto pb-12">
         {/* En-tête standardisé */}
         <PageHeader
           title="Proverbes & Fady (Ohabolana)"
           description="Corpus des traditions orales et sagesses ancestrales de Madagascar."
           icon={ScrollText}
-          primaryAction={{
-            label: 'Nouveau Proverbe',
-            icon: <Plus size={14} />,
-            onClick: openCreateModal,
-          }}
-        />
-
-        {/* Barre de recherche avec filtres intégrés */}
-        <SearchBar
-          value={search}
-          onChange={(val) => {
-            setSearch(val);
-            setPage(1);
-          }}
-          placeholder="Rechercher par mot-clé malgache, traduction ou sens culturel..."
-          totalCount={totalCount}
-          filters={
-            <>
-              <div className="flex items-center gap-1 overflow-x-auto pb-1 sm:pb-0">
-                {[
-                  { label: 'Tous', value: 'ALL' },
-                  { label: 'Ohabolana', value: 'PROVERBE' },
-                  { label: 'Oha-pitenenana', value: 'EXPRESSION' },
-                  { label: 'Hatra / Fady', value: 'DICTON' },
-                ].map((tab) => (
-                  <button
-                    key={tab.value}
-                    onClick={() => {
-                      setCategory(tab.value);
-                      setPage(1);
-                    }}
-                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                      category === tab.value
-                        ? 'bg-[var(--accent)] text-white shadow-xs'
-                        : 'bg-[var(--input-bg)] text-[var(--text-muted)] hover:bg-[var(--card-hover)] border border-[var(--input-border)]'
-                    }`}
-                  >
-                    {tab.label}
-                  </button>
-                ))}
-              </div>
-
-              <select
-                value={difficulty}
-                onChange={(e) => {
-                  setDifficulty(e.target.value);
-                  setPage(1);
-                }}
-                className="py-1 px-2 text-xs rounded-lg bg-[var(--input-bg)] border border-[var(--input-border)] font-medium text-[var(--foreground)]"
+          badge={
+            <span className="text-xs px-2.5 py-1 rounded-lg font-mono font-medium border border-[var(--card-border)] bg-[var(--card)] text-[var(--foreground)] shadow-xs">
+              {totalCount} proverbe{totalCount !== 1 ? 's' : ''}
+            </span>
+          }
+          actions={
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => void loadItems()}
+                disabled={isLoading}
+                className="p-2 rounded-lg border border-[var(--card-border)] bg-[var(--card)] text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--card-hover)] transition cursor-pointer shadow-xs disabled:opacity-50"
+                title="Actualiser"
               >
-                <option value="ALL">Difficulté : Toutes</option>
-                <option value="EASY">Tsotra (Courant)</option>
-                <option value="MEDIUM">Antoniny (Moyen)</option>
-                <option value="HARD">Sarotra (Littéraire)</option>
-              </select>
-            </>
+                <RotateCcw size={14} className={isLoading ? 'animate-spin' : ''} />
+              </button>
+
+              <button
+                onClick={openCreateModal}
+                className="px-3 py-1.5 rounded-lg bg-[var(--accent)] text-white hover:opacity-90 transition cursor-pointer flex items-center gap-1.5 text-xs font-semibold shadow-xs"
+              >
+                <Plus size={14} />
+                <span>Nouveau proverbe</span>
+              </button>
+            </div>
           }
         />
 
-        {/* Fiches de Proverbes */}
-        <div className="bg-[var(--card)] rounded-xl border border-[var(--card-border)] overflow-hidden">
-          {isLoading ? (
-            <LoadingState message="Chargement des sagesses..." />
-          ) : items.length === 0 ? (
-            <EmptyState
-              title="Aucun proverbe trouvé"
-              description="Aucune sagesse ne correspond à vos critères de recherche ou filtres."
-              action={{
-                label: 'Créer un proverbe',
-                icon: <Plus size={14} />,
-                onClick: openCreateModal,
+        {/* Barre d'outils (Recherche + Filtres) */}
+        <div className="p-3 rounded-xl border border-[var(--card-border)] bg-[var(--card)] shadow-xs flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
+          {/* Recherche */}
+          <div className="relative flex-1">
+            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-subtle)]" />
+            <input
+              type="text"
+              placeholder="Rechercher par texte malgache, traduction ou sens..."
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(1);
               }}
+              className="w-full pl-8 pr-8 py-1.5 text-xs rounded-lg bg-[var(--input-bg)] border border-[var(--input-border)] text-[var(--foreground)] placeholder:text-[var(--text-subtle)] focus:outline-none focus:border-[var(--accent)]"
             />
+            {search && (
+              <button
+                onClick={() => {
+                  setSearch('');
+                  setPage(1);
+                }}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--text-subtle)] hover:text-[var(--foreground)] p-0.5 cursor-pointer"
+              >
+                <X size={12} />
+              </button>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Pastilles Catégories */}
+            <div className="flex items-center gap-1 p-0.5 rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)]">
+              {[
+                { label: 'Tous', value: 'ALL' },
+                { label: 'Ohabolana', value: 'PROVERBE' },
+                { label: 'Expressions', value: 'EXPRESSION' },
+                { label: 'Dictons & Fady', value: 'DICTON' },
+              ].map((tab) => (
+                <button
+                  key={tab.value}
+                  onClick={() => {
+                    setCategory(tab.value);
+                    setPage(1);
+                  }}
+                  className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition cursor-pointer ${
+                    category === tab.value
+                      ? 'bg-[var(--card)] text-[var(--foreground)] font-semibold shadow-xs'
+                      : 'text-[var(--text-muted)] hover:text-[var(--foreground)]'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Difficulté */}
+            <select
+              value={difficulty}
+              onChange={(e) => {
+                setDifficulty(e.target.value);
+                setPage(1);
+              }}
+              className="py-1.5 px-2.5 text-xs rounded-lg bg-[var(--input-bg)] border border-[var(--input-border)] font-medium text-[var(--foreground)] cursor-pointer focus:outline-none focus:border-[var(--accent)]"
+            >
+              <option value="ALL">Difficulté : Toutes</option>
+              <option value="EASY">Tsotra (Courant)</option>
+              <option value="MEDIUM">Antoniny (Moyen)</option>
+              <option value="HARD">Sarotra (Littéraire)</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Liste des Proverbes */}
+        <div className="bg-[var(--card)] rounded-xl border border-[var(--card-border)] shadow-xs overflow-hidden">
+          {isLoading ? (
+            <div className="py-16 flex flex-col items-center justify-center gap-2">
+              <Loader2 className="w-5 h-5 animate-spin text-[var(--accent)]" />
+              <span className="text-xs text-[var(--text-muted)]">Chargement des proverbes...</span>
+            </div>
+          ) : items.length === 0 ? (
+            <div className="py-16 text-center text-xs text-[var(--text-muted)]">
+              Aucune sagesse ne correspond à vos critères de recherche.
+            </div>
           ) : (
             <div className="divide-y divide-[var(--card-border)]">
               {items.map((item) => (
                 <div
                   key={item.id}
-                  className="p-4 flex flex-col md:flex-row items-start justify-between gap-4 hover:bg-[var(--card-hover)] transition-colors"
+                  className="p-3.5 flex flex-col md:flex-row items-start justify-between gap-3 hover:bg-[var(--card-hover)] transition-colors"
                 >
-                  <div className="space-y-2 flex-1">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-[10.5px] font-bold uppercase px-2 py-0.5 rounded bg-[var(--accent)]/10 text-[var(--accent)] border border-[var(--accent)]/20">
+                  <div className="space-y-1.5 flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-md bg-[var(--accent-light)] text-[var(--accent-text)] border border-[var(--accent-border)]">
                         {item.category}
                       </span>
-                      <span className="text-[10.5px] font-medium px-2 py-0.5 rounded bg-[var(--input-bg)] text-[var(--text-muted)] border border-[var(--input-border)]">
+                      <span className="text-[10px] font-medium px-2 py-0.5 rounded-md bg-[var(--input-bg)] text-[var(--text-muted)] border border-[var(--input-border)]">
                         {item.difficulty === 'EASY'
                           ? 'Courant'
                           : item.difficulty === 'MEDIUM'
@@ -329,14 +370,14 @@ export default function ProverbesAdminPage() {
                           : 'Littéraire'}
                       </span>
                       {item.isFeatured && (
-                        <span className="text-[10.5px] font-bold px-2 py-0.5 rounded bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 flex items-center gap-1">
-                          <Bookmark size={11} fill="currentColor" />
-                          <span>À la Une</span>
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 flex items-center gap-1">
+                          <Bookmark size={10} fill="currentColor" />
+                          <span>À la une</span>
                         </span>
                       )}
                       {item.dialectVariants && item.dialectVariants.length > 0 && (
-                        <span className="text-[10.5px] font-medium px-2 py-0.5 rounded bg-[var(--input-bg)] text-[var(--text-muted)] border border-[var(--input-border)] flex items-center gap-1">
-                          <MapPin size={11} />
+                        <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-[var(--input-bg)] text-[var(--text-muted)] border border-[var(--input-border)] flex items-center gap-1">
+                          <MapPin size={10} />
                           <span>{item.dialectVariants.length} variante(s)</span>
                         </span>
                       )}
@@ -351,19 +392,19 @@ export default function ProverbesAdminPage() {
                       </div>
                     </div>
 
-                    <div className="text-xs text-neutral-600 dark:text-neutral-400 line-clamp-2 leading-relaxed">
+                    <div className="text-xs text-[var(--text-muted)] line-clamp-2 leading-relaxed pt-0.5">
                       {item.meaning}
                     </div>
                   </div>
 
                   {/* Actions */}
-                  <div className="flex items-center gap-1.5 shrink-0 self-end md:self-center">
+                  <div className="flex items-center gap-1 shrink-0 self-end md:self-center">
                     <button
                       onClick={() => handleToggleFeatured(item)}
                       title={item.isFeatured ? 'Retirer de la Une' : 'Mettre à la Une'}
-                      className={`p-1.5 rounded-md border transition cursor-pointer ${
+                      className={`p-1.5 rounded-lg border transition cursor-pointer ${
                         item.isFeatured
-                          ? 'border-amber-300 bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400'
+                          ? 'border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400'
                           : 'border-[var(--card-border)] bg-[var(--input-bg)] text-[var(--text-muted)] hover:text-amber-500'
                       }`}
                     >
@@ -372,7 +413,7 @@ export default function ProverbesAdminPage() {
 
                     <button
                       onClick={() => setSelectedItem(item)}
-                      className="px-2.5 py-1 rounded-md border border-[var(--card-border)] bg-[var(--input-bg)] hover:bg-[var(--card-hover)] text-[var(--foreground)] text-xs font-medium transition cursor-pointer"
+                      className="px-2.5 py-1 rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] hover:bg-[var(--card-hover)] text-[var(--foreground)] text-xs font-medium transition cursor-pointer shadow-xs"
                     >
                       Détails
                     </button>
@@ -380,7 +421,7 @@ export default function ProverbesAdminPage() {
                     <button
                       onClick={() => openEditModal(item)}
                       title="Modifier ce proverbe"
-                      className="p-1.5 rounded-md border border-[var(--card-border)] bg-[var(--input-bg)] hover:bg-[var(--card-hover)] text-[var(--text-muted)] hover:text-[var(--foreground)] transition cursor-pointer"
+                      className="p-1.5 rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] hover:bg-[var(--card-hover)] text-[var(--text-muted)] hover:text-[var(--accent)] transition cursor-pointer"
                     >
                       <Edit size={13} />
                     </button>
@@ -388,7 +429,7 @@ export default function ProverbesAdminPage() {
                     <button
                       onClick={() => setDeletingItem(item)}
                       title="Supprimer ce proverbe"
-                      className="p-1.5 rounded-md border border-red-200 dark:border-red-900/40 bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 hover:bg-red-100 transition cursor-pointer"
+                      className="p-1.5 rounded-lg border border-rose-500/20 bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-500/20 transition cursor-pointer"
                     >
                       <Trash2 size={13} />
                     </button>
@@ -398,8 +439,8 @@ export default function ProverbesAdminPage() {
             </div>
           )}
 
-          {/* Pagination standardisée */}
-          <div className="p-3">
+          {/* Pagination */}
+          <div className="p-3 border-t border-[var(--card-border)] bg-[var(--input-bg)]">
             <Pagination
               currentPage={page}
               totalPages={totalPages}
@@ -412,7 +453,7 @@ export default function ProverbesAdminPage() {
           </div>
         </div>
 
-        {/* Modal Confirmation de Suppression standardisée */}
+        {/* Modal Confirmation de Suppression */}
         <ConfirmModal
           isOpen={!!deletingItem}
           onClose={() => setDeletingItem(null)}
@@ -426,35 +467,37 @@ export default function ProverbesAdminPage() {
 
         {/* Modal Création / Édition Proverbe */}
         {isModalOpen && (
-          <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs overflow-y-auto flex items-start justify-center p-4 pt-6 sm:pt-10 md:pt-12">
-            <div className="kanto-card rounded-xl border border-[var(--card-border)] shadow-xl max-w-lg w-full max-h-[calc(100vh-3rem)] sm:max-h-[calc(100vh-5.5rem)] flex flex-col overflow-hidden animate-in fade-in slide-in-from-top-3 duration-150">
-              <div className="px-4 py-3 border-b border-[var(--card-border)] flex items-center justify-between">
+          <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs overflow-y-auto flex items-start justify-center p-4 pt-8 md:pt-12 animate-in fade-in duration-150">
+            <div className="bg-[var(--card)] rounded-2xl border border-[var(--card-border)] shadow-2xl max-w-lg w-full max-h-[calc(100vh-4rem)] flex flex-col overflow-hidden">
+              <div className="px-5 py-3.5 border-b border-[var(--card-border)] bg-[var(--input-bg)] flex items-center justify-between">
                 <div>
                   <h2 className="text-sm font-semibold text-[var(--foreground)] tracking-tight">
                     {editingId ? 'Modifier la sagesse' : 'Ajouter une nouvelle sagesse'}
                   </h2>
-                  <p className="text-xs text-[var(--text-muted)] mt-0.5">
-                    {editingId ? 'Édition du proverbe ou dicton' : 'Enregistrer un proverbe ou dicton'}
+                  <p className="text-[11px] text-[var(--text-muted)] mt-0.5">
+                    {editingId ? 'Mise à jour du proverbe ou dicton' : 'Enregistrer une sagesse ancestrale'}
                   </p>
                 </div>
                 <button
                   onClick={() => setIsModalOpen(false)}
-                  className="p-1 rounded-md text-[var(--text-subtle)] hover:bg-[var(--card-hover)] transition-colors cursor-pointer"
+                  className="p-1 rounded-lg hover:bg-[var(--card-hover)] text-[var(--text-muted)] transition cursor-pointer"
                 >
-                  <X size={16} />
+                  <X size={15} />
                 </button>
               </div>
 
-              <form onSubmit={handleSubmit} className="p-4 space-y-3 overflow-y-auto flex-1 text-xs">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <form onSubmit={handleSubmit} className="p-5 space-y-3.5 overflow-y-auto flex-1 text-xs">
+                <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-medium text-[var(--text-muted)] mb-1">
+                    <label className="block text-xs font-semibold text-[var(--foreground)] mb-1">
                       Catégorie *
                     </label>
                     <select
                       value={formItem.category}
-                      onChange={(e) => setFormItem({ ...formItem, category: e.target.value as MalagasyItem['category'] })}
-                      className="w-full px-2.5 py-1.5 rounded-md kanto-input text-xs"
+                      onChange={(e) =>
+                        setFormItem({ ...formItem, category: e.target.value as MalagasyItem['category'] })
+                      }
+                      className={inputCls}
                     >
                       <option value="PROVERBE">Ohabolana (Proverbe)</option>
                       <option value="EXPRESSION">Oha-pitenenana (Expression)</option>
@@ -463,13 +506,15 @@ export default function ProverbesAdminPage() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-[var(--text-muted)] mb-2">
+                    <label className="block text-xs font-semibold text-[var(--foreground)] mb-1">
                       Niveau de difficulté *
                     </label>
                     <select
                       value={formItem.difficulty}
-                      onChange={(e) => setFormItem({ ...formItem, difficulty: e.target.value as MalagasyItem['difficulty'] })}
-                      className="w-full p-3.5 rounded-xl kanto-input text-base"
+                      onChange={(e) =>
+                        setFormItem({ ...formItem, difficulty: e.target.value as MalagasyItem['difficulty'] })
+                      }
+                      className={inputCls}
                     >
                       <option value="EASY">Tsotra (Courant / Populaire)</option>
                       <option value="MEDIUM">Antoniny (Intermédiaire)</option>
@@ -479,21 +524,21 @@ export default function ProverbesAdminPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-[var(--text-muted)] mb-2">
+                  <label className="block text-xs font-semibold text-[var(--foreground)] mb-1">
                     Texte en Malagasy *
                   </label>
                   <textarea
                     rows={2}
                     value={formItem.malagasy}
                     onChange={(e) => setFormItem({ ...formItem, malagasy: e.target.value })}
-                    placeholder="Ex: Ny fihavanana toy ny ketsa, raha tsy terena tsy maniry..."
+                    placeholder="Ex: Ny fihavanana toy ny ketsa..."
                     required
-                    className="w-full p-4 rounded-xl kanto-input font-heritage font-bold text-lg"
+                    className={inputCls}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-[var(--text-muted)] mb-2">
+                  <label className="block text-xs font-semibold text-[var(--foreground)] mb-1">
                     Traduction en Français *
                   </label>
                   <textarea
@@ -502,12 +547,12 @@ export default function ProverbesAdminPage() {
                     onChange={(e) => setFormItem({ ...formItem, french: e.target.value })}
                     placeholder="Ex: La parenté est comme de jeunes plants de riz..."
                     required
-                    className="w-full p-4 rounded-xl kanto-input italic font-serif text-base"
+                    className={inputCls}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-[var(--text-muted)] mb-2">
+                  <label className="block text-xs font-semibold text-[var(--foreground)] mb-1">
                     Sens culturel &amp; Explication *
                   </label>
                   <textarea
@@ -516,33 +561,33 @@ export default function ProverbesAdminPage() {
                     onChange={(e) => setFormItem({ ...formItem, meaning: e.target.value })}
                     placeholder="Explication du contexte, de la morale et des enseignements traditionnels..."
                     required
-                    className="w-full p-4 rounded-xl kanto-input text-base"
+                    className={inputCls}
                   />
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-center">
                   <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-[var(--text-muted)] mb-2">
+                    <label className="block text-xs font-semibold text-[var(--foreground)] mb-1">
                       Exemple d&apos;usage (optionnel)
                     </label>
                     <input
                       type="text"
                       value={formItem.example}
                       onChange={(e) => setFormItem({ ...formItem, example: e.target.value })}
-                      placeholder="Ex: Ampiasaina rehefa mampihavana..."
-                      className="w-full p-3.5 rounded-xl kanto-input text-base"
+                      placeholder="Ex: Ampiasaina rehefa..."
+                      className={inputCls}
                     />
                   </div>
 
-                  <div className="flex items-center pt-6">
-                    <label className="flex items-center gap-3 cursor-pointer select-none">
+                  <div className="flex items-center pt-4">
+                    <label className="flex items-center gap-2 cursor-pointer select-none">
                       <input
                         type="checkbox"
                         checked={formItem.isFeatured}
                         onChange={(e) => setFormItem({ ...formItem, isFeatured: e.target.checked })}
-                        className="w-5 h-5 rounded text-[var(--accent)]"
+                        className="w-4 h-4 rounded text-[var(--accent)]"
                       />
-                      <span className="font-bold text-base text-[var(--foreground)]">
+                      <span className="font-semibold text-xs text-[var(--foreground)]">
                         Mettre en avant sur l&apos;accueil
                       </span>
                     </label>
@@ -550,48 +595,48 @@ export default function ProverbesAdminPage() {
                 </div>
 
                 {/* Variante dialectale */}
-                <div className="pt-4 border-t border-[var(--card-border)] space-y-3">
-                  <div className="text-xs font-bold uppercase text-[var(--text-subtle)]">
+                <div className="pt-3 border-t border-[var(--card-border)] space-y-2">
+                  <div className="text-[11px] font-semibold uppercase text-[var(--text-muted)] font-mono">
                     Variante dialectale régionale (optionnel)
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-2">
                     <input
                       type="text"
                       value={formItem.dialectName}
                       onChange={(e) => setFormItem({ ...formItem, dialectName: e.target.value })}
-                      placeholder="Nom du dialecte (ex: Betsimisaraka)"
-                      className="w-full p-3.5 rounded-xl kanto-input text-base"
+                      placeholder="Dialecte (ex: Betsimisaraka)"
+                      className={inputCls}
                     />
                     <input
                       type="text"
                       value={formItem.dialectText}
                       onChange={(e) => setFormItem({ ...formItem, dialectText: e.target.value })}
-                      placeholder="Texte dans le dialecte régional"
-                      className="w-full p-3.5 rounded-xl kanto-input text-base"
+                      placeholder="Texte dans le dialecte"
+                      className={inputCls}
                     />
                   </div>
                 </div>
 
-                <div className="pt-5 border-t border-[var(--card-border)] flex items-center justify-end gap-4">
+                <div className="pt-3 border-t border-[var(--card-border)] flex items-center justify-end gap-2">
                   <button
                     type="button"
                     onClick={() => setIsModalOpen(false)}
-                    className="px-6 py-3 rounded-xl border border-[var(--card-border)] bg-[var(--card)] text-[var(--text-muted)] hover:bg-[var(--card-hover)] transition-colors cursor-pointer text-base font-semibold"
+                    className="px-3.5 py-1.5 rounded-lg border border-[var(--card-border)] hover:bg-[var(--card-hover)] text-[var(--foreground)] transition cursor-pointer"
                   >
                     Annuler
                   </button>
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="px-7 py-3 rounded-xl bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-bold transition-all disabled:opacity-50 flex items-center gap-2.5 cursor-pointer shadow-soft text-base"
+                    className="px-4 py-1.5 rounded-lg bg-[var(--accent)] text-white font-semibold hover:opacity-90 transition disabled:opacity-50 flex items-center gap-1.5 cursor-pointer shadow-xs"
                   >
                     {isSubmitting ? (
                       <>
-                        <Loader2 size={18} className="animate-spin" />
+                        <Loader2 size={13} className="animate-spin" />
                         <span>Enregistrement...</span>
                       </>
                     ) : (
-                      <span>{editingId ? 'Enregistrer les modifications' : 'Publier la sagesse'}</span>
+                      <span>{editingId ? 'Enregistrer' : 'Publier'}</span>
                     )}
                   </button>
                 </div>
@@ -602,21 +647,21 @@ export default function ProverbesAdminPage() {
 
         {/* Modal Détails Proverbe */}
         {selectedItem && (
-          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs overflow-y-auto flex items-start justify-center p-4 pt-6 sm:pt-10 md:pt-12">
-            <div className="kanto-card rounded-xl border border-[var(--card-border)] shadow-xl max-w-lg w-full max-h-[calc(100vh-3rem)] sm:max-h-[calc(100vh-5.5rem)] flex flex-col overflow-hidden animate-in fade-in slide-in-from-top-3 duration-150">
-              <div className="px-4 py-3 border-b border-[var(--card-border)] flex items-center justify-between">
+          <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs overflow-y-auto flex items-start justify-center p-4 pt-8 md:pt-12 animate-in fade-in duration-150">
+            <div className="bg-[var(--card)] rounded-2xl border border-[var(--card-border)] shadow-2xl max-w-lg w-full max-h-[calc(100vh-4rem)] flex flex-col overflow-hidden">
+              <div className="px-5 py-3.5 border-b border-[var(--card-border)] bg-[var(--input-bg)] flex items-center justify-between">
                 <span className="text-sm font-semibold text-[var(--foreground)]">Détails de la sagesse</span>
                 <button
                   onClick={() => setSelectedItem(null)}
-                  className="p-1 rounded-md text-[var(--text-subtle)] hover:bg-[var(--card-hover)] transition-colors cursor-pointer"
+                  className="p-1 rounded-lg hover:bg-[var(--card-hover)] text-[var(--text-muted)] transition cursor-pointer"
                 >
-                  <X size={16} />
+                  <X size={15} />
                 </button>
               </div>
 
-              <div className="p-4 space-y-3 overflow-y-auto flex-1 text-xs">
-                <div className="space-y-1">
-                  <div className="text-[10px] font-mono uppercase tracking-wider text-neutral-400">
+              <div className="p-5 space-y-3 overflow-y-auto flex-1 text-xs">
+                <div className="space-y-0.5">
+                  <div className="text-[10px] font-mono uppercase tracking-wider text-[var(--text-muted)]">
                     Texte Malagasy
                   </div>
                   <div className="text-sm font-semibold text-[var(--foreground)] leading-snug">
@@ -624,8 +669,8 @@ export default function ProverbesAdminPage() {
                   </div>
                 </div>
 
-                <div className="space-y-1">
-                  <div className="text-[10px] font-mono uppercase tracking-wider text-neutral-400">
+                <div className="space-y-0.5">
+                  <div className="text-[10px] font-mono uppercase tracking-wider text-[var(--text-muted)]">
                     Traduction Française
                   </div>
                   <div className="text-xs text-[var(--text-muted)] italic leading-relaxed">
@@ -633,8 +678,8 @@ export default function ProverbesAdminPage() {
                   </div>
                 </div>
 
-                <div className="p-3 rounded-lg bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 space-y-1">
-                  <div className="text-[10px] font-mono uppercase tracking-wider text-emerald-600 dark:text-emerald-400 font-medium">
+                <div className="p-3 rounded-xl bg-[var(--input-bg)] border border-[var(--card-border)] space-y-1">
+                  <div className="text-[10px] font-mono uppercase tracking-wider text-[var(--accent)] font-semibold">
                     Sens &amp; Enseignement
                   </div>
                   <div className="text-xs text-[var(--foreground)] leading-relaxed">
@@ -643,8 +688,8 @@ export default function ProverbesAdminPage() {
                 </div>
 
                 {selectedItem.example && (
-                  <div className="space-y-1">
-                    <div className="text-[10px] font-mono uppercase tracking-wider text-neutral-400">
+                  <div className="space-y-0.5">
+                    <div className="text-[10px] font-mono uppercase tracking-wider text-[var(--text-muted)]">
                       Exemple d&apos;usage
                     </div>
                     <div className="text-xs text-[var(--text-muted)]">
@@ -655,13 +700,13 @@ export default function ProverbesAdminPage() {
 
                 {selectedItem.dialectVariants && selectedItem.dialectVariants.length > 0 && (
                   <div className="space-y-2 pt-2 border-t border-[var(--card-border)]">
-                    <div className="text-[10px] font-mono uppercase tracking-wider text-neutral-400">
+                    <div className="text-[10px] font-mono uppercase tracking-wider text-[var(--text-muted)]">
                       Variantes régionales
                     </div>
-                    <div className="space-y-2">
+                    <div className="space-y-1.5">
                       {selectedItem.dialectVariants.map((v) => (
-                        <div key={v.id} className="p-2.5 rounded-md border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-xs">
-                          <div className="font-semibold text-emerald-600 dark:text-emerald-400 text-[11px]">{v.dialectName}</div>
+                        <div key={v.id} className="p-2.5 rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] text-xs">
+                          <div className="font-semibold text-[var(--accent)] text-[11px]">{v.dialectName}</div>
                           <div className="text-xs mt-0.5">« {v.text} »</div>
                         </div>
                       ))}
@@ -670,10 +715,10 @@ export default function ProverbesAdminPage() {
                 )}
               </div>
 
-              <div className="px-4 py-2.5 border-t border-[var(--card-border)] bg-[var(--background)] flex justify-end">
+              <div className="px-5 py-3 border-t border-[var(--card-border)] bg-[var(--input-bg)] flex justify-end">
                 <button
                   onClick={() => setSelectedItem(null)}
-                  className="px-3 py-1.5 rounded-md bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900 text-xs font-medium hover:opacity-90 transition-opacity cursor-pointer"
+                  className="px-3.5 py-1.5 rounded-lg border border-[var(--card-border)] bg-[var(--card)] hover:bg-[var(--card-hover)] text-xs font-semibold text-[var(--foreground)] transition cursor-pointer shadow-xs"
                 >
                   Fermer
                 </button>
