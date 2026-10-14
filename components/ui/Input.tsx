@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useId } from 'react';
 
 export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string;
@@ -16,9 +16,16 @@ export function Input({
   leftIcon,
   className = '',
   id,
+  name,
   ...props
 }: InputProps) {
-  const inputId = id || (label ? label.toLowerCase().replace(/\s+/g, '-') : undefined);
+  const generatedId = useId();
+  const cleanGeneratedId = `input-${generatedId.replace(/:/g, '')}`;
+  const inputId =
+    id ||
+    (name ? `input-${name}` : undefined) ||
+    (label ? `input-${label.toLowerCase().replace(/[^a-z0-9]/gi, '-')}` : cleanGeneratedId);
+  const inputName = name || inputId;
 
   return (
     <div className="space-y-1 w-full">
@@ -39,6 +46,13 @@ export function Input({
         )}
         <input
           id={inputId}
+          name={inputName}
+          aria-label={
+            props['aria-label'] ||
+            label ||
+            (typeof props.placeholder === 'string' ? props.placeholder : inputName)
+          }
+          aria-invalid={error ? true : undefined}
           className={`w-full py-2 px-3 rounded-lg kanto-input text-xs placeholder-[var(--text-subtle)] ${
             leftIcon ? 'pl-9' : ''
           } ${error ? 'border-red-500 focus:border-red-500' : ''} ${className}`}
@@ -67,10 +81,17 @@ export function Textarea({
   helperText,
   className = '',
   id,
+  name,
   rows = 3,
   ...props
 }: TextareaProps) {
-  const inputId = id || (label ? label.toLowerCase().replace(/\s+/g, '-') : undefined);
+  const generatedId = useId();
+  const cleanGeneratedId = `textarea-${generatedId.replace(/:/g, '')}`;
+  const inputId =
+    id ||
+    (name ? `textarea-${name}` : undefined) ||
+    (label ? `textarea-${label.toLowerCase().replace(/[^a-z0-9]/gi, '-')}` : cleanGeneratedId);
+  const inputName = name || inputId;
 
   return (
     <div className="space-y-1 w-full">
@@ -85,7 +106,14 @@ export function Textarea({
 
       <textarea
         id={inputId}
+        name={inputName}
         rows={rows}
+        aria-label={
+          props['aria-label'] ||
+          label ||
+          (typeof props.placeholder === 'string' ? props.placeholder : inputName)
+        }
+        aria-invalid={error ? true : undefined}
         className={`w-full p-2.5 rounded-lg kanto-input text-xs placeholder-[var(--text-subtle)] leading-relaxed ${
           error ? 'border-red-500 focus:border-red-500' : ''
         } ${className}`}
@@ -116,9 +144,16 @@ export function Select({
   children,
   className = '',
   id,
+  name,
   ...props
 }: SelectProps) {
-  const inputId = id || (label ? label.toLowerCase().replace(/\s+/g, '-') : undefined);
+  const generatedId = useId();
+  const cleanGeneratedId = `select-${generatedId.replace(/:/g, '')}`;
+  const inputId =
+    id ||
+    (name ? `select-${name}` : undefined) ||
+    (label ? `select-${label.toLowerCase().replace(/[^a-z0-9]/gi, '-')}` : cleanGeneratedId);
+  const inputName = name || inputId;
 
   return (
     <div className="space-y-1 w-full">
@@ -133,6 +168,9 @@ export function Select({
 
       <select
         id={inputId}
+        name={inputName}
+        aria-label={props['aria-label'] || label || inputName}
+        aria-invalid={error ? true : undefined}
         className={`w-full py-2 px-2.5 rounded-lg kanto-input text-xs font-medium text-[var(--foreground)] ${
           error ? 'border-red-500 focus:border-red-500' : ''
         } ${className}`}
@@ -155,3 +193,4 @@ export function Select({
     </div>
   );
 }
+

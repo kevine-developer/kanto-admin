@@ -113,9 +113,9 @@ export function LockModal({
       <form onSubmit={handleSubmit} className="space-y-3.5">
         {/* Type de module */}
         <div>
-          <label className="block text-[10.5px] font-mono text-[var(--text-muted)] mb-1 uppercase tracking-wider">
+          <span className="block text-[10.5px] font-mono text-[var(--text-muted)] mb-1 uppercase tracking-wider">
             Type de module :
-          </label>
+          </span>
           <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
@@ -149,6 +149,8 @@ export function LockModal({
         <div className="grid grid-cols-2 gap-2">
           <Field label="Nom en français" required>
             <input
+              id="module-name-fr"
+              name="nameFr"
               type="text"
               required
               value={formNameFr}
@@ -160,6 +162,8 @@ export function LockModal({
 
           <Field label="Nom en malgache" required>
             <input
+              id="module-name-mg"
+              name="nameMg"
               type="text"
               required
               value={formNameMg}
@@ -177,6 +181,8 @@ export function LockModal({
           hint={isEditing ? 'Non modifiable' : 'Préfixe automatique'}
         >
           <input
+            id="module-key"
+            name="key"
             type="text"
             required
             disabled={isEditing}
@@ -192,9 +198,9 @@ export function LockModal({
 
         {/* Image / Illustration */}
         <div>
-          <label className="block text-[10.5px] font-mono text-[var(--text-muted)] mb-1 uppercase tracking-wider">
+          <span className="block text-[10.5px] font-mono text-[var(--text-muted)] mb-1 uppercase tracking-wider">
             Illustration du module (Catalogue) :
-          </label>
+          </span>
           <ImageUploadDropzone
             value={formImageUrl}
             onChange={setFormImageUrl}
@@ -204,9 +210,9 @@ export function LockModal({
 
         {/* Image d'arrière-plan immersive (Chemin de niveaux / Jeu) */}
         <div>
-          <label className="block text-[10.5px] font-mono text-[var(--text-muted)] mb-1 uppercase tracking-wider">
+          <span className="block text-[10.5px] font-mono text-[var(--text-muted)] mb-1 uppercase tracking-wider">
             Image d&apos;arrière-plan immersive (Chemin de niveaux / Écran de jeu) :
-          </label>
+          </span>
           <ImageUploadDropzone
             value={formBgImageUrl}
             onChange={setFormBgImageUrl}
@@ -216,8 +222,10 @@ export function LockModal({
 
         {/* Visibilité dans l'application mobile */}
         <div className="p-3 rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] space-y-1.5">
-          <label className="flex items-center gap-2 cursor-pointer select-none">
+          <label htmlFor="module-is-visible" className="flex items-center gap-2 cursor-pointer select-none">
             <input
+              id="module-is-visible"
+              name="isVisible"
               type="checkbox"
               checked={formIsVisible}
               onChange={(e) => setFormIsVisible(e.target.checked)}
@@ -234,8 +242,10 @@ export function LockModal({
 
         {/* Verrouillage initial */}
         <div className="p-3 rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] space-y-2.5">
-          <label className="flex items-center gap-2 cursor-pointer select-none">
+          <label htmlFor="module-is-locked" className="flex items-center gap-2 cursor-pointer select-none">
             <input
+              id="module-is-locked"
+              name="isLocked"
               type="checkbox"
               checked={formIsLocked}
               onChange={(e) => setFormIsLocked(e.target.checked)}
@@ -249,6 +259,8 @@ export function LockModal({
           {formIsLocked && (
             <Field label="Motif d'indisponibilité (affiché aux utilisateurs)">
               <input
+                id="module-lock-reason"
+                name="lockReason"
                 type="text"
                 value={formLockReason}
                 onChange={(e) => setFormLockReason(e.target.value)}

@@ -622,12 +622,18 @@ export default function AdminContributionsPage() {
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
                 {/* Recherche */}
                 <div className="relative flex-1">
+                  <label htmlFor="search-contributions" className="sr-only">
+                    Filtrer par titre, extrait ou auteur
+                  </label>
                   <Search
                     size={13}
                     className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-subtle)]"
                   />
                   <input
-                    type="text"
+                    id="search-contributions"
+                    name="searchContributions"
+                    type="search"
+                    aria-label="Filtrer par titre, extrait ou auteur..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Filtrer par titre, extrait ou auteur..."
@@ -1237,12 +1243,22 @@ export default function AdminContributionsPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-[var(--text-muted)] mb-1">
+                <label
+                  htmlFor="action-decision-reason"
+                  className="block text-xs font-medium text-[var(--text-muted)] mb-1"
+                >
                   {actionModal.type === 'REQUEST_CHANGES'
                     ? 'Consignes & ajustements attendus *'
                     : 'Motif du rejet (transmis à l’auteur) *'}
                 </label>
                 <textarea
+                  id="action-decision-reason"
+                  name="decisionReason"
+                  aria-label={
+                    actionModal.type === 'REQUEST_CHANGES'
+                      ? 'Consignes et ajustements attendus'
+                      : 'Motif du rejet transmis à l’auteur'
+                  }
                   value={actionModal.reason}
                   onChange={(e) =>
                     setActionModal((prev) =>
@@ -1397,10 +1413,16 @@ export default function AdminContributionsPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-[var(--text-muted)] mb-1">
+                <label
+                  htmlFor="dispute-explanation-note"
+                  className="block text-xs font-medium text-[var(--text-muted)] mb-1"
+                >
                   Note explicative pour l&apos;auteur *
                 </label>
                 <textarea
+                  id="dispute-explanation-note"
+                  name="disputeNote"
+                  aria-label="Note explicative pour l'auteur"
                   value={disputeModal.note}
                   onChange={(e) =>
                     setDisputeModal((prev) => (prev ? { ...prev, note: e.target.value } : null))

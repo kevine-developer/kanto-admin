@@ -28,11 +28,14 @@ export function ZoomControl({ showPresets = true }: { showPresets?: boolean }) {
 
         <div className="flex-1 flex items-center gap-3 px-3 py-2 rounded-xl bg-[var(--input-bg)] border border-[var(--input-border)]">
           <input
+            id="zoom-level-range"
+            name="zoomLevel"
             type="range"
             min="80"
             max="140"
             step="5"
             value={zoomLevel}
+            aria-label="Niveau de zoom de l'interface"
             onChange={(e) => setZoomLevel(parseInt(e.target.value, 10))}
             className="w-full accent-[var(--accent)] cursor-pointer"
           />

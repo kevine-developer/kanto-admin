@@ -974,29 +974,38 @@ export default function MissingWordAdminPage() {
 
               {/* Les 3 autres choix (distracteurs) */}
               <div className="space-y-1.5">
-                <label className="block text-[11px] font-semibold text-[var(--foreground)]">
+                <span className="block text-[11px] font-semibold text-[var(--foreground)]">
                   3 Fausses réponses (Distracteurs) <span className="text-rose-500">*</span>
-                </label>
+                </span>
                 <div className="grid grid-cols-3 gap-2">
                   <input
+                    id="mw-choice-1"
+                    name="choice1"
                     type="text"
                     required
+                    aria-label="Fausse réponse 1 (Distracteur)"
                     placeholder="Choix 2"
                     value={questionForm.choice1}
                     onChange={(e) => setQuestionForm({ ...questionForm, choice1: e.target.value })}
                     className={inputCls}
                   />
                   <input
+                    id="mw-choice-2"
+                    name="choice2"
                     type="text"
                     required
+                    aria-label="Fausse réponse 2 (Distracteur)"
                     placeholder="Choix 3"
                     value={questionForm.choice2}
                     onChange={(e) => setQuestionForm({ ...questionForm, choice2: e.target.value })}
                     className={inputCls}
                   />
                   <input
+                    id="mw-choice-3"
+                    name="choice3"
                     type="text"
                     required
+                    aria-label="Fausse réponse 3 (Distracteur)"
                     placeholder="Choix 4"
                     value={questionForm.choice3}
                     onChange={(e) => setQuestionForm({ ...questionForm, choice3: e.target.value })}

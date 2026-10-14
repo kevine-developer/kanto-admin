@@ -309,9 +309,14 @@ export default function ProgressionAdminPage() {
             {/* Barre de recherche et filtre de niveau */}
             <div className="p-3 rounded-xl border border-[var(--card-border)] bg-[var(--card)] shadow-xs flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
               <div className="relative flex-1">
+                <label htmlFor="search-progression-players" className="sr-only">
+                  Rechercher un joueur par nom ou ID
+                </label>
                 <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-subtle)]" />
                 <input
-                  type="text"
+                  id="search-progression-players"
+                  name="searchPlayers"
+                  type="search"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Rechercher parmi le Top 100 des joueurs (nom ou ID)..."
@@ -687,10 +692,12 @@ export default function ProgressionAdminPage() {
 
                 <form onSubmit={handleConfirmXpAdjustment} className="space-y-3.5">
                   <div>
-                    <label className="block text-xs font-semibold text-[var(--foreground)] mb-1">
+                    <label htmlFor="xp-delta-input" className="block text-xs font-semibold text-[var(--foreground)] mb-1">
                       Valeur d&apos;ajustement (XP)
                     </label>
                     <input
+                      id="xp-delta-input"
+                      name="xpDelta"
                       type="number"
                       step="1"
                       required
@@ -715,10 +722,12 @@ export default function ProgressionAdminPage() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-[var(--foreground)] mb-1">
+                    <label htmlFor="xp-reason-input" className="block text-xs font-semibold text-[var(--foreground)] mb-1">
                       Motif ou Justification (optionnel)
                     </label>
                     <input
+                      id="xp-reason-input"
+                      name="xpReason"
                       type="text"
                       value={xpReasonInput}
                       onChange={(e) => setXpReasonInput(e.target.value)}

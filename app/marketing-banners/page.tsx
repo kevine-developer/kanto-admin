@@ -536,10 +536,12 @@ export default function MarketingBannersAdminPage() {
                 {/* 1. Titres FR & MG */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div>
-                    <label className="text-xs font-semibold text-muted-foreground block mb-1">
+                    <label htmlFor="banner-title-fr" className="text-xs font-semibold text-muted-foreground block mb-1">
                       Titre Français *
                     </label>
                     <input
+                      id="banner-title-fr"
+                      name="titleFr"
                       type="text"
                       required
                       value={titleFr}
@@ -549,10 +551,12 @@ export default function MarketingBannersAdminPage() {
                     />
                   </div>
                   <div>
-                    <label className="text-xs font-semibold text-muted-foreground block mb-1">
+                    <label htmlFor="banner-title-mg" className="text-xs font-semibold text-muted-foreground block mb-1">
                       Titre Malgache *
                     </label>
                     <input
+                      id="banner-title-mg"
+                      name="titleMg"
                       type="text"
                       required
                       value={titleMg}
@@ -566,10 +570,12 @@ export default function MarketingBannersAdminPage() {
                 {/* 2. Badges FR & MG (sans icône) */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div>
-                    <label className="text-xs font-semibold text-muted-foreground block mb-1">
+                    <label htmlFor="banner-badge-fr" className="text-xs font-semibold text-muted-foreground block mb-1">
                       Badge Français (texte pur)
                     </label>
                     <input
+                      id="banner-badge-fr"
+                      name="badgeFr"
                       type="text"
                       value={badgeFr}
                       onChange={(e) => setBadgeFr(e.target.value)}
@@ -578,10 +584,12 @@ export default function MarketingBannersAdminPage() {
                     />
                   </div>
                   <div>
-                    <label className="text-xs font-semibold text-muted-foreground block mb-1">
+                    <label htmlFor="banner-badge-mg" className="text-xs font-semibold text-muted-foreground block mb-1">
                       Badge Malgache (texte pur)
                     </label>
                     <input
+                      id="banner-badge-mg"
+                      name="badgeMg"
                       type="text"
                       value={badgeMg}
                       onChange={(e) => setBadgeMg(e.target.value)}
@@ -594,10 +602,12 @@ export default function MarketingBannersAdminPage() {
                 {/* 3. Descriptions FR & MG */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div>
-                    <label className="text-xs font-semibold text-muted-foreground block mb-1">
+                    <label htmlFor="banner-desc-fr" className="text-xs font-semibold text-muted-foreground block mb-1">
                       Description Français
                     </label>
                     <textarea
+                      id="banner-desc-fr"
+                      name="descriptionFr"
                       rows={2}
                       value={descriptionFr}
                       onChange={(e) => setDescriptionFr(e.target.value)}
@@ -606,10 +616,12 @@ export default function MarketingBannersAdminPage() {
                     />
                   </div>
                   <div>
-                    <label className="text-xs font-semibold text-muted-foreground block mb-1">
+                    <label htmlFor="banner-desc-mg" className="text-xs font-semibold text-muted-foreground block mb-1">
                       Description Malgache
                     </label>
                     <textarea
+                      id="banner-desc-mg"
+                      name="descriptionMg"
                       rows={2}
                       value={descriptionMg}
                       onChange={(e) => setDescriptionMg(e.target.value)}
@@ -622,10 +634,12 @@ export default function MarketingBannersAdminPage() {
                 {/* 4. Boutons CTA FR & MG */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div>
-                    <label className="text-xs font-semibold text-muted-foreground block mb-1">
+                    <label htmlFor="banner-cta-fr" className="text-xs font-semibold text-muted-foreground block mb-1">
                       Bouton CTA (FR)
                     </label>
                     <input
+                      id="banner-cta-fr"
+                      name="ctaFr"
                       type="text"
                       value={ctaFr}
                       onChange={(e) => setCtaFr(e.target.value)}
@@ -634,10 +648,12 @@ export default function MarketingBannersAdminPage() {
                     />
                   </div>
                   <div>
-                    <label className="text-xs font-semibold text-muted-foreground block mb-1">
+                    <label htmlFor="banner-cta-mg" className="text-xs font-semibold text-muted-foreground block mb-1">
                       Bouton CTA (MG)
                     </label>
                     <input
+                      id="banner-cta-mg"
+                      name="ctaMg"
                       type="text"
                       value={ctaMg}
                       onChange={(e) => setCtaMg(e.target.value)}
@@ -736,10 +752,12 @@ export default function MarketingBannersAdminPage() {
                       {/* Textes de la modale FR & MG */}
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         <div>
-                          <label className="text-xs font-semibold text-muted-foreground block mb-1">
+                          <label htmlFor="banner-modal-body-fr" className="text-xs font-semibold text-muted-foreground block mb-1">
                             Texte du modal (Français) *
                           </label>
                           <textarea
+                            id="banner-modal-body-fr"
+                            name="modalBodyFr"
                             rows={actionType === 'BOTTOM_SHEET' ? 4 : 2}
                             value={modalBodyFr}
                             onChange={(e) => setModalBodyFr(e.target.value)}
@@ -752,10 +770,12 @@ export default function MarketingBannersAdminPage() {
                           />
                         </div>
                         <div>
-                          <label className="text-xs font-semibold text-muted-foreground block mb-1">
+                          <label htmlFor="banner-modal-body-mg" className="text-xs font-semibold text-muted-foreground block mb-1">
                             Texte du modal (Malgache)
                           </label>
                           <textarea
+                            id="banner-modal-body-mg"
+                            name="modalBodyMg"
                             rows={actionType === 'BOTTOM_SHEET' ? 4 : 2}
                             value={modalBodyMg}
                             onChange={(e) => setModalBodyMg(e.target.value)}
@@ -772,10 +792,12 @@ export default function MarketingBannersAdminPage() {
                       {/* Image spécifique au modal & CTA modal */}
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                         <div>
-                          <label className="text-xs font-semibold text-muted-foreground block mb-1">
+                          <label htmlFor="banner-modal-image-url" className="text-xs font-semibold text-muted-foreground block mb-1">
                             Image de la modale (optionnel)
                           </label>
                           <input
+                            id="banner-modal-image-url"
+                            name="modalImageUrl"
                             type="url"
                             value={modalImageUrl}
                             onChange={(e) => setModalImageUrl(e.target.value)}
@@ -784,10 +806,12 @@ export default function MarketingBannersAdminPage() {
                           />
                         </div>
                         <div>
-                          <label className="text-xs font-semibold text-muted-foreground block mb-1">
+                          <label htmlFor="banner-modal-cta-fr" className="text-xs font-semibold text-muted-foreground block mb-1">
                             Bouton d&apos;action (FR)
                           </label>
                           <input
+                            id="banner-modal-cta-fr"
+                            name="modalCtaLabelFr"
                             type="text"
                             value={modalCtaLabelFr}
                             onChange={(e) => setModalCtaLabelFr(e.target.value)}
@@ -796,10 +820,12 @@ export default function MarketingBannersAdminPage() {
                           />
                         </div>
                         <div>
-                          <label className="text-xs font-semibold text-muted-foreground block mb-1">
+                          <label htmlFor="banner-modal-cta-mg" className="text-xs font-semibold text-muted-foreground block mb-1">
                             Bouton d&apos;action (MG)
                           </label>
                           <input
+                            id="banner-modal-cta-mg"
+                            name="modalCtaLabelMg"
                             type="text"
                             value={modalCtaLabelMg}
                             onChange={(e) => setModalCtaLabelMg(e.target.value)}
@@ -810,10 +836,12 @@ export default function MarketingBannersAdminPage() {
                       </div>
 
                       <div>
-                        <label className="text-xs font-semibold text-muted-foreground block mb-1">
+                        <label htmlFor="banner-modal-cta-link" className="text-xs font-semibold text-muted-foreground block mb-1">
                           Lien de redirection du bouton modal (optionnel)
                         </label>
                         <input
+                          id="banner-modal-cta-link"
+                          name="modalCtaLink"
                           type="text"
                           value={modalCtaLink}
                           onChange={(e) => setModalCtaLink(e.target.value)}
@@ -843,9 +871,14 @@ export default function MarketingBannersAdminPage() {
 
                   {/* Barre de recherche rapide de deep link */}
                   <div className="relative">
+                    <label htmlFor="banner-deeplink-search" className="sr-only">
+                      Filtrer parmi les destinations disponibles
+                    </label>
                     <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                     <input
-                      type="text"
+                      id="banner-deeplink-search"
+                      name="deepLinkSearch"
+                      type="search"
                       value={deepLinkSearch}
                       onChange={(e) => setDeepLinkSearch(e.target.value)}
                       placeholder="Filtrer parmi les destinations disponibles..."
@@ -890,10 +923,12 @@ export default function MarketingBannersAdminPage() {
 
                   {/* Champ de saisie manuelle */}
                   <div>
-                    <label className="text-xs font-medium text-muted-foreground block mb-1">
+                    <label htmlFor="banner-deeplink" className="text-xs font-medium text-muted-foreground block mb-1">
                       Chemin Expo Router ou URL complète (saisie libre)
                     </label>
                     <input
+                      id="banner-deeplink"
+                      name="deepLink"
                       type="text"
                       required
                       value={deepLink}
@@ -907,11 +942,13 @@ export default function MarketingBannersAdminPage() {
                 {/* 6. Image de fond & Couleur d'accent */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div>
-                    <label className="text-xs font-semibold text-muted-foreground block mb-1 flex items-center gap-1.5">
+                    <label htmlFor="banner-image-url" className="text-xs font-semibold text-muted-foreground block mb-1 flex items-center gap-1.5">
                       <ImageIcon className="w-3.5 h-3.5" />
                       URL Image de fond *
                     </label>
                     <input
+                      id="banner-image-url"
+                      name="imageUrl"
                       type="url"
                       required
                       value={imageUrl}
@@ -932,7 +969,7 @@ export default function MarketingBannersAdminPage() {
                   </div>
 
                   <div>
-                    <label className="text-xs font-semibold text-muted-foreground block mb-1 flex items-center gap-1.5">
+                    <label htmlFor="banner-accent-color" className="text-xs font-semibold text-muted-foreground block mb-1 flex items-center gap-1.5">
                       <Palette className="w-3.5 h-3.5" />
                       Couleur d&apos;accent
                     </label>
@@ -951,6 +988,8 @@ export default function MarketingBannersAdminPage() {
                       ))}
                     </div>
                     <input
+                      id="banner-accent-color"
+                      name="accentColor"
                       type="text"
                       value={accentColor}
                       onChange={(e) => setAccentColor(e.target.value)}
@@ -964,9 +1003,10 @@ export default function MarketingBannersAdminPage() {
                   <input
                     type="checkbox"
                     id="isActiveCheck"
+                    name="isActive"
                     checked={isActive}
                     onChange={(e) => setIsActive(e.target.checked)}
-                    className="rounded border-border text-emerald-600 focus:ring-emerald-500 w-4 h-4"
+                    className="rounded border-border text-emerald-600 focus:ring-emerald-500 w-4 h-4 cursor-pointer"
                   />
                   <label htmlFor="isActiveCheck" className="text-sm font-medium text-foreground cursor-pointer">
                     Bannière active et visible sur l&apos;application mobile

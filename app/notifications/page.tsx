@@ -663,9 +663,9 @@ export default function NotificationsManagementPage() {
             <form onSubmit={handleSubmit} className="overflow-y-auto p-5 space-y-3.5 flex-1">
               {/* Modèles rapides */}
               <div>
-                <label className="text-[11px] font-semibold text-[var(--foreground)] mb-1.5 block">
+                <span className="text-[11px] font-semibold text-[var(--foreground)] mb-1.5 block">
                   Modèles culturels prêts à l&apos;emploi
-                </label>
+                </span>
                 <div className="flex flex-wrap gap-1.5">
                   {CULTURAL_PRESETS.map((p) => (
                     <button
