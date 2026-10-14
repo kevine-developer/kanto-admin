@@ -424,7 +424,10 @@ export default function SettingsPage() {
 
                 <div className="flex-1 flex items-center px-2.5 py-1.5 rounded-lg bg-[var(--input-bg)] border border-[var(--card-border)]">
                   <input
+                    id="settings-zoom-range"
+                    name="zoomRange"
                     type="range"
+                    aria-label="Niveau de zoom de l'interface"
                     min="80"
                     max="130"
                     step="5"
@@ -561,12 +564,14 @@ export default function SettingsPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   {/* Mot de passe actuel */}
                   <div className="space-y-1">
-                    <label className="text-[11px] font-semibold text-[var(--foreground)]">
+                    <label htmlFor="current-password" className="text-[11px] font-semibold text-[var(--foreground)]">
                       Mot de passe actuel
                     </label>
                     <div className="relative">
                       <Lock size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-subtle)]" />
                       <input
+                        id="current-password"
+                        name="currentPassword"
                         type={showCurrentPassword ? 'text' : 'password'}
                         required
                         value={currentPassword}
@@ -587,12 +592,14 @@ export default function SettingsPage() {
 
                   {/* Nouveau mot de passe */}
                   <div className="space-y-1">
-                    <label className="text-[11px] font-semibold text-[var(--foreground)]">
+                    <label htmlFor="new-password" className="text-[11px] font-semibold text-[var(--foreground)]">
                       Nouveau mot de passe
                     </label>
                     <div className="relative">
                       <Lock size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-subtle)]" />
                       <input
+                        id="new-password"
+                        name="newPassword"
                         type={showNewPassword ? 'text' : 'password'}
                         required
                         value={newPassword}
@@ -613,12 +620,14 @@ export default function SettingsPage() {
 
                   {/* Confirmation */}
                   <div className="space-y-1">
-                    <label className="text-[11px] font-semibold text-[var(--foreground)]">
+                    <label htmlFor="confirm-new-password" className="text-[11px] font-semibold text-[var(--foreground)]">
                       Confirmation
                     </label>
                     <div className="relative">
                       <Lock size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-subtle)]" />
                       <input
+                        id="confirm-new-password"
+                        name="confirmNewPassword"
                         type={showConfirmNewPassword ? 'text' : 'password'}
                         required
                         value={confirmNewPassword}
@@ -639,8 +648,10 @@ export default function SettingsPage() {
                 </div>
 
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-[var(--card-border)]">
-                  <label className="flex items-center gap-2 text-[11px] text-[var(--text-muted)] cursor-pointer">
+                  <label htmlFor="revoke-other-sessions" className="flex items-center gap-2 text-[11px] text-[var(--text-muted)] cursor-pointer">
                     <input
+                      id="revoke-other-sessions"
+                      name="revokeOtherSessions"
                       type="checkbox"
                       checked={revokeOtherSessions}
                       onChange={(e) => setRevokeOtherSessions(e.target.checked)}
@@ -756,10 +767,12 @@ export default function SettingsPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                 {/* Choix du modèle */}
                 <div className="space-y-1">
-                  <label className="text-[11px] font-semibold text-[var(--foreground)]">
+                  <label htmlFor="select-email-template" className="text-[11px] font-semibold text-[var(--foreground)]">
                     Modèle d&apos;e-mail
                   </label>
                   <select
+                    id="select-email-template"
+                    name="emailTemplate"
                     value={selectedTemplate}
                     onChange={(e) => setSelectedTemplate(e.target.value)}
                     className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] text-[var(--foreground)] focus:outline-hidden focus:border-[var(--accent)] cursor-pointer"
@@ -775,7 +788,7 @@ export default function SettingsPage() {
                 {/* Adresse destinataire */}
                 <div className="space-y-1">
                   <div className="flex items-center justify-between">
-                    <label className="text-[11px] font-semibold text-[var(--foreground)]">
+                    <label htmlFor="test-email-address" className="text-[11px] font-semibold text-[var(--foreground)]">
                       Adresse de test
                     </label>
                     {user?.email && (
@@ -789,6 +802,8 @@ export default function SettingsPage() {
                     )}
                   </div>
                   <input
+                    id="test-email-address"
+                    name="testEmailAddress"
                     type="email"
                     value={testEmailAddress}
                     onChange={(e) => setTestEmailAddress(e.target.value)}

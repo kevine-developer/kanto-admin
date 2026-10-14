@@ -12,6 +12,7 @@ interface ImageUploadDropzoneProps {
   uploadEndpoint?: string;
   className?: string;
   subfolder?: string;
+  label?: string;
 }
 
 export function ImageUploadDropzone({
@@ -21,6 +22,7 @@ export function ImageUploadDropzone({
   uploadEndpoint = '/admin/locks/upload-image',
   className = '',
   subfolder,
+  label,
 }: ImageUploadDropzoneProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
@@ -77,12 +79,18 @@ export function ImageUploadDropzone({
     if (file) void processFile(file);
   };
 
+  const generatedDropzoneId = React.useId();
+  const fileInputId = `dropzone-file-${generatedDropzoneId.replace(/:/g, '')}`;
+
   return (
     <div className={`space-y-2 ${className}`}>
       <input
         ref={fileInputRef}
+        id={fileInputId}
+        name={fileInputId}
         type="file"
         accept="image/*"
+        aria-label={label || 'Sélectionner une image'}
         className="hidden"
         onChange={(e) => {
           const file = e.target.files?.[0];

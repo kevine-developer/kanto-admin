@@ -272,9 +272,14 @@ export default function ProverbesAdminPage() {
         <div className="p-3 rounded-xl border border-[var(--card-border)] bg-[var(--card)] shadow-xs flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
           {/* Recherche */}
           <div className="relative flex-1">
+            <label htmlFor="search-proverbes" className="sr-only">
+              Rechercher par texte malgache, traduction ou sens
+            </label>
             <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-subtle)]" />
             <input
-              type="text"
+              id="search-proverbes"
+              name="search"
+              type="search"
               placeholder="Rechercher par texte malgache, traduction ou sens..."
               value={search}
               onChange={(e) => {
@@ -323,7 +328,12 @@ export default function ProverbesAdminPage() {
             </div>
 
             {/* Difficulté */}
+            <label htmlFor="filter-proverbes-difficulty" className="sr-only">
+              Filtrer par niveau de difficulté
+            </label>
             <select
+              id="filter-proverbes-difficulty"
+              name="difficultyFilter"
               value={difficulty}
               onChange={(e) => {
                 setDifficulty(e.target.value);
@@ -489,10 +499,12 @@ export default function ProverbesAdminPage() {
               <form onSubmit={handleSubmit} className="p-5 space-y-3.5 overflow-y-auto flex-1 text-xs">
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-semibold text-[var(--foreground)] mb-1">
+                    <label htmlFor="proverbe-category" className="block text-xs font-semibold text-[var(--foreground)] mb-1">
                       Catégorie *
                     </label>
                     <select
+                      id="proverbe-category"
+                      name="category"
                       value={formItem.category}
                       onChange={(e) =>
                         setFormItem({ ...formItem, category: e.target.value as MalagasyItem['category'] })
@@ -506,10 +518,12 @@ export default function ProverbesAdminPage() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-[var(--foreground)] mb-1">
+                    <label htmlFor="proverbe-difficulty" className="block text-xs font-semibold text-[var(--foreground)] mb-1">
                       Niveau de difficulté *
                     </label>
                     <select
+                      id="proverbe-difficulty"
+                      name="difficulty"
                       value={formItem.difficulty}
                       onChange={(e) =>
                         setFormItem({ ...formItem, difficulty: e.target.value as MalagasyItem['difficulty'] })
@@ -524,10 +538,12 @@ export default function ProverbesAdminPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-[var(--foreground)] mb-1">
+                  <label htmlFor="proverbe-malagasy" className="block text-xs font-semibold text-[var(--foreground)] mb-1">
                     Texte en Malagasy *
                   </label>
                   <textarea
+                    id="proverbe-malagasy"
+                    name="malagasy"
                     rows={2}
                     value={formItem.malagasy}
                     onChange={(e) => setFormItem({ ...formItem, malagasy: e.target.value })}
@@ -538,10 +554,12 @@ export default function ProverbesAdminPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-[var(--foreground)] mb-1">
+                  <label htmlFor="proverbe-french" className="block text-xs font-semibold text-[var(--foreground)] mb-1">
                     Traduction en Français *
                   </label>
                   <textarea
+                    id="proverbe-french"
+                    name="french"
                     rows={2}
                     value={formItem.french}
                     onChange={(e) => setFormItem({ ...formItem, french: e.target.value })}
@@ -552,10 +570,12 @@ export default function ProverbesAdminPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-[var(--foreground)] mb-1">
+                  <label htmlFor="proverbe-meaning" className="block text-xs font-semibold text-[var(--foreground)] mb-1">
                     Sens culturel &amp; Explication *
                   </label>
                   <textarea
+                    id="proverbe-meaning"
+                    name="meaning"
                     rows={3}
                     value={formItem.meaning}
                     onChange={(e) => setFormItem({ ...formItem, meaning: e.target.value })}
@@ -567,10 +587,12 @@ export default function ProverbesAdminPage() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-center">
                   <div>
-                    <label className="block text-xs font-semibold text-[var(--foreground)] mb-1">
+                    <label htmlFor="proverbe-example" className="block text-xs font-semibold text-[var(--foreground)] mb-1">
                       Exemple d&apos;usage (optionnel)
                     </label>
                     <input
+                      id="proverbe-example"
+                      name="example"
                       type="text"
                       value={formItem.example}
                       onChange={(e) => setFormItem({ ...formItem, example: e.target.value })}
@@ -580,8 +602,10 @@ export default function ProverbesAdminPage() {
                   </div>
 
                   <div className="flex items-center pt-4">
-                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                    <label htmlFor="proverbe-is-featured" className="flex items-center gap-2 cursor-pointer select-none">
                       <input
+                        id="proverbe-is-featured"
+                        name="isFeatured"
                         type="checkbox"
                         checked={formItem.isFeatured}
                         onChange={(e) => setFormItem({ ...formItem, isFeatured: e.target.checked })}
@@ -601,14 +625,20 @@ export default function ProverbesAdminPage() {
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <input
+                      id="proverbe-dialect-name"
+                      name="dialectName"
                       type="text"
+                      aria-label="Nom du dialecte"
                       value={formItem.dialectName}
                       onChange={(e) => setFormItem({ ...formItem, dialectName: e.target.value })}
                       placeholder="Dialecte (ex: Betsimisaraka)"
                       className={inputCls}
                     />
                     <input
+                      id="proverbe-dialect-text"
+                      name="dialectText"
                       type="text"
+                      aria-label="Texte dans le dialecte"
                       value={formItem.dialectText}
                       onChange={(e) => setFormItem({ ...formItem, dialectText: e.target.value })}
                       placeholder="Texte dans le dialecte"

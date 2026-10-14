@@ -745,6 +745,7 @@ export function HistoireModal({
                 <input
                   type="checkbox"
                   id="isComingSoonCheckbox"
+                  name="isComingSoon"
                   checked={isComingSoon}
                   onChange={(e) =>
                     setFormValues((prev) => ({
@@ -809,9 +810,9 @@ export function HistoireModal({
 
               {/* Sélecteur d'Ère Monétaire */}
               <div className="space-y-2">
-                <label className="block text-xs font-bold text-stone-700 dark:text-stone-300 uppercase tracking-wider">
+                <span className="block text-xs font-bold text-stone-700 dark:text-stone-300 uppercase tracking-wider">
                   Régime & Époque Monétaire
-                </label>
+                </span>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
                   {(
                     [
@@ -1594,14 +1595,16 @@ export function HistoireModal({
               />
             </Field>
             <div className="flex items-center gap-3 pt-2">
-              <label className="flex items-center gap-2 text-sm font-medium text-stone-700 dark:text-stone-300">
+              <label htmlFor="theme-lesson-status" className="flex items-center gap-2 text-sm font-medium text-stone-700 dark:text-stone-300 cursor-pointer">
                 <input
+                  id="theme-lesson-status"
+                  name="lessonStatus"
                   type="checkbox"
                   checked={formValues.lessonStatus ?? true}
                   onChange={(e) =>
                     setFormValues((prev) => ({ ...prev, lessonStatus: e.target.checked }))
                   }
-                  className="rounded text-emerald-600 focus:ring-emerald-500 w-4 h-4"
+                  className="rounded text-emerald-600 focus:ring-emerald-500 w-4 h-4 cursor-pointer"
                 />
                 <span>Thématique active et disponible dans l&apos;application</span>
               </label>

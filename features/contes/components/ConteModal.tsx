@@ -129,8 +129,11 @@ export function ConteModal({
         <div className="grid grid-cols-2 gap-3">
           <Field label="Titre en malgache" required>
             <input
+              id="conte-title-mg"
+              name="titleMg"
               type="text"
               required
+              aria-label="Titre en malgache"
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
               placeholder="Ex: Ibotity sy Trimobe"
@@ -140,8 +143,11 @@ export function ConteModal({
 
           <Field label="Titre en français" required>
             <input
+              id="conte-title-fr"
+              name="titleFr"
               type="text"
               required
+              aria-label="Titre en français"
               value={formData.titleFr}
               onChange={(e) => setFormData({ ...formData, titleFr: e.target.value })}
               placeholder="Ex: Ibotity et le géant Trimobe"
@@ -153,7 +159,10 @@ export function ConteModal({
         <div className="grid grid-cols-2 gap-3">
           <Field label="Sous-titre / Thème">
             <input
+              id="conte-subtitle"
+              name="subtitle"
               type="text"
+              aria-label="Sous-titre ou thème"
               value={formData.subtitle || ''}
               onChange={(e) => setFormData({ ...formData, subtitle: e.target.value })}
               placeholder="Ex: Le courage des humbles"
@@ -163,7 +172,10 @@ export function ConteModal({
 
           <Field label="Auteur / Origine">
             <input
+              id="conte-author"
+              name="author"
               type="text"
+              aria-label="Auteur ou origine du conte"
               value={formData.author || ''}
               onChange={(e) => setFormData({ ...formData, author: e.target.value })}
               placeholder="Ex: Tradition Betsileo"
@@ -175,9 +187,9 @@ export function ConteModal({
         {/* Paragraphes du conte */}
         <div className="space-y-2.5 pt-2 border-t border-[var(--card-border)]">
           <div className="flex items-center justify-between">
-            <label className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
               Paragraphes du récit ({formData.paragraphs.length})
-            </label>
+            </span>
             <button
               type="button"
               onClick={handleAddParagraph}
@@ -210,14 +222,20 @@ export function ConteModal({
 
                 <div className="grid grid-cols-2 gap-2">
                   <textarea
+                    id={`conte-paragraph-${idx}-mg`}
+                    name={`paragraph_${idx}_mg`}
                     rows={2}
+                    aria-label={`Texte en malgache du paragraphe ${idx + 1}`}
                     value={p.textMg}
                     onChange={(e) => handleParagraphChange(idx, 'textMg', e.target.value)}
                     placeholder="Texte en malgache..."
                     className="w-full p-2 text-xs rounded-lg bg-[var(--card)] border border-[var(--input-border)] text-[var(--foreground)] focus:outline-none focus:border-[var(--accent)] resize-none"
                   />
                   <textarea
+                    id={`conte-paragraph-${idx}-fr`}
+                    name={`paragraph_${idx}_fr`}
                     rows={2}
+                    aria-label={`Traduction en français du paragraphe ${idx + 1}`}
                     value={p.textFr}
                     onChange={(e) => handleParagraphChange(idx, 'textFr', e.target.value)}
                     placeholder="Traduction en français..."
@@ -233,7 +251,10 @@ export function ConteModal({
         <div className="grid grid-cols-2 gap-3 pt-2 border-t border-[var(--card-border)]">
           <Field label="Morale (Malgache)">
             <textarea
+              id="conte-moral-mg"
+              name="moralMg"
               rows={2}
+              aria-label="Morale en malgache"
               value={formData.moralMg || ''}
               onChange={(e) => setFormData({ ...formData, moralMg: e.target.value })}
               placeholder="Hatraiza ny fahendrena..."
@@ -243,7 +264,10 @@ export function ConteModal({
 
           <Field label="Morale (Français)">
             <textarea
+              id="conte-moral-fr"
+              name="moralFr"
               rows={2}
+              aria-label="Morale en français"
               value={formData.moralFr || ''}
               onChange={(e) => setFormData({ ...formData, moralFr: e.target.value })}
               placeholder="Enseignement moral du conte..."

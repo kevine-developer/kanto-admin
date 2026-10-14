@@ -26,9 +26,15 @@ export function HistoireFilterBar({
   return (
     <div className="p-3 rounded-xl border border-[var(--card-border)] bg-[var(--card)] shadow-xs flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
       <div className="relative flex-1">
+        <label htmlFor="search-histoire" className="sr-only">
+          Rechercher par nom, province, mot-clé, date
+        </label>
         <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-subtle)]" />
         <input
-          type="text"
+          id="search-histoire"
+          name="searchHistoire"
+          type="search"
+          aria-label="Rechercher par nom, province, mot-clé, date..."
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
           placeholder="Rechercher par nom, province, mot-clé, date..."
@@ -46,10 +52,13 @@ export function HistoireFilterBar({
 
       {showBanknoteFilter && (
         <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
-          <span className="text-[11px] font-medium text-[var(--text-muted)]">
+          <label htmlFor="banknote-series-filter" className="text-[11px] font-medium text-[var(--text-muted)]">
             Époque / Série :
-          </span>
+          </label>
           <select
+            id="banknote-series-filter"
+            name="banknoteSeriesFilter"
+            aria-label="Filtrer par époque ou série de billets"
             value={banknoteSeriesFilter}
             onChange={(e) => onBanknoteSeriesChange(e.target.value as BanknoteSeriesFilter)}
             className="px-2.5 py-1.5 rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] text-xs font-semibold text-[var(--foreground)] focus:outline-none focus:border-[var(--accent)] cursor-pointer"

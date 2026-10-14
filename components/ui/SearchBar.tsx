@@ -20,17 +20,26 @@ export function SearchBar({
   filters,
   className = '',
 }: SearchBarProps) {
+  const generatedId = React.useId();
+  const searchInputId = `search-${generatedId.replace(/:/g, '')}`;
+
   return (
     <div
       className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-xl border border-[var(--card-border)] bg-[var(--card)] ${className}`}
     >
       <div className="relative flex-1">
+        <label htmlFor={searchInputId} className="sr-only">
+          {placeholder}
+        </label>
         <Search
           size={16}
           className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] pointer-events-none"
         />
         <input
-          type="text"
+          id={searchInputId}
+          name="search-query"
+          type="search"
+          aria-label={placeholder}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}

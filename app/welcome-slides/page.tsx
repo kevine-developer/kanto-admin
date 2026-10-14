@@ -479,10 +479,12 @@ export default function WelcomeSlidesAdminPage() {
               <form onSubmit={handleSubmit} className="p-5 space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-semibold text-foreground mb-1">
+                    <label htmlFor="ws-title" className="block text-xs font-semibold text-foreground mb-1">
                       Titre principal *
                     </label>
                     <input
+                      id="ws-title"
+                      name="title"
                       type="text"
                       required
                       value={formTitle}
@@ -492,10 +494,12 @@ export default function WelcomeSlidesAdminPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-foreground mb-1">
+                    <label htmlFor="ws-title-mg" className="block text-xs font-semibold text-foreground mb-1">
                       Titre Malagasy
                     </label>
                     <input
+                      id="ws-title-mg"
+                      name="titleMg"
                       type="text"
                       value={formTitleMg}
                       onChange={(e) => setFormTitleMg(e.target.value)}
@@ -507,10 +511,12 @@ export default function WelcomeSlidesAdminPage() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-semibold text-foreground mb-1">
+                    <label htmlFor="ws-badge" className="block text-xs font-semibold text-foreground mb-1">
                       Badge FR *
                     </label>
                     <input
+                      id="ws-badge"
+                      name="badge"
                       type="text"
                       required
                       value={formBadge}
@@ -520,10 +526,12 @@ export default function WelcomeSlidesAdminPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-foreground mb-1">
+                    <label htmlFor="ws-badge-mg" className="block text-xs font-semibold text-foreground mb-1">
                       Badge Malagasy *
                     </label>
                     <input
+                      id="ws-badge-mg"
+                      name="badgeMg"
                       type="text"
                       required
                       value={formBadgeMg}
@@ -536,10 +544,12 @@ export default function WelcomeSlidesAdminPage() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-semibold text-foreground mb-1">
+                    <label htmlFor="ws-tag" className="block text-xs font-semibold text-foreground mb-1">
                       Sous-titre / Tag
                     </label>
                     <input
+                      id="ws-tag"
+                      name="tag"
                       type="text"
                       value={formTag}
                       onChange={(e) => setFormTag(e.target.value)}
@@ -548,18 +558,23 @@ export default function WelcomeSlidesAdminPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-foreground mb-1">
+                    <label htmlFor="ws-accent-color" className="block text-xs font-semibold text-foreground mb-1">
                       Couleur d&apos;accent (Hex)
                     </label>
                     <div className="flex items-center gap-2">
                       <input
+                        id="ws-accent-color"
+                        name="accentColor"
                         type="color"
                         value={formAccentColor}
                         onChange={(e) => setFormAccentColor(e.target.value)}
                         className="w-9 h-9 p-0.5 rounded-lg border border-border bg-background cursor-pointer"
                       />
                       <input
+                        id="ws-accent-color-hex"
+                        name="accentColorHex"
                         type="text"
+                        aria-label="Code hexadécimal couleur d'accent"
                         value={formAccentColor}
                         onChange={(e) => setFormAccentColor(e.target.value)}
                         placeholder="#4A6741"
@@ -570,7 +585,7 @@ export default function WelcomeSlidesAdminPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-foreground mb-1">
+                  <label htmlFor="ws-image-url" className="block text-xs font-semibold text-foreground mb-1">
                     Photo du carrousel (Téléversement Cloudinary ou URL) *
                   </label>
                   <ImageUploadDropzone
@@ -581,6 +596,8 @@ export default function WelcomeSlidesAdminPage() {
                   />
                   <div className="mt-2">
                     <input
+                      id="ws-image-url"
+                      name="imageUrl"
                       type="url"
                       required
                       value={formImageUrl}
@@ -596,6 +613,7 @@ export default function WelcomeSlidesAdminPage() {
                   <input
                     type="checkbox"
                     id="isActiveCheck"
+                    name="isActive"
                     checked={formIsActive}
                     onChange={(e) => setFormIsActive(e.target.checked)}
                     className="w-4 h-4 rounded text-primary focus:ring-primary border-border"
