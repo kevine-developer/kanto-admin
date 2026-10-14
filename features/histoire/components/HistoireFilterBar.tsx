@@ -70,8 +70,8 @@ export function HistoireFilterBar({
               <option value="MDG450">Banque Centrale de Madagascar (1994-1998)</option>
               <option value="MDG400">Banque Centrale de Madagascar (1983-1993)</option>
               <option value="MDG300">Banque Centrale de la République Malgache (1974-1975)</option>
-              <option value="MDG250">Institut d'Émission Malgache (1964-1970)</option>
-              <option value="MDG200">Institut d'Émission Malgache (1961)</option>
+              <option value="MDG250">Institut d&apos;Émission Malgache (1964-1970)</option>
+              <option value="MDG200">Institut d&apos;Émission Malgache (1961)</option>
             </optgroup>
             <optgroup label="🏛️ Période Coloniale (1917 - 1960)">
               <option value="COLONIAL">Toutes les séries coloniales</option>

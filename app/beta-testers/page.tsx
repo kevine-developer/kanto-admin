@@ -23,7 +23,6 @@ import {
   Smartphone,
   Loader2,
   X,
-  Sparkles,
 } from 'lucide-react';
 
 const STATUS_CONFIG: Record<

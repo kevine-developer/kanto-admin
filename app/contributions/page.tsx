@@ -37,7 +37,6 @@ import {
   FileEdit,
   Flag,
   Loader2,
-  Filter,
 } from 'lucide-react';
 
 type TabType = 'pending' | 'duplicates' | 'reports';

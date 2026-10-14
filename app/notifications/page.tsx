@@ -16,8 +16,6 @@ import {
   Loader2,
   X,
   Send,
-  ExternalLink,
-  Smartphone,
   Flame,
   BookOpen,
   Scale,
@@ -56,15 +54,6 @@ const CATEGORIES = [
   { id: 'civic', label: 'Civique & Fady', icon: Scale, color: '#4A6741', bg: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' },
   { id: 'community', label: 'Communauté', icon: Users, color: '#2980B9', bg: 'bg-blue-500/10 text-blue-500 border-blue-500/20' },
   { id: 'system', label: 'Système & Mise à jour', icon: Info, color: '#10B981', bg: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' },
-];
-
-const BADGE_TYPES = [
-  { id: 'new', label: 'Nouveau / Vaovao' },
-  { id: 'update', label: 'Mise à jour / Fanavaozana' },
-  { id: 'streak', label: 'Série / Misesy' },
-  { id: 'reward', label: 'Récompense / Isa' },
-  { id: 'civic', label: 'Civique / Andrim-panjakana' },
-  { id: 'info', label: 'Information générale' },
 ];
 
 const PRESET_ROUTES = [
@@ -192,8 +181,6 @@ export default function NotificationsManagementPage() {
   );
   const [updateBadgeText, setUpdateBadgeText] = useState('Mise à jour v0.0.8');
 
-  // Langue de prévisualisation
-  const [previewLanguage, setPreviewLanguage] = useState<'mg' | 'fr'>('mg');
 
   const loadNotifications = useCallback(async () => {
     try {
@@ -591,7 +578,7 @@ export default function NotificationsManagementPage() {
                 <Select
                   label="Type de mise à jour"
                   value={updateType}
-                  onChange={(e) => setUpdateType(e.target.value as any)}
+                  onChange={(e) => setUpdateType(e.target.value as 'features' | 'fixes' | 'major')}
                   options={[
                     { label: 'Nouveautés', value: 'features' },
                     { label: 'Correctifs', value: 'fixes' },
