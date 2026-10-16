@@ -21,8 +21,19 @@ import {
   Upload,
   FileSpreadsheet,
   CheckCircle2,
-  AlertCircle,
 } from 'lucide-react';
+
+interface ParsedCsvRow {
+  malagasy: string;
+  french: string;
+  meaning: string;
+  example: string;
+  category: 'PROVERBE' | 'EXPRESSION' | 'DICTON';
+  difficulty: 'EASY' | 'MEDIUM' | 'HARD';
+  dialectName: string;
+  dialectText: string;
+  isValid: boolean;
+}
 
 interface MalagasyItem {
   id: string;
@@ -95,7 +106,7 @@ export default function ProverbesAdminPage() {
   const [isExporting, setIsExporting] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [importFile, setImportFile] = useState<File | null>(null);
-  const [parsedRows, setParsedRows] = useState<any[]>([]);
+  const [parsedRows, setParsedRows] = useState<ParsedCsvRow[]>([]);
   const [isParsing, setIsParsing] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [skipDuplicates, setSkipDuplicates] = useState(true);
@@ -352,7 +363,7 @@ export default function ProverbesAdminPage() {
       h.toLowerCase().replace(/[^a-z0-9]/g, '')
     );
 
-    const mappedItems: any[] = [];
+    const mappedItems: ParsedCsvRow[] = [];
     for (let r = 1; r < rows.length; r++) {
       const row = rows[r];
       const record: Record<string, string> = {};
@@ -368,9 +379,13 @@ export default function ProverbesAdminPage() {
         record['signification'] || record['sens'] || record['explication'] || record['meaning'] || '';
       const example = record['exemple'] || record['example'] || '';
       const catRaw = (record['categorie'] || record['category'] || 'PROVERBE').toUpperCase();
-      const category = ['PROVERBE', 'EXPRESSION', 'DICTON'].includes(catRaw) ? catRaw : 'PROVERBE';
+      const category: 'PROVERBE' | 'EXPRESSION' | 'DICTON' = (
+        ['PROVERBE', 'EXPRESSION', 'DICTON'].includes(catRaw) ? catRaw : 'PROVERBE'
+      ) as 'PROVERBE' | 'EXPRESSION' | 'DICTON';
       const diffRaw = (record['difficulte'] || record['difficulty'] || 'EASY').toUpperCase();
-      const difficulty = ['EASY', 'MEDIUM', 'HARD'].includes(diffRaw) ? diffRaw : 'EASY';
+      const difficulty: 'EASY' | 'MEDIUM' | 'HARD' = (
+        ['EASY', 'MEDIUM', 'HARD'].includes(diffRaw) ? diffRaw : 'EASY'
+      ) as 'EASY' | 'MEDIUM' | 'HARD';
       const dialectName = record['dialecte'] || record['dialectname'] || '';
       const dialectText = record['variante'] || record['variantedialectale'] || record['dialecttext'] || '';
 
@@ -1050,6 +1065,11 @@ export default function ProverbesAdminPage() {
                     onChange={handleFileChange}
                     className="w-full text-xs text-[var(--text-muted)] file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-[var(--accent)] file:text-white hover:file:opacity-90 cursor-pointer"
                   />
+                  {importFile && (
+                    <div className="text-[11px] text-[var(--text-muted)] mt-1.5 truncate">
+                      Fichier sélectionné : <span className="font-semibold text-[var(--foreground)]">{importFile.name}</span> ({(importFile.size / 1024).toFixed(1)} Ko)
+                    </div>
+                  )}
                 </div>
 
                 {/* Option Doublons */}
