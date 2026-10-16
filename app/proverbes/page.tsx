@@ -17,6 +17,11 @@ import {
   Loader2,
   Search,
   RotateCcw,
+  Download,
+  Upload,
+  FileSpreadsheet,
+  CheckCircle2,
+  AlertCircle,
 } from 'lucide-react';
 
 interface MalagasyItem {
@@ -85,6 +90,22 @@ export default function ProverbesAdminPage() {
     dialectName: '',
     dialectText: '',
   });
+
+  // Modal Import / Export CSV & Excel
+  const [isExporting, setIsExporting] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [parsedRows, setParsedRows] = useState<any[]>([]);
+  const [isParsing, setIsParsing] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const [skipDuplicates, setSkipDuplicates] = useState(true);
+  const [importResult, setImportResult] = useState<{
+    totalReceived: number;
+    importedCount: number;
+    duplicatesSkipped: number;
+    errorsCount: number;
+    errors: Array<{ row: number; text: string; reason: string }>;
+  } | null>(null);
 
   const loadItems = useCallback(async () => {
     try {
@@ -233,6 +254,201 @@ export default function ProverbesAdminPage() {
     }
   };
 
+  // Exporter en CSV
+  const handleExportCsv = async () => {
+    try {
+      setIsExporting(true);
+      const params = new URLSearchParams();
+      if (category !== 'ALL') params.append('category', category);
+      if (difficulty !== 'ALL') params.append('difficulty', difficulty);
+
+      const res = await fetchApi<string>(`/items/export-csv?${params.toString()}`);
+      if (!res) {
+        toast.error('Aucune donnée à exporter');
+        return;
+      }
+      const blob = new Blob([res], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `proverbes-kanto-${new Date().toISOString().slice(0, 10)}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      toast.success('Fichier CSV exporté avec succès !');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Erreur lors de l’export CSV';
+      toast.error(msg);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  // Télécharger le modèle de CSV type (Template)
+  const downloadTemplateCsv = () => {
+    const templateContent =
+      '\uFEFFMalagasy,Traduction Francaise,Signification,Exemple,Categorie,Difficulte,Dialecte,Variante Dialectale\r\n' +
+      '"Ny fihavanana toy ny ketsa, raha fafy tsy maniry fa raha afindra vao vanona","La fraternité est comme de jeunes plants de riz...","La vraie fraternité se cultive et se consolide par les actes d entraide.","Rehefa misy fahoriana...","PROVERBE","EASY","",""\r\n' +
+      '"Aza manao lamban-tsomonda","Ne fais pas comme le vêtement de deuil porté à l envers","Ne sois pas hypocrite dans tes attitudes et paroles.","","PROVERBE","MEDIUM","",""';
+
+    const blob = new Blob([templateContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', 'modele-import-proverbes-kanto.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  // Analyseur CSV côté client avec support des guillemets
+  const parseCsvText = (text: string) => {
+    const firstLine = text.split(/\r\n|\n|\r/)[0] || '';
+    const delimiter = firstLine.includes(';') && !firstLine.includes(',') ? ';' : ',';
+
+    const rows: string[][] = [];
+    let currentRow: string[] = [];
+    let currentField = '';
+    let insideQuotes = false;
+
+    for (let i = 0; i < text.length; i++) {
+      const char = text[i];
+      const nextChar = text[i + 1];
+
+      if (char === '"') {
+        if (insideQuotes && nextChar === '"') {
+          currentField += '"';
+          i++;
+        } else {
+          insideQuotes = !insideQuotes;
+        }
+      } else if (char === delimiter && !insideQuotes) {
+        currentRow.push(currentField.trim());
+        currentField = '';
+      } else if ((char === '\r' || char === '\n') && !insideQuotes) {
+        if (char === '\r' && nextChar === '\n') i++;
+        currentRow.push(currentField.trim());
+        if (currentRow.some((f) => f.length > 0)) {
+          rows.push(currentRow);
+        }
+        currentRow = [];
+        currentField = '';
+      } else {
+        currentField += char;
+      }
+    }
+    if (currentField || currentRow.length > 0) {
+      currentRow.push(currentField.trim());
+      if (currentRow.some((f) => f.length > 0)) {
+        rows.push(currentRow);
+      }
+    }
+
+    if (rows.length < 2) return [];
+
+    const rawHeaders = rows[0].map((h) =>
+      h.toLowerCase().replace(/[^a-z0-9]/g, '')
+    );
+
+    const mappedItems: any[] = [];
+    for (let r = 1; r < rows.length; r++) {
+      const row = rows[r];
+      const record: Record<string, string> = {};
+      for (let c = 0; c < rawHeaders.length; c++) {
+        record[rawHeaders[c]] = row[c] || '';
+      }
+
+      const malagasy =
+        record['malagasy'] || record['texte'] || record['proverbe'] || record['textemalagasy'] || '';
+      const french =
+        record['traductionfrancaise'] || record['traduction'] || record['francais'] || record['french'] || '';
+      const meaning =
+        record['signification'] || record['sens'] || record['explication'] || record['meaning'] || '';
+      const example = record['exemple'] || record['example'] || '';
+      const catRaw = (record['categorie'] || record['category'] || 'PROVERBE').toUpperCase();
+      const category = ['PROVERBE', 'EXPRESSION', 'DICTON'].includes(catRaw) ? catRaw : 'PROVERBE';
+      const diffRaw = (record['difficulte'] || record['difficulty'] || 'EASY').toUpperCase();
+      const difficulty = ['EASY', 'MEDIUM', 'HARD'].includes(diffRaw) ? diffRaw : 'EASY';
+      const dialectName = record['dialecte'] || record['dialectname'] || '';
+      const dialectText = record['variante'] || record['variantedialectale'] || record['dialecttext'] || '';
+
+      if (malagasy || french || meaning) {
+        mappedItems.push({
+          malagasy,
+          french,
+          meaning,
+          example,
+          category,
+          difficulty,
+          dialectName,
+          dialectText,
+          isValid: Boolean(malagasy.trim() && french.trim() && meaning.trim()),
+        });
+      }
+    }
+    return mappedItems;
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setImportFile(file);
+    setIsParsing(true);
+    setImportResult(null);
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const text = String(event.target?.result || '');
+        const items = parseCsvText(text);
+        setParsedRows(items);
+      } catch (err) {
+        console.error('Erreur lecture CSV', err);
+        toast.error('Impossible de lire le fichier CSV.');
+      } finally {
+        setIsParsing(false);
+      }
+    };
+    reader.readAsText(file, 'UTF-8');
+  };
+
+  const handleExecuteImport = async () => {
+    const validRows = parsedRows.filter((r) => r.isValid);
+    if (validRows.length === 0) {
+      toast.error('Aucune ligne valide à importer');
+      return;
+    }
+
+    try {
+      setIsImporting(true);
+      const res = await fetchApi<{
+        totalReceived: number;
+        importedCount: number;
+        duplicatesSkipped: number;
+        errorsCount: number;
+        errors: Array<{ row: number; text: string; reason: string }>;
+      }>('/items/import-csv', {
+        method: 'POST',
+        body: JSON.stringify({
+          items: validRows,
+          skipDuplicates,
+        }),
+      });
+
+      setImportResult(res);
+      toast.success(`${res.importedCount} proverbe(s) importé(s) avec succès !`);
+      void loadItems();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Erreur lors de l’importation';
+      toast.error(msg);
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
   return (
     <AdminShell>
       <div className="w-full space-y-4 max-w-6xl mx-auto pb-12">
@@ -255,6 +471,34 @@ export default function ProverbesAdminPage() {
                 title="Actualiser"
               >
                 <RotateCcw size={14} className={isLoading ? 'animate-spin' : ''} />
+              </button>
+
+              <button
+                onClick={handleExportCsv}
+                disabled={isExporting}
+                className="px-3 py-1.5 rounded-lg border border-[var(--card-border)] bg-[var(--card)] text-[var(--foreground)] hover:bg-[var(--card-hover)] transition cursor-pointer flex items-center gap-1.5 text-xs font-semibold shadow-xs disabled:opacity-50"
+                title="Exporter la sélection en CSV (UTF-8 pour Excel)"
+              >
+                {isExporting ? (
+                  <Loader2 size={13} className="animate-spin text-[var(--accent)]" />
+                ) : (
+                  <Download size={13} />
+                )}
+                <span className="hidden sm:inline">Exporter</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  setImportFile(null);
+                  setParsedRows([]);
+                  setImportResult(null);
+                  setIsImportModalOpen(true);
+                }}
+                className="px-3 py-1.5 rounded-lg border border-[var(--card-border)] bg-[var(--card)] text-[var(--foreground)] hover:bg-[var(--card-hover)] transition cursor-pointer flex items-center gap-1.5 text-xs font-semibold shadow-xs"
+                title="Importer des proverbes par lot (CSV / Excel)"
+              >
+                <Upload size={13} />
+                <span className="hidden sm:inline">Importer</span>
               </button>
 
               <button
@@ -752,6 +996,172 @@ export default function ProverbesAdminPage() {
                 >
                   Fermer
                 </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal Import CSV & Excel */}
+        {isImportModalOpen && (
+          <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs overflow-y-auto flex items-start justify-center p-4 pt-8 md:pt-12 animate-in fade-in duration-150">
+            <div className="bg-[var(--card)] rounded-2xl border border-[var(--card-border)] shadow-2xl max-w-xl w-full max-h-[calc(100vh-4rem)] flex flex-col overflow-hidden">
+              <div className="px-5 py-3.5 border-b border-[var(--card-border)] bg-[var(--input-bg)] flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <FileSpreadsheet size={16} className="text-[var(--accent)]" />
+                  <span className="text-sm font-semibold text-[var(--foreground)]">
+                    Importation par lot (CSV / Excel)
+                  </span>
+                </div>
+                <button
+                  onClick={() => setIsImportModalOpen(false)}
+                  className="p-1 rounded-lg hover:bg-[var(--card-hover)] text-[var(--text-muted)] transition cursor-pointer"
+                >
+                  <X size={15} />
+                </button>
+              </div>
+
+              <div className="p-5 space-y-4 overflow-y-auto flex-1 text-xs">
+                {/* Guide & Template */}
+                <div className="p-3.5 rounded-xl border border-[var(--card-border)] bg-[var(--input-bg)] flex items-center justify-between gap-3">
+                  <div>
+                    <div className="font-semibold text-[var(--foreground)]">Modèle CSV standard</div>
+                    <div className="text-[11px] text-[var(--text-muted)] mt-0.5">
+                      Colonnes requises : <code>Malagasy</code>, <code>Traduction Francaise</code>, <code>Signification</code>.
+                    </div>
+                  </div>
+                  <button
+                    onClick={downloadTemplateCsv}
+                    className="px-3 py-1.5 rounded-lg border border-[var(--card-border)] bg-[var(--card)] hover:bg-[var(--card-hover)] font-medium text-[11px] flex items-center gap-1.5 transition cursor-pointer shadow-xs shrink-0"
+                  >
+                    <Download size={12} />
+                    <span>Télécharger modèle</span>
+                  </button>
+                </div>
+
+                {/* Sélecteur de fichier */}
+                <div>
+                  <label htmlFor="csv-file-input" className="block text-xs font-semibold text-[var(--foreground)] mb-1">
+                    Sélectionner un fichier CSV (*.csv)
+                  </label>
+                  <input
+                    id="csv-file-input"
+                    type="file"
+                    accept=".csv,text/csv"
+                    onChange={handleFileChange}
+                    className="w-full text-xs text-[var(--text-muted)] file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-[var(--accent)] file:text-white hover:file:opacity-90 cursor-pointer"
+                  />
+                </div>
+
+                {/* Option Doublons */}
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={skipDuplicates}
+                    onChange={(e) => setSkipDuplicates(e.target.checked)}
+                    className="w-4 h-4 rounded text-[var(--accent)]"
+                  />
+                  <span className="text-xs text-[var(--foreground)]">
+                    Ignorer automatiquement les proverbes déjà existants en base
+                  </span>
+                </label>
+
+                {/* État de chargement du parsing */}
+                {isParsing && (
+                  <div className="flex items-center gap-2 text-xs text-[var(--text-muted)]">
+                    <Loader2 size={13} className="animate-spin text-[var(--accent)]" />
+                    <span>Analyse des lignes du fichier en cours...</span>
+                  </div>
+                )}
+
+                {/* Aperçu des lignes détectées */}
+                {parsedRows.length > 0 && !importResult && (
+                  <div className="space-y-2 pt-2 border-t border-[var(--card-border)]">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-semibold text-[var(--foreground)]">
+                        {parsedRows.filter((r) => r.isValid).length} ligne(s) valide(s) détectée(s)
+                      </span>
+                      {parsedRows.some((r) => !r.isValid) && (
+                        <span className="text-amber-500 font-medium">
+                          {parsedRows.filter((r) => !r.isValid).length} ligne(s) incomplète(s) ignorée(s)
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="max-h-48 overflow-y-auto rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] p-2 space-y-1.5">
+                      {parsedRows.slice(0, 5).map((row, idx) => (
+                        <div
+                          key={idx}
+                          className={`p-2 rounded text-[11px] border ${
+                            row.isValid
+                              ? 'border-[var(--card-border)] bg-[var(--card)]'
+                              : 'border-amber-500/30 bg-amber-500/10 text-amber-600'
+                          }`}
+                        >
+                          <div className="font-semibold">« {row.malagasy || '(Texte manquant)'} »</div>
+                          <div className="text-[var(--text-muted)] truncate">{row.french}</div>
+                        </div>
+                      ))}
+                      {parsedRows.length > 5 && (
+                        <div className="text-[10px] text-center text-[var(--text-muted)] pt-1">
+                          + {parsedRows.length - 5} autre(s) proverbe(s)...
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Rapport post-importation */}
+                {importResult && (
+                  <div className="p-3.5 rounded-xl border border-[var(--card-border)] bg-[var(--input-bg)] space-y-2">
+                    <div className="flex items-center gap-2 text-emerald-600 font-semibold text-xs">
+                      <CheckCircle2 size={15} />
+                      <span>Importation terminée avec succès !</span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 text-center text-xs pt-1">
+                      <div className="p-2 rounded-lg bg-[var(--card)] border border-[var(--card-border)]">
+                        <div className="text-lg font-bold text-emerald-600">{importResult.importedCount}</div>
+                        <div className="text-[10px] text-[var(--text-muted)]">Importés</div>
+                      </div>
+                      <div className="p-2 rounded-lg bg-[var(--card)] border border-[var(--card-border)]">
+                        <div className="text-lg font-bold text-amber-500">{importResult.duplicatesSkipped}</div>
+                        <div className="text-[10px] text-[var(--text-muted)]">Doublons évités</div>
+                      </div>
+                      <div className="p-2 rounded-lg bg-[var(--card)] border border-[var(--card-border)]">
+                        <div className="text-lg font-bold text-red-500">{importResult.errorsCount}</div>
+                        <div className="text-[10px] text-[var(--text-muted)]">Erreurs</div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="px-5 py-3 border-t border-[var(--card-border)] bg-[var(--input-bg)] flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsImportModalOpen(false)}
+                  className="px-3.5 py-1.5 rounded-lg border border-[var(--card-border)] hover:bg-[var(--card-hover)] text-xs text-[var(--foreground)] transition cursor-pointer"
+                >
+                  {importResult ? 'Fermer' : 'Annuler'}
+                </button>
+                {!importResult && (
+                  <button
+                    type="button"
+                    disabled={isImporting || parsedRows.filter((r) => r.isValid).length === 0}
+                    onClick={handleExecuteImport}
+                    className="px-4 py-1.5 rounded-lg bg-[var(--accent)] text-white text-xs font-semibold hover:opacity-90 transition disabled:opacity-50 flex items-center gap-1.5 cursor-pointer shadow-xs"
+                  >
+                    {isImporting ? (
+                      <>
+                        <Loader2 size={13} className="animate-spin" />
+                        <span>Importation en cours...</span>
+                      </>
+                    ) : (
+                      <span>
+                        Importer {parsedRows.filter((r) => r.isValid).length} proverbe(s)
+                      </span>
+                    )}
+                  </button>
+                )}
               </div>
             </div>
           </div>
