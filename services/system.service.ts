@@ -1,5 +1,12 @@
 import { fetchApi } from '@/lib/api-client';
-import { NotificationItem, UserAccount } from '@/types';
+import {
+  NotificationItem,
+  UserAccount,
+  UserDetails,
+  UserRole,
+  DashboardMetrics,
+  AdminAuditLog,
+} from '@/types';
 
 export const systemService = {
   // ─── Notifications ─────────────────────────────────────────────────────────
@@ -20,15 +27,66 @@ export const systemService = {
   },
 
   // ─── Utilisateurs ───────────────────────────────────────────────────────────
-  async getUsers(): Promise<UserAccount[]> {
-    const res = await fetchApi<{ data: UserAccount[] }>('/admin/users');
-    return res.data || [];
+  async getUsers(params?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    role?: string;
+    status?: string;
+  }): Promise<{
+    data: UserAccount[];
+    meta?: { total: number; page: number; limit: number; totalPages: number };
+  }> {
+    const query = new URLSearchParams();
+    if (params?.page) query.set('page', params.page.toString());
+    if (params?.limit) query.set('limit', params.limit.toString());
+    if (params?.search) query.set('search', params.search);
+    if (params?.role && params.role !== 'ALL') query.set('role', params.role);
+    if (params?.status && params.status !== 'ALL') query.set('status', params.status);
+
+    const qs = query.toString();
+    const res = await fetchApi<{
+      data: UserAccount[];
+      meta?: { total: number; page: number; limit: number; totalPages: number };
+    }>(`/admin/users${qs ? `?${qs}` : ''}`);
+
+    return {
+      data: res.data || [],
+      meta: res.meta,
+    };
   },
 
-  async updateUserRole(id: string, role: 'ADMIN' | 'USER'): Promise<void> {
+  async getUserDetails(id: string): Promise<UserDetails> {
+    return fetchApi<UserDetails>(`/admin/users/${id}`);
+  },
+
+  async updateUserRole(id: string, role: UserRole): Promise<void> {
     await fetchApi(`/admin/users/${id}/role`, {
       method: 'PATCH',
       body: JSON.stringify({ role }),
+    });
+  },
+
+  async banUser(
+    id: string,
+    reason: string,
+    expiresAt?: string | null,
+  ): Promise<{ success: boolean; message: string }> {
+    return fetchApi<{ success: boolean; message: string }>(`/admin/users/${id}/ban`, {
+      method: 'PATCH',
+      body: JSON.stringify({ reason, expiresAt }),
+    });
+  },
+
+  async unbanUser(id: string): Promise<{ success: boolean; message: string }> {
+    return fetchApi<{ success: boolean; message: string }>(`/admin/users/${id}/unban`, {
+      method: 'PATCH',
+    });
+  },
+
+  async deleteUser(id: string): Promise<{ success: boolean; message: string }> {
+    return fetchApi<{ success: boolean; message: string }>(`/admin/users/${id}`, {
+      method: 'DELETE',
     });
   },
 
@@ -37,6 +95,35 @@ export const systemService = {
       `/admin/users/${id}/reset-password`,
       { method: 'POST' }
     );
+  },
+
+  // ─── Tableau de bord & Audit ────────────────────────────────────────────────
+  async getDashboardMetrics(period = '7d'): Promise<DashboardMetrics> {
+    return fetchApi<DashboardMetrics>(`/admin/stats/dashboard?period=${period}`);
+  },
+
+  async getAuditLogs(params?: {
+    page?: number;
+    limit?: number;
+    action?: string;
+    targetType?: string;
+    userId?: string;
+  }): Promise<{
+    data: AdminAuditLog[];
+    meta?: { total: number; page: number; limit: number; totalPages: number };
+  }> {
+    const query = new URLSearchParams();
+    if (params?.page) query.set('page', params.page.toString());
+    if (params?.limit) query.set('limit', params.limit.toString());
+    if (params?.action) query.set('action', params.action);
+    if (params?.targetType) query.set('targetType', params.targetType);
+    if (params?.userId) query.set('userId', params.userId);
+
+    const qs = query.toString();
+    return fetchApi<{
+      data: AdminAuditLog[];
+      meta?: { total: number; page: number; limit: number; totalPages: number };
+    }>(`/admin/audit-logs${qs ? `?${qs}` : ''}`);
   },
 
   // ─── Diagnostic & Test Email ────────────────────────────────────────────────

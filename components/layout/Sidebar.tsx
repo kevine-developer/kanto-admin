@@ -28,6 +28,7 @@ import {
   Sparkles,
   FileText,
   Smartphone,
+  History,
 } from 'lucide-react';
 
 interface AuthUser {
@@ -78,6 +79,7 @@ const NAV_GROUPS: { label: string; items: { href: string; icon: React.ElementTyp
     label: 'Comptes & Système',
     items: [
       { href: '/users',         icon: Users,      label: 'Utilisateurs & Rôles' },
+      { href: '/audit-logs',    icon: History,    label: "Journal d'Audit" },
       { href: '/beta-testers',  icon: Smartphone, label: 'Bêta-Testeurs Play' },
       { href: '/cgu',           icon: FileText,   label: 'CGU & Juridique' },
       { href: '/notifications', icon: Bell,       label: 'Notifications Push' },
