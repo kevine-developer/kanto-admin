@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { AdminShell } from '@/components/layout/AdminShell';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Modal, ConfirmModal } from '@/components/ui';
@@ -10,25 +10,18 @@ import { useSession } from '@/lib/auth-client';
 import {
   Search,
   ShieldCheck,
-  User,
   Loader2,
-  Calendar,
   KeyRound,
   Users as UsersIcon,
   RotateCcw,
   X,
   ChevronLeft,
   ChevronRight,
-  ShieldAlert,
   Ban,
   CheckCircle2,
   Eye,
   Trash2,
-  Award,
-  BookOpen,
-  Sparkles,
   AlertTriangle,
-  Flag,
 } from 'lucide-react';
 import { useToast } from '@/lib/hooks/useToast';
 
@@ -68,7 +61,7 @@ const ROLE_BADGES: Record<
 export default function UsersAdminPage() {
   const { toast } = useToast();
   const { data: session } = useSession();
-  const currentUserId = (session?.user as any)?.id;
+  const currentUserId = (session?.user as { id?: string } | undefined)?.id;
 
   const [users, setUsers] = useState<UserAccount[]>([]);
   const [totalCount, setTotalCount] = useState(0);
@@ -84,7 +77,6 @@ export default function UsersAdminPage() {
 
   // Actions & Modales
   const [selectedUserDetail, setSelectedUserDetail] = useState<UserDetails | null>(null);
-  const [isLoadingDetails, setIsLoadingDetails] = useState(false);
 
   // Modal de suspension (Ban)
   const [banModalState, setBanModalState] = useState<{
@@ -154,13 +146,10 @@ export default function UsersAdminPage() {
   // Ouvrir la fiche détaillée
   const handleOpenDetails = async (userId: string) => {
     try {
-      setIsLoadingDetails(true);
       const details = await systemService.getUserDetails(userId);
       setSelectedUserDetail(details);
-    } catch (err) {
+    } catch {
       toast.error('Impossible de charger la fiche utilisateur.');
-    } finally {
-      setIsLoadingDetails(false);
     }
   };
 
@@ -389,6 +378,7 @@ export default function UsersAdminPage() {
                           <div className="flex items-center gap-2.5">
                             <div className="w-8 h-8 rounded-full bg-[var(--background)] border border-[var(--card-border)] flex items-center justify-center font-bold text-xs text-[var(--text-muted)] shrink-0 overflow-hidden">
                               {u.image ? (
+                                // eslint-disable-next-line @next/next/no-img-element
                                 <img
                                   src={u.image}
                                   alt={u.name}
@@ -542,6 +532,7 @@ export default function UsersAdminPage() {
               <div className="p-4 rounded-xl border border-[var(--card-border)] bg-[var(--background)] flex items-start gap-4">
                 <div className="w-12 h-12 rounded-full bg-[var(--card)] border border-[var(--card-border)] flex items-center justify-center font-bold text-base text-[var(--accent)] shrink-0 overflow-hidden">
                   {selectedUserDetail.user.image ? (
+                    // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={selectedUserDetail.user.image}
                       alt={selectedUserDetail.user.name}
@@ -700,7 +691,7 @@ export default function UsersAdminPage() {
           >
             <div className="space-y-4 text-xs">
               <p className="text-[var(--text-muted)]">
-                L'utilisateur ne pourra plus se connecter et toutes ses sessions actives seront
+                L&apos;utilisateur ne pourra plus se connecter et toutes ses sessions actives seront
                 révoquées immédiatement.
               </p>
 
@@ -721,7 +712,7 @@ export default function UsersAdminPage() {
 
               <div>
                 <label className="block text-xs font-semibold mb-1 text-[var(--foreground)]">
-                  Date d'expiration (Optionnel — laisser vide pour suspension définitive)
+                  Date d&apos;expiration (Optionnel — laisser vide pour suspension définitive)
                 </label>
                 <input
                   type="date"

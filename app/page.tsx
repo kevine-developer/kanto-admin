@@ -8,11 +8,8 @@ import { systemService } from '@/services/system.service';
 import { DashboardMetrics } from '@/types';
 import {
   BookOpen,
-  Headphones,
   ScrollText,
   ArrowUpRight,
-  Quote,
-  Mic,
   CheckCheck,
   Puzzle,
   HeartHandshake,
@@ -20,17 +17,13 @@ import {
   RotateCcw,
   Sparkles,
   AlertTriangle,
-  Landmark,
   FileText,
-  Megaphone,
   Users,
   ShieldCheck,
   Activity,
   CheckCircle2,
   DollarSign,
   Info,
-  Calendar,
-  Layers,
 } from 'lucide-react';
 
 type PeriodType = 'today' | '7d' | '30d' | 'all';
@@ -194,7 +187,7 @@ export default function AdminDashboardPage() {
                 {metrics?.moderation.totalUrgent || 0}
               </div>
               <div className="text-[11px] text-[var(--text-muted)] mt-0.5">
-                Dossiers en attente d'arbitrage
+                Dossiers en attente d&apos;arbitrage
               </div>
             </div>
             <div className="pt-2 border-t border-[var(--card-border)] flex items-center justify-between text-[10.5px] text-[var(--text-muted)]">
@@ -411,14 +404,14 @@ export default function AdminDashboardPage() {
             <div className="space-y-1">
               <div className="font-semibold text-[var(--foreground)] flex items-center gap-1.5">
                 <Info size={13} className="text-[var(--accent)]" />
-                Intégration de l'API Google AdMob Reporting
+                Intégration de l&apos;API Google AdMob Reporting
               </div>
               <p className="text-[11px] text-[var(--text-muted)] max-w-2xl leading-relaxed">
                 Les unités publicitaires Kanto (Bannières adaptatives, Interstitiels solo et Vidéos récompensées)
                 sont opérationnelles avec filtrage parental <strong>PG</strong> et consentement UMP.
                 Pour rapatrier les revenus réels, eCPM et impressions dans ce CRM sans exposer de secrets,
-                activez l'API <em>Google AdMob Reporting</em> sur la Google Cloud Console du projet et
-                déclarez le service account JSON dans les variables d'environnement serveur.
+                activez l&apos;API <em>Google AdMob Reporting</em> sur la Google Cloud Console du projet et
+                déclarez le service account JSON dans les variables d&apos;environnement serveur.
               </p>
             </div>
             <div className="shrink-0 flex items-center gap-2">

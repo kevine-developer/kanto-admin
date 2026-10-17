@@ -187,7 +187,7 @@ export default function AuditLogsPage() {
               <thead className="bg-[var(--background)] border-b border-[var(--card-border)] text-[var(--text-muted)] uppercase tracking-wider font-mono text-[10px]">
                 <tr>
                   <th className="py-3 px-4">Date & Heure</th>
-                  <th className="py-3 px-4">Type d'action</th>
+                  <th className="py-3 px-4">Type d&apos;action</th>
                   <th className="py-3 px-4">Administrateur</th>
                   <th className="py-3 px-4">Cible / Ressource</th>
                   <th className="py-3 px-4">Motif & Justification</th>
@@ -199,7 +199,7 @@ export default function AuditLogsPage() {
                   <tr>
                     <td colSpan={6} className="py-12 text-center text-[var(--text-muted)]">
                       <RefreshCw size={18} className="animate-spin mx-auto mb-2 text-[var(--accent)]" />
-                      Chargement du journal d'audit...
+                      Chargement du journal d&apos;audit...
                     </td>
                   </tr>
                 ) : filteredLogs.length === 0 ? (
