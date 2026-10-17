@@ -4,16 +4,12 @@ import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { AdminShell } from '@/components/layout/AdminShell';
 import { PageHeader } from '@/components/layout/PageHeader';
-import { fetchApi } from '@/lib/api-client';
-import { contributionsService } from '@/services/contributions.service';
+import { systemService } from '@/services/system.service';
+import { DashboardMetrics } from '@/types';
 import {
   BookOpen,
-  Headphones,
   ScrollText,
   ArrowUpRight,
-  Quote,
-  Mic,
-  Lock,
   CheckCheck,
   Puzzle,
   HeartHandshake,
@@ -21,261 +17,116 @@ import {
   RotateCcw,
   Sparkles,
   AlertTriangle,
-  Landmark,
   FileText,
-  Megaphone,
   Users,
-  Settings2,
+  ShieldCheck,
+  Activity,
+  CheckCircle2,
+  DollarSign,
+  Info,
 } from 'lucide-react';
 
-interface StatsData {
-  totalContes: number;
-  contesWithAudioMg: number;
-  contesWithAudioFr: number;
-  totalItems: number;
-  totalCitations: number;
-  pendingContributions: number;
-  pendingReports: number;
-}
-
-interface ConteSummary {
-  id: string;
-  audioUrlMg?: string | null;
-  audioUrlFr?: string | null;
-}
-
-const MODULE_POLES = [
-  {
-    title: 'Patrimoine Culturel',
-    badge: 'Corpus',
-    links: [
-      {
-        href: '/contes',
-        label: 'Contes & Angano',
-        detail: 'Studio audio TTS bilingue et récits',
-        icon: BookOpen,
-      },
-      {
-        href: '/proverbes',
-        label: 'Proverbes & Fady',
-        detail: 'Sagesses ancestrales et interdits',
-        icon: ScrollText,
-      },
-      {
-        href: '/kabary',
-        label: 'Discours & Kabary',
-        detail: 'Art oratoire et protocoles oraux',
-        icon: Mic,
-      },
-      {
-        href: '/citations',
-        label: 'Citations & Auteurs',
-        detail: 'Grandes pensées et mémoires',
-        icon: Quote,
-      },
-      {
-        href: '/histoire',
-        label: 'Histoire & Chronologie',
-        detail: 'Grandes époques et repères',
-        icon: Landmark,
-      },
-    ],
-  },
-  {
-    title: 'Gamification & Quiz',
-    badge: 'Apprentissage',
-    links: [
-      {
-        href: '/true-false',
-        label: 'Vrai ou Faux',
-        detail: 'Affirmations bilingues et quiz',
-        icon: CheckCheck,
-      },
-      {
-        href: '/word-puzzle',
-        label: 'Remise en Ordre',
-        detail: 'Puzzles de phrases et syntaxes',
-        icon: Puzzle,
-      },
-      {
-        href: '/missing-word',
-        label: 'Mots Manquants',
-        detail: 'Complétion lexicale contextuelle',
-        icon: FileText,
-      },
-      {
-        href: '/progression',
-        label: 'Niveaux & Récompenses',
-        detail: 'Points de fahalalana et badges',
-        icon: Sparkles,
-      },
-    ],
-  },
-  {
-    title: 'Pilotage & Système',
-    badge: 'Gouvernance',
-    links: [
-      {
-        href: '/contributions',
-        label: 'Modération Citoyenne',
-        detail: 'Validation collaborative du public',
-        icon: HeartHandshake,
-      },
-      {
-        href: '/announcements',
-        label: 'Annonces Système',
-        detail: 'Communications et alertes mobiles',
-        icon: Megaphone,
-      },
-      {
-        href: '/locks',
-        label: 'Visuels & Accès',
-        detail: 'Bannières de couverture et verrous',
-        icon: Lock,
-      },
-      {
-        href: '/users',
-        label: 'Utilisateurs & Rôles',
-        detail: 'Gestion des comptes et droits',
-        icon: Users,
-      },
-      {
-        href: '/settings',
-        label: 'Paramètres & CGU',
-        detail: 'Configuration globale et mentions',
-        icon: Settings2,
-      },
-    ],
-  },
-];
+type PeriodType = 'today' | '7d' | '30d' | 'all';
 
 export default function AdminDashboardPage() {
-  const [stats, setStats] = useState<StatsData>({
-    totalContes: 0,
-    contesWithAudioMg: 0,
-    contesWithAudioFr: 0,
-    totalItems: 0,
-    totalCitations: 0,
-    pendingContributions: 0,
-    pendingReports: 0,
-  });
+  const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
+  const [period, setPeriod] = useState<PeriodType>('7d');
   const [isLoading, setIsLoading] = useState(true);
 
-  const loadStats = useCallback(async () => {
+  const loadMetrics = useCallback(async () => {
     try {
       setIsLoading(true);
-
-      const [contesSettled, itemsSettled, citationsSettled, contribSettled] =
-        await Promise.allSettled([
-          fetchApi<{ data: ConteSummary[] }>('/contes?limit=100'),
-          fetchApi<{ meta?: { total?: number } }>('/items?limit=1'),
-          fetchApi<{ meta?: { total?: number } }>('/citations?limit=1'),
-          contributionsService.getStats(),
-        ]);
-
-      let totalContes = 0;
-      let withMg = 0;
-      let withFr = 0;
-      if (contesSettled.status === 'fulfilled') {
-        const contes = contesSettled.value?.data || [];
-        totalContes = contes.length;
-        withMg = contes.filter((c) => !!c.audioUrlMg).length;
-        withFr = contes.filter((c) => !!c.audioUrlFr).length;
-      }
-
-      let totalItems = 0;
-      if (itemsSettled.status === 'fulfilled') {
-        totalItems = itemsSettled.value?.meta?.total || 0;
-      }
-
-      let totalCitations = 0;
-      if (citationsSettled.status === 'fulfilled') {
-        totalCitations = citationsSettled.value?.meta?.total || 0;
-      }
-
-      let pendingContributions = 0;
-      let pendingReports = 0;
-      if (contribSettled.status === 'fulfilled') {
-        pendingContributions = contribSettled.value?.totalPending || 0;
-        pendingReports = contribSettled.value?.totalReportsPending || 0;
-      }
-
-      setStats({
-        totalContes,
-        contesWithAudioMg: withMg,
-        contesWithAudioFr: withFr,
-        totalItems,
-        totalCitations,
-        pendingContributions,
-        pendingReports,
-      });
+      const data = await systemService.getDashboardMetrics(period);
+      setMetrics(data);
     } catch (err: unknown) {
-      console.error('Erreur chargement des métriques :', err);
+      console.error('Erreur chargement des métriques du dashboard :', err);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [period]);
 
   useEffect(() => {
-    void loadStats();
-  }, [loadStats]);
+    void loadMetrics();
+  }, [loadMetrics]);
 
-  const mgPercentage =
-    stats.totalContes > 0
-      ? Math.round((stats.contesWithAudioMg / stats.totalContes) * 100)
-      : 0;
-  const frPercentage =
-    stats.totalContes > 0
-      ? Math.round((stats.contesWithAudioFr / stats.totalContes) * 100)
-      : 0;
-
-  const hasUrgentActions = stats.pendingContributions > 0 || stats.pendingReports > 0;
+  const hasUrgentActions =
+    (metrics?.moderation.totalUrgent || 0) > 0;
 
   return (
     <AdminShell>
-      <div className="w-full space-y-5 pb-8">
-        {/* En-tête standardisé et compact */}
+      <div className="w-full space-y-6 pb-12">
+        {/* En-tête avec sélecteur de période */}
         <PageHeader
-          title="Vue d'ensemble"
-          description="Supervision synthétique du conservatoire Kanto : corpus vivant, couverture audio bilingue et modération citoyenne."
+          title="Tableau de Bord & Pilotage"
+          description="Vue synthétique du conservatoire Kanto : communauté active, modération citoyenne, corpus culturel et état des services."
           badge={
-            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10.5px] font-mono font-medium border border-[var(--card-border)] bg-[var(--card)] text-[var(--accent)]">
-              <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent)] animate-pulse" />
-              Conservatoire Kanto
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-[10.5px] font-mono font-medium border border-[var(--card-border)] bg-[var(--card)] text-[var(--accent)]">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              Système Opérationnel
             </span>
           }
           icon={LayoutDashboard}
           actions={
-            <button
-              type="button"
-              onClick={() => void loadStats()}
-              title="Actualiser les métriques"
-              className="p-1.5 rounded-md border border-[var(--card-border)] bg-[var(--card)] hover:bg-[var(--card-hover)] text-[var(--text-muted)] hover:text-[var(--foreground)] transition cursor-pointer"
-            >
-              <RotateCcw size={14} className={isLoading ? 'animate-spin' : ''} />
-            </button>
+            <div className="flex items-center gap-2">
+              {/* Sélecteur de période */}
+              <div className="inline-flex items-center p-0.5 rounded-lg border border-[var(--card-border)] bg-[var(--card)] text-xs">
+                {(
+                  [
+                    { id: 'today', label: "Aujourd'hui" },
+                    { id: '7d', label: '7 jours' },
+                    { id: '30d', label: '30 jours' },
+                    { id: 'all', label: 'Global' },
+                  ] as { id: PeriodType; label: string }[]
+                ).map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => setPeriod(p.id)}
+                    className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition cursor-pointer ${
+                      period === p.id
+                        ? 'bg-[var(--accent)] text-white shadow-xs'
+                        : 'text-[var(--text-muted)] hover:text-[var(--foreground)]'
+                    }`}
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => void loadMetrics()}
+                title="Actualiser les métriques"
+                className="p-1.5 rounded-md border border-[var(--card-border)] bg-[var(--card)] hover:bg-[var(--card-hover)] text-[var(--text-muted)] hover:text-[var(--foreground)] transition cursor-pointer"
+              >
+                <RotateCcw size={14} className={isLoading ? 'animate-spin' : ''} />
+              </button>
+            </div>
           }
-          primaryAction={{
-            label: 'Studio Audio Contes',
-            icon: <Headphones size={13} />,
-            href: '/contes',
-          }}
         />
 
-        {/* Alerte contextuelle UX si actions requises */}
+        {/* 1. Alerte prioritaire d'actions requises (File de modération) */}
         {hasUrgentActions && (
-          <div className="p-3 rounded-xl border border-amber-500/30 bg-amber-500/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-            <div className="flex items-center gap-2.5">
-              <div className="w-7 h-7 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
-                <AlertTriangle size={14} />
+          <div className="p-3.5 rounded-xl border border-amber-500/30 bg-amber-500/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-xs">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                <AlertTriangle size={16} />
               </div>
               <div>
-                <span className="font-semibold text-[var(--foreground)]">Action prioritaire requise : </span>
+                <span className="font-semibold text-[var(--foreground)]">Actions requises en modération : </span>
                 <span className="text-[var(--text-muted)]">
-                  {stats.pendingContributions > 0 &&
-                    `${stats.pendingContributions} proposition(s) citoyenne(s) en attente de modération`}
-                  {stats.pendingContributions > 0 && stats.pendingReports > 0 && ' et '}
-                  {stats.pendingReports > 0 && `${stats.pendingReports} signalement(s) à instruire`}
+                  {metrics?.moderation.pendingContributions
+                    ? `${metrics.moderation.pendingContributions} contribution(s) citoyenne(s) en attente`
+                    : ''}
+                  {metrics?.moderation.pendingContributions && metrics?.moderation.pendingReports
+                    ? ' • '
+                    : ''}
+                  {metrics?.moderation.pendingReports
+                    ? `${metrics.moderation.pendingReports} signalement(s) non traité(s)`
+                    : ''}
+                  {metrics?.moderation.disputedContributions
+                    ? ` • ${metrics.moderation.disputedContributions} réclamation(s) doublon`
+                    : ''}
                 </span>
               </div>
             </div>
@@ -288,224 +139,292 @@ export default function AdminDashboardPage() {
           </div>
         )}
 
-        {/* Ruban des Indicateurs Clés (KPIs minimalistes) */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          {/* KPI 1 : Contes & Récits */}
+        {/* 2. KPIs Clés : Utilisateurs, Modération, Corpus & Activité */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+          {/* KPI 1 : Communauté Utilisateurs */}
           <Link
-            href="/contes"
-            className="group p-3.5 rounded-xl border border-[var(--card-border)] bg-[var(--card)] hover:bg-[var(--card-hover)] transition-all cursor-pointer flex flex-col justify-between"
+            href="/users"
+            className="p-4 rounded-xl border border-[var(--card-border)] bg-[var(--card)] hover:bg-[var(--card-hover)] transition flex flex-col justify-between shadow-xs"
           >
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-medium font-mono text-[var(--text-muted)] uppercase tracking-wider">
-                Contes & Angano
-              </span>
-              <BookOpen size={15} className="text-[var(--accent)] opacity-70 group-hover:opacity-100 transition-opacity" />
+            <div className="flex items-center justify-between text-[var(--text-muted)]">
+              <span className="text-[11px] font-mono uppercase tracking-wider">Communauté Kanto</span>
+              <Users size={15} className="text-purple-500" />
             </div>
-            <div className="my-2">
-              <div className="text-2xl font-bold font-mono tracking-tight text-[var(--foreground)]">
-                {isLoading ? '—' : stats.totalContes}
+            <div className="my-2.5">
+              <div className="text-2xl font-bold font-mono text-[var(--foreground)]">
+                {metrics?.users.total.toLocaleString('fr-FR') || 0}
               </div>
-              <p className="text-[11px] text-[var(--text-muted)] mt-0.5">
-                {isLoading
-                  ? 'Chargement...'
-                  : `${stats.totalContes - Math.min(stats.contesWithAudioMg, stats.contesWithAudioFr)} à compléter en audio`}
-              </p>
+              <div className="text-[11px] text-[var(--text-muted)] mt-0.5">
+                <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+                  +{metrics?.users.newInPeriod || 0}
+                </span>{' '}
+                {period === 'today'
+                  ? "aujourd'hui"
+                  : period === '7d'
+                  ? 'sur 7 jours'
+                  : period === '30d'
+                  ? 'sur 30 jours'
+                  : 'au total'}
+              </div>
             </div>
-            <div className="pt-2 border-t border-[var(--card-border)] flex items-center justify-between text-[10.5px]">
-              <span className="text-[var(--text-subtle)] font-mono">Corpus récits</span>
-              <span className="text-[var(--accent)] font-medium group-hover:translate-x-0.5 transition-transform inline-flex items-center gap-0.5">
-                Gérer <ArrowUpRight size={11} />
-              </span>
+            <div className="pt-2 border-t border-[var(--card-border)] flex items-center justify-between text-[10.5px] text-[var(--text-muted)]">
+              <span>{metrics?.users.roles.admin || 0} admin(s)</span>
+              <span>{metrics?.users.banned || 0} suspendu(s)</span>
             </div>
           </Link>
 
-          {/* KPI 2 : Couverture Audio Bilingue */}
-          <Link
-            href="/contes"
-            className="group p-3.5 rounded-xl border border-[var(--card-border)] bg-[var(--card)] hover:bg-[var(--card-hover)] transition-all cursor-pointer flex flex-col justify-between"
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-medium font-mono text-[var(--text-muted)] uppercase tracking-wider">
-                Couverture Audio
-              </span>
-              <Headphones size={15} className="text-emerald-500 opacity-70 group-hover:opacity-100 transition-opacity" />
-            </div>
-            <div className="my-1.5 space-y-1.5">
-              <div>
-                <div className="flex items-center justify-between text-[10.5px] font-mono text-[var(--text-muted)] mb-1">
-                  <span>Malagasy</span>
-                  <span className="font-semibold text-[var(--foreground)]">
-                    {isLoading ? '—' : `${mgPercentage}%`}
-                  </span>
-                </div>
-                <div className="w-full h-1.5 rounded-full bg-[var(--input-bg)] border border-[var(--input-border)] overflow-hidden">
-                  <div
-                    className="h-full bg-emerald-500 rounded-full transition-all duration-500"
-                    style={{ width: `${mgPercentage}%` }}
-                  />
-                </div>
-              </div>
-              <div>
-                <div className="flex items-center justify-between text-[10.5px] font-mono text-[var(--text-muted)] mb-1">
-                  <span>Français</span>
-                  <span className="font-semibold text-[var(--foreground)]">
-                    {isLoading ? '—' : `${frPercentage}%`}
-                  </span>
-                </div>
-                <div className="w-full h-1.5 rounded-full bg-[var(--input-bg)] border border-[var(--input-border)] overflow-hidden">
-                  <div
-                    className="h-full bg-sky-500 rounded-full transition-all duration-500"
-                    style={{ width: `${frPercentage}%` }}
-                  />
-                </div>
-              </div>
-            </div>
-            <div className="pt-2 border-t border-[var(--card-border)] flex items-center justify-between text-[10.5px]">
-              <span className="text-[var(--text-subtle)] font-mono">
-                {stats.contesWithAudioMg} MG • {stats.contesWithAudioFr} FR
-              </span>
-              <span className="text-[var(--accent)] font-medium group-hover:translate-x-0.5 transition-transform inline-flex items-center gap-0.5">
-                Studio <ArrowUpRight size={11} />
-              </span>
-            </div>
-          </Link>
-
-          {/* KPI 3 : Sagesses & Citations */}
-          <Link
-            href="/proverbes"
-            className="group p-3.5 rounded-xl border border-[var(--card-border)] bg-[var(--card)] hover:bg-[var(--card-hover)] transition-all cursor-pointer flex flex-col justify-between"
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-medium font-mono text-[var(--text-muted)] uppercase tracking-wider">
-                Sagesses & Citations
-              </span>
-              <ScrollText size={15} className="text-amber-500 opacity-70 group-hover:opacity-100 transition-opacity" />
-            </div>
-            <div className="my-2">
-              <div className="text-2xl font-bold font-mono tracking-tight text-[var(--foreground)]">
-                {isLoading ? '—' : stats.totalItems + stats.totalCitations}
-              </div>
-              <p className="text-[11px] text-[var(--text-muted)] mt-0.5">
-                {isLoading
-                  ? 'Chargement...'
-                  : `${stats.totalItems} proverbes • ${stats.totalCitations} citations`}
-              </p>
-            </div>
-            <div className="pt-2 border-t border-[var(--card-border)] flex items-center justify-between text-[10.5px]">
-              <span className="text-[var(--text-subtle)] font-mono">Patrimoine écrit</span>
-              <span className="text-[var(--accent)] font-medium group-hover:translate-x-0.5 transition-transform inline-flex items-center gap-0.5">
-                Explorer <ArrowUpRight size={11} />
-              </span>
-            </div>
-          </Link>
-
-          {/* KPI 4 : Modération & Flux */}
+          {/* KPI 2 : Modération Citoyenne */}
           <Link
             href="/contributions"
-            className="group p-3.5 rounded-xl border border-[var(--card-border)] bg-[var(--card)] hover:bg-[var(--card-hover)] transition-all cursor-pointer flex flex-col justify-between"
+            className="p-4 rounded-xl border border-[var(--card-border)] bg-[var(--card)] hover:bg-[var(--card-hover)] transition flex flex-col justify-between shadow-xs"
           >
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-medium font-mono text-[var(--text-muted)] uppercase tracking-wider">
-                Modération Citoyenne
-              </span>
-              <HeartHandshake size={15} className="text-indigo-500 opacity-70 group-hover:opacity-100 transition-opacity" />
+            <div className="flex items-center justify-between text-[var(--text-muted)]">
+              <span className="text-[11px] font-mono uppercase tracking-wider">File de Modération</span>
+              <HeartHandshake size={15} className="text-amber-500" />
             </div>
-            <div className="my-2">
-              <div className="flex items-center gap-2">
-                <span className="text-2xl font-bold font-mono tracking-tight text-[var(--foreground)]">
-                  {isLoading ? '—' : stats.pendingContributions}
-                </span>
-                {!isLoading && (
-                  <span
-                    className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-medium ${
-                      stats.pendingContributions > 0
-                        ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
-                        : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
-                    }`}
-                  >
-                    {stats.pendingContributions > 0 ? `${stats.pendingContributions} en attente` : 'À jour'}
-                  </span>
-                )}
+            <div className="my-2.5">
+              <div className="text-2xl font-bold font-mono text-amber-600 dark:text-amber-400">
+                {metrics?.moderation.totalUrgent || 0}
               </div>
-              <p className="text-[11px] text-[var(--text-muted)] mt-0.5">
-                {isLoading
-                  ? 'Chargement...'
-                  : stats.pendingReports > 0
-                  ? `${stats.pendingReports} signalement(s) actif(s)`
-                  : 'Aucun signalement actif'}
-              </p>
+              <div className="text-[11px] text-[var(--text-muted)] mt-0.5">
+                Dossiers en attente d&apos;arbitrage
+              </div>
             </div>
-            <div className="pt-2 border-t border-[var(--card-border)] flex items-center justify-between text-[10.5px]">
-              <span className="text-[var(--text-subtle)] font-mono">Contributions</span>
-              <span className="text-[var(--accent)] font-medium group-hover:translate-x-0.5 transition-transform inline-flex items-center gap-0.5">
-                Arbitrer <ArrowUpRight size={11} />
+            <div className="pt-2 border-t border-[var(--card-border)] flex items-center justify-between text-[10.5px] text-[var(--text-muted)]">
+              <span>{metrics?.moderation.pendingContributions || 0} proposition(s)</span>
+              <span>{metrics?.moderation.pendingReports || 0} signalement(s)</span>
+            </div>
+          </Link>
+
+          {/* KPI 3 : Patrimoine & Contes */}
+          <Link
+            href="/contes"
+            className="p-4 rounded-xl border border-[var(--card-border)] bg-[var(--card)] hover:bg-[var(--card-hover)] transition flex flex-col justify-between shadow-xs"
+          >
+            <div className="flex items-center justify-between text-[var(--text-muted)]">
+              <span className="text-[11px] font-mono uppercase tracking-wider">Contes & Récits</span>
+              <BookOpen size={15} className="text-emerald-500" />
+            </div>
+            <div className="my-2.5">
+              <div className="text-2xl font-bold font-mono text-[var(--foreground)]">
+                {metrics?.content.contes.total || 0}
+              </div>
+              <div className="text-[11px] text-[var(--text-muted)] mt-0.5">
+                Couverture audio bilingue :
+              </div>
+            </div>
+            <div className="pt-2 border-t border-[var(--card-border)] flex items-center justify-between text-[10.5px] font-mono">
+              <span className="text-emerald-600 dark:text-emerald-400">
+                MG: {metrics?.content.contes.audioCoverageMg || 0}%
               </span>
+              <span className="text-blue-600 dark:text-blue-400">
+                FR: {metrics?.content.contes.audioCoverageFr || 0}%
+              </span>
+            </div>
+          </Link>
+
+          {/* KPI 4 : Sagesse & Culture */}
+          <Link
+            href="/proverbes"
+            className="p-4 rounded-xl border border-[var(--card-border)] bg-[var(--card)] hover:bg-[var(--card-hover)] transition flex flex-col justify-between shadow-xs"
+          >
+            <div className="flex items-center justify-between text-[var(--text-muted)]">
+              <span className="text-[11px] font-mono uppercase tracking-wider">Corpus Culturel</span>
+              <ScrollText size={15} className="text-blue-500" />
+            </div>
+            <div className="my-2.5">
+              <div className="text-2xl font-bold font-mono text-[var(--foreground)]">
+                {((metrics?.content.items || 0) + (metrics?.content.citations || 0)).toLocaleString('fr-FR')}
+              </div>
+              <div className="text-[11px] text-[var(--text-muted)] mt-0.5">
+                Proverbes, fady et citations
+              </div>
+            </div>
+            <div className="pt-2 border-t border-[var(--card-border)] flex items-center justify-between text-[10.5px] text-[var(--text-muted)]">
+              <span>{metrics?.content.items || 0} items</span>
+              <span>{metrics?.content.kabary || 0} kabary</span>
             </div>
           </Link>
         </div>
 
-        {/* Pôles d'Activités & Espaces de Travail (Compact & Épuré) */}
-        <div className="space-y-3 pt-1">
+        {/* 3. Deuxième rangée : Activité UGC Quiz + Santé des Services */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          {/* Carte 1 : Activité UGC Quiz Communautaires (2 colonnes) */}
+          <div className="lg:col-span-2 p-4 rounded-xl border border-[var(--card-border)] bg-[var(--card)] space-y-4 shadow-xs">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Sparkles size={16} className="text-[var(--accent)]" />
+                <h3 className="font-semibold text-xs text-[var(--foreground)]">
+                  Activité Jeux, Duels & Communauté
+                </h3>
+              </div>
+              <Link
+                href="/true-false"
+                className="text-[11px] text-[var(--accent)] hover:underline flex items-center gap-1 font-medium"
+              >
+                Explorer la gamification <ArrowUpRight size={12} />
+              </Link>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+              <div className="p-3 rounded-lg border border-[var(--card-border)] bg-[var(--background)]">
+                <div className="text-[11px] font-mono text-[var(--text-muted)] uppercase">
+                  Quiz UGC créés
+                </div>
+                <div className="text-xl font-bold font-mono text-[var(--foreground)] mt-1">
+                  {metrics?.activity.ugcQuizSets || 0}
+                </div>
+                <div className="text-[10.5px] text-[var(--text-muted)] mt-0.5">
+                  Decks créés par les joueurs
+                </div>
+              </div>
+
+              <div className="p-3 rounded-lg border border-[var(--card-border)] bg-[var(--background)]">
+                <div className="text-[11px] font-mono text-[var(--text-muted)] uppercase">
+                  Abonnements VIP
+                </div>
+                <div className="text-xl font-bold font-mono text-purple-600 dark:text-purple-400 mt-1">
+                  {metrics?.users.premium || 0}
+                </div>
+                <div className="text-[10.5px] text-[var(--text-muted)] mt-0.5">
+                  Membres Premium actifs
+                </div>
+              </div>
+
+              <div className="p-3 rounded-lg border border-[var(--card-border)] bg-[var(--background)]">
+                <div className="text-[11px] font-mono text-[var(--text-muted)] uppercase">
+                  Modération Auto
+                </div>
+                <div className="text-xl font-bold font-mono text-amber-600 dark:text-amber-400 mt-1">
+                  {metrics?.moderation.flaggedContributions || 0}
+                </div>
+                <div className="text-[10.5px] text-[var(--text-muted)] mt-0.5">
+                  Mots sensibles interceptés
+                </div>
+              </div>
+            </div>
+
+            {/* Accès rapide aux jeux */}
+            <div className="pt-2 border-t border-[var(--card-border)] grid grid-cols-3 gap-2 text-center text-xs">
+              <Link
+                href="/true-false"
+                className="p-2 rounded-lg bg-[var(--background)] hover:bg-[var(--card-hover)] border border-[var(--card-border)] transition"
+              >
+                <CheckCheck size={14} className="mx-auto text-emerald-500 mb-1" />
+                <span className="font-medium text-[11px]">Vrai ou Faux</span>
+              </Link>
+              <Link
+                href="/word-puzzle"
+                className="p-2 rounded-lg bg-[var(--background)] hover:bg-[var(--card-hover)] border border-[var(--card-border)] transition"
+              >
+                <Puzzle size={14} className="mx-auto text-blue-500 mb-1" />
+                <span className="font-medium text-[11px]">Remets en Ordre</span>
+              </Link>
+              <Link
+                href="/missing-word"
+                className="p-2 rounded-lg bg-[var(--background)] hover:bg-[var(--card-hover)] border border-[var(--card-border)] transition"
+              >
+                <FileText size={14} className="mx-auto text-purple-500 mb-1" />
+                <span className="font-medium text-[11px]">Mot Manquant</span>
+              </Link>
+            </div>
+          </div>
+
+          {/* Carte 2 : Santé des Services & Verrous (1 colonne) */}
+          <div className="p-4 rounded-xl border border-[var(--card-border)] bg-[var(--card)] space-y-4 shadow-xs">
+            <div className="flex items-center gap-2">
+              <Activity size={16} className="text-emerald-500" />
+              <h3 className="font-semibold text-xs text-[var(--foreground)]">
+                État des Services & Serveur
+              </h3>
+            </div>
+
+            <div className="space-y-2 text-xs">
+              <div className="flex items-center justify-between p-2 rounded-lg bg-[var(--background)] border border-[var(--card-border)]">
+                <span className="text-[var(--text-muted)]">Base de données PostgreSQL</span>
+                {metrics?.system.databaseHealthy ? (
+                  <span className="inline-flex items-center gap-1 text-[10.5px] font-semibold text-emerald-600 dark:text-emerald-400">
+                    <CheckCircle2 size={12} /> Opérationnelle
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 text-[10.5px] font-semibold text-red-500">
+                    <AlertTriangle size={12} /> Déconnectée
+                  </span>
+                )}
+              </div>
+
+              <div className="flex items-center justify-between p-2 rounded-lg bg-[var(--background)] border border-[var(--card-border)]">
+                <span className="text-[var(--text-muted)]">Modules verrouillés</span>
+                <span className="font-mono font-semibold text-[var(--foreground)]">
+                  {metrics?.system.lockedModules || 0} module(s)
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between p-2 rounded-lg bg-[var(--background)] border border-[var(--card-border)]">
+                <span className="text-[var(--text-muted)]">Annonces actives</span>
+                <span className="font-mono font-semibold text-[var(--foreground)]">
+                  {metrics?.system.activeAnnouncements || 0} active(s)
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between p-2 rounded-lg bg-[var(--background)] border border-[var(--card-border)]">
+                <span className="text-[var(--text-muted)]">Auth & Sessions</span>
+                <span className="inline-flex items-center gap-1 text-[10.5px] font-semibold text-emerald-600 dark:text-emerald-400">
+                  <ShieldCheck size={12} /> Better-Auth Actif
+                </span>
+              </div>
+            </div>
+
+            <div className="pt-2 border-t border-[var(--card-border)]">
+              <Link
+                href="/locks"
+                className="w-full py-1.5 px-3 rounded-lg border border-[var(--card-border)] bg-[var(--background)] hover:bg-[var(--card-hover)] text-xs text-[var(--foreground)] transition flex items-center justify-center gap-1.5 font-medium cursor-pointer"
+              >
+                Gérer les Verrous & Annonces
+              </Link>
+            </div>
+          </div>
+        </div>
+
+        {/* 4. Section Monétisation Google AdMob (Transparence & Directives de Production) */}
+        <div className="p-4 rounded-xl border border-[var(--card-border)] bg-[var(--card)] space-y-3 shadow-xs">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-semibold uppercase tracking-wider font-mono text-[var(--text-subtle)]">
-              Espaces & Pôles de Pilotage
-            </span>
-            <span className="text-[10.5px] font-mono text-[var(--text-muted)]">
-              Accès directs aux modules
+            <div className="flex items-center gap-2">
+              <DollarSign size={16} className="text-amber-500" />
+              <h3 className="font-semibold text-xs text-[var(--foreground)]">
+                Monétisation & Performance AdMob
+              </h3>
+            </div>
+            <span className="text-[10px] font-mono px-2 py-0.5 rounded-md border border-amber-500/20 bg-amber-500/5 text-amber-600 dark:text-amber-400">
+              Reporting API — Notice Technique
             </span>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {MODULE_POLES.map((pole) => (
-              <div
-                key={pole.title}
-                className="p-3.5 rounded-xl border border-[var(--card-border)] bg-[var(--card)] flex flex-col justify-between"
-              >
-                <div>
-                  <div className="flex items-center justify-between pb-2.5 mb-2 border-b border-[var(--card-border)]">
-                    <span className="text-[11.5px] font-bold uppercase tracking-wider font-mono text-[var(--foreground)]">
-                      {pole.title}
-                    </span>
-                    <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[var(--input-bg)] border border-[var(--input-border)] text-[var(--text-muted)] font-medium">
-                      {pole.badge}
-                    </span>
-                  </div>
-
-                  <div className="space-y-1">
-                    {pole.links.map(({ href, label, detail, icon: Icon }) => (
-                      <Link
-                        key={href}
-                        href={href}
-                        className="group flex items-center justify-between p-2 rounded-lg hover:bg-[var(--card-hover)] transition-colors cursor-pointer"
-                      >
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          <div className="w-7 h-7 rounded-md bg-[var(--input-bg)] border border-[var(--input-border)] text-[var(--text-muted)] group-hover:text-[var(--accent)] group-hover:border-[var(--card-border)] transition-colors flex items-center justify-center shrink-0">
-                            <Icon size={14} />
-                          </div>
-                          <div className="min-w-0">
-                            <div className="text-xs font-medium text-[var(--foreground)] group-hover:text-[var(--accent)] transition-colors truncate">
-                              {label}
-                            </div>
-                            <div className="text-[10.5px] text-[var(--text-muted)] truncate">
-                              {detail}
-                            </div>
-                          </div>
-                        </div>
-
-                        <ArrowUpRight
-                          size={13}
-                          className="text-[var(--text-subtle)] group-hover:text-[var(--foreground)] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all shrink-0 ml-2"
-                        />
-                      </Link>
-                    ))}
-                  </div>
-                </div>
+          <div className="p-3.5 rounded-lg bg-[var(--background)] border border-[var(--card-border)] flex flex-col md:flex-row items-start md:items-center justify-between gap-3 text-xs">
+            <div className="space-y-1">
+              <div className="font-semibold text-[var(--foreground)] flex items-center gap-1.5">
+                <Info size={13} className="text-[var(--accent)]" />
+                Intégration de l&apos;API Google AdMob Reporting
               </div>
-            ))}
+              <p className="text-[11px] text-[var(--text-muted)] max-w-2xl leading-relaxed">
+                Les unités publicitaires Kanto (Bannières adaptatives, Interstitiels solo et Vidéos récompensées)
+                sont opérationnelles avec filtrage parental <strong>PG</strong> et consentement UMP.
+                Pour rapatrier les revenus réels, eCPM et impressions dans ce CRM sans exposer de secrets,
+                activez l&apos;API <em>Google AdMob Reporting</em> sur la Google Cloud Console du projet et
+                déclarez le service account JSON dans les variables d&apos;environnement serveur.
+              </p>
+            </div>
+            <div className="shrink-0 flex items-center gap-2">
+              <Link
+                href="/cgu"
+                className="px-3 py-1.5 rounded-lg border border-[var(--card-border)] bg-[var(--card)] hover:bg-[var(--card-hover)] text-[11px] font-medium text-[var(--foreground)] transition"
+              >
+                Politique & CGU
+              </Link>
+            </div>
           </div>
         </div>
       </div>
     </AdminShell>
   );
 }
-

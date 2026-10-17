@@ -1,551 +1,824 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { AdminShell } from '@/components/layout/AdminShell';
 import { PageHeader } from '@/components/layout/PageHeader';
+import { Modal, ConfirmModal } from '@/components/ui';
 import { systemService } from '@/services/system.service';
-import { UserAccount } from '@/types';
+import { UserAccount, UserDetails, UserRole } from '@/types';
+import { useSession } from '@/lib/auth-client';
 import {
   Search,
   ShieldCheck,
-  User,
   Loader2,
-  Calendar,
   KeyRound,
   Users as UsersIcon,
-  UserCheck,
-  ArrowUpDown,
   RotateCcw,
   X,
   ChevronLeft,
   ChevronRight,
-  List,
-  Layers,
-  Copy,
+  Ban,
+  CheckCircle2,
+  Eye,
+  Trash2,
+  AlertTriangle,
 } from 'lucide-react';
 import { useToast } from '@/lib/hooks/useToast';
 
-type SortOption =
-  | 'date_desc'
-  | 'date_asc'
-  | 'name_asc'
-  | 'name_desc'
-  | 'email_asc'
-  | 'role_first';
+type RoleFilter = 'ALL' | 'ADMIN' | 'MODERATOR' | 'CONTRIBUTOR' | 'USER';
+type StatusFilter = 'ALL' | 'ACTIVE' | 'BANNED';
 
-type RoleFilter = 'ALL' | 'ADMIN' | 'USER';
-type ViewMode = 'flat' | 'grouped';
+const ROLE_BADGES: Record<
+  UserRole,
+  { label: string; bg: string; text: string; border: string }
+> = {
+  ADMIN: {
+    label: 'Administrateur',
+    bg: 'bg-purple-500/10 dark:bg-purple-500/20',
+    text: 'text-purple-700 dark:text-purple-300',
+    border: 'border-purple-500/30',
+  },
+  MODERATOR: {
+    label: 'Modérateur',
+    bg: 'bg-blue-500/10 dark:bg-blue-500/20',
+    text: 'text-blue-700 dark:text-blue-300',
+    border: 'border-blue-500/30',
+  },
+  CONTRIBUTOR: {
+    label: 'Contributeur',
+    bg: 'bg-emerald-500/10 dark:bg-emerald-500/20',
+    text: 'text-emerald-700 dark:text-emerald-300',
+    border: 'border-emerald-500/30',
+  },
+  USER: {
+    label: 'Membre',
+    bg: 'bg-zinc-500/10 dark:bg-zinc-500/20',
+    text: 'text-zinc-700 dark:text-zinc-300',
+    border: 'border-zinc-500/20',
+  },
+};
 
 export default function UsersAdminPage() {
   const { toast } = useToast();
+  const { data: session } = useSession();
+  const currentUserId = (session?.user as { id?: string } | undefined)?.id;
+
   const [users, setUsers] = useState<UserAccount[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Filtres
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState<RoleFilter>('ALL');
-  const [sortBy, setSortBy] = useState<SortOption>('date_desc');
-  const [viewMode, setViewMode] = useState<ViewMode>('flat');
-
-  // Pagination
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL');
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(15);
+  const [pageSize] = useState(15);
 
-  // Actions
-  const [updatingId, setUpdatingId] = useState<string | null>(null);
-  const [resettingId, setResettingId] = useState<string | null>(null);
+  // Actions & Modales
+  const [selectedUserDetail, setSelectedUserDetail] = useState<UserDetails | null>(null);
 
+  // Modal de suspension (Ban)
+  const [banModalState, setBanModalState] = useState<{
+    isOpen: boolean;
+    user: UserAccount | null;
+    reason: string;
+    expiresAt: string;
+  }>({
+    isOpen: false,
+    user: null,
+    reason: '',
+    expiresAt: '',
+  });
+
+  // Modal de changement de rôle
+  const [roleModalState, setRoleModalState] = useState<{
+    isOpen: boolean;
+    user: UserAccount | null;
+    newRole: UserRole;
+  }>({
+    isOpen: false,
+    user: null,
+    newRole: 'USER',
+  });
+
+  // Modal de confirmation (débannissement, suppression)
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    description: string;
+    variant?: 'primary' | 'danger' | 'warning';
+    action: () => Promise<void>;
+  } | null>(null);
+
+  // Chargement des utilisateurs avec pagination serveur
   const loadUsers = useCallback(async () => {
     try {
       setIsLoading(true);
-      const data = await systemService.getUsers();
-      setUsers(data || []);
+      const res = await systemService.getUsers({
+        page: currentPage,
+        limit: pageSize,
+        search: search.trim() || undefined,
+        role: roleFilter !== 'ALL' ? roleFilter : undefined,
+        status: statusFilter !== 'ALL' ? statusFilter : undefined,
+      });
+
+      setUsers(res.data);
+      if (res.meta) {
+        setTotalCount(res.meta.total);
+        setTotalPages(res.meta.totalPages || 1);
+      } else {
+        setTotalCount(res.data.length);
+        setTotalPages(1);
+      }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Erreur lors du chargement des utilisateurs';
       toast.error(msg);
     } finally {
       setIsLoading(false);
     }
-  }, [toast]);
+  }, [currentPage, pageSize, search, roleFilter, statusFilter, toast]);
 
   useEffect(() => {
     void loadUsers();
   }, [loadUsers]);
 
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [search, roleFilter, sortBy, pageSize]);
-
-  // Statistiques calculées
-  const stats = useMemo(() => {
-    const total = users.length;
-    const admins = users.filter((u) => u.role === 'ADMIN').length;
-    const members = total - admins;
-    const oneMonthAgo = new Date();
-    oneMonthAgo.setDate(oneMonthAgo.getDate() - 30);
-    const recent = users.filter((u) => new Date(u.createdAt) >= oneMonthAgo).length;
-
-    return { total, admins, members, recent };
-  }, [users]);
-
-  // Filtrage et Tri
-  const filteredAndSortedUsers = useMemo(() => {
-    let result = [...users];
-
-    if (search.trim()) {
-      const q = search.toLowerCase().trim();
-      result = result.filter(
-        (u) =>
-          u.name?.toLowerCase().includes(q) ||
-          u.email?.toLowerCase().includes(q) ||
-          u.id?.toLowerCase().includes(q)
-      );
-    }
-
-    if (roleFilter !== 'ALL') {
-      result = result.filter((u) => u.role === roleFilter);
-    }
-
-    result.sort((a, b) => {
-      switch (sortBy) {
-        case 'date_desc':
-          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-        case 'date_asc':
-          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-        case 'name_asc':
-          return (a.name || '').localeCompare(b.name || '');
-        case 'name_desc':
-          return (b.name || '').localeCompare(a.name || '');
-        case 'email_asc':
-          return (a.email || '').localeCompare(b.email || '');
-        case 'role_first': {
-          if (a.role === b.role) {
-            return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-          }
-          return a.role === 'ADMIN' ? -1 : 1;
-        }
-        default:
-          return 0;
-      }
-    });
-
-    return result;
-  }, [users, search, roleFilter, sortBy]);
-
-  const totalPages = Math.ceil(filteredAndSortedUsers.length / pageSize) || 1;
-  const paginatedUsers = useMemo(() => {
-    const startIndex = (currentPage - 1) * pageSize;
-    return filteredAndSortedUsers.slice(startIndex, startIndex + pageSize);
-  }, [filteredAndSortedUsers, currentPage, pageSize]);
-
-  const groupedUsers = useMemo(() => {
-    const admins = filteredAndSortedUsers.filter((u) => u.role === 'ADMIN');
-    const members = filteredAndSortedUsers.filter((u) => u.role !== 'ADMIN');
-    return { admins, members };
-  }, [filteredAndSortedUsers]);
-
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return '—';
+  // Ouvrir la fiche détaillée
+  const handleOpenDetails = async (userId: string) => {
     try {
-      const date = new Date(dateString);
-      return new Intl.DateTimeFormat('fr-FR', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-      }).format(date);
+      const details = await systemService.getUserDetails(userId);
+      setSelectedUserDetail(details);
     } catch {
-      return dateString;
+      toast.error('Impossible de charger la fiche utilisateur.');
     }
   };
 
+  // Traiter le bannissement
+  const handleConfirmBan = async () => {
+    if (!banModalState.user) return;
+    if (!banModalState.reason.trim()) {
+      toast.error('Un motif de suspension clair est obligatoire.');
+      return;
+    }
+
+    try {
+      const res = await systemService.banUser(
+        banModalState.user.id,
+        banModalState.reason,
+        banModalState.expiresAt || null,
+      );
+      toast.success(res.message);
+      setBanModalState({ isOpen: false, user: null, reason: '', expiresAt: '' });
+      void loadUsers();
+      if (selectedUserDetail?.user.id === banModalState.user.id) {
+        void handleOpenDetails(banModalState.user.id);
+      }
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Erreur lors de la suspension');
+    }
+  };
+
+  // Traiter le débannissement
+  const handleUnban = (user: UserAccount) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Réactiver le compte utilisateur ?',
+      description: `Êtes-vous sûr de vouloir réactiver le compte de ${user.name} (${user.email}) ? L'accès à l'application sera immédiatement rétabli.`,
+      variant: 'primary',
+      action: async () => {
+        try {
+          const res = await systemService.unbanUser(user.id);
+          toast.success(res.message);
+          void loadUsers();
+          if (selectedUserDetail?.user.id === user.id) {
+            void handleOpenDetails(user.id);
+          }
+        } catch (err: unknown) {
+          toast.error(err instanceof Error ? err.message : 'Erreur lors de la réactivation');
+        }
+      },
+    });
+  };
+
+  // Traiter le changement de rôle
+  const handleConfirmRoleChange = async () => {
+    if (!roleModalState.user) return;
+    try {
+      await systemService.updateUserRole(roleModalState.user.id, roleModalState.newRole);
+      toast.success(`Rôle mis à jour en ${roleModalState.newRole}`);
+      setRoleModalState({ isOpen: false, user: null, newRole: 'USER' });
+      void loadUsers();
+      if (selectedUserDetail?.user.id === roleModalState.user.id) {
+        void handleOpenDetails(roleModalState.user.id);
+      }
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Erreur lors du changement de rôle');
+    }
+  };
+
+  // Traiter la suppression
+  const handleDeleteUser = (user: UserAccount) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Supprimer définitivement ce compte ?',
+      description: `Cette action est irréversible. Le compte ${user.email} et ses sessions associées seront supprimés de la base de données.`,
+      variant: 'danger',
+      action: async () => {
+        try {
+          const res = await systemService.deleteUser(user.id);
+          toast.success(res.message);
+          setSelectedUserDetail(null);
+          void loadUsers();
+        } catch (err: unknown) {
+          toast.error(err instanceof Error ? err.message : 'Erreur lors de la suppression');
+        }
+      },
+    });
+  };
+
+  // Réinitialiser le mot de passe
   const handleResetPassword = async (user: UserAccount) => {
-    if (!confirm(`Envoyer un email de réinitialisation de mot de passe à ${user.email} ?`)) {
-      return;
-    }
-
     try {
-      setResettingId(user.id);
       const res = await systemService.resetUserPassword(user.id);
-      toast.success(res.message || `Lien envoyé à ${user.email}.`);
+      toast.success(res.message);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Erreur d'envoi de réinitialisation";
-      toast.error(msg);
-    } finally {
-      setResettingId(null);
+      toast.error(err instanceof Error ? err.message : 'Erreur envoi email réinitialisation');
     }
   };
-
-  const handleToggleRole = async (user: UserAccount) => {
-    const nextRole = user.role === 'ADMIN' ? 'USER' : 'ADMIN';
-    const actionLabel = nextRole === 'ADMIN' ? 'promouvoir en Administrateur' : 'rétrograder en Membre simple';
-
-    if (!confirm(`Voulez-vous vraiment ${actionLabel} le compte ${user.email} ?`)) {
-      return;
-    }
-
-    try {
-      setUpdatingId(user.id);
-      await systemService.updateUserRole(user.id, nextRole);
-      toast.success(`Rôle de ${user.name || user.email} mis à jour : [${nextRole}].`);
-      setUsers((prev) => prev.map((u) => (u.id === user.id ? { ...u, role: nextRole } : u)));
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Erreur lors du changement de rôle';
-      toast.error(msg);
-    } finally {
-      setUpdatingId(null);
-    }
-  };
-
-  const renderUserTable = (items: UserAccount[], titleBadge?: string) => (
-    <div className="rounded-xl border border-[var(--card-border)] bg-[var(--card)] overflow-hidden shadow-xs">
-      {titleBadge && (
-        <div className="px-4 py-2.5 bg-[var(--input-bg)] border-b border-[var(--card-border)] flex items-center justify-between">
-          <span className="text-xs font-semibold text-[var(--foreground)]">{titleBadge}</span>
-          <span className="text-[11px] font-mono text-[var(--text-muted)]">
-            {items.length} {items.length > 1 ? 'comptes' : 'compte'}
-          </span>
-        </div>
-      )}
-      <div className="overflow-x-auto">
-        <table className="w-full text-left text-xs border-collapse">
-          <thead>
-            <tr className="border-b border-[var(--card-border)] bg-[var(--input-bg)] text-[var(--text-muted)] font-semibold text-[11px]">
-              <th className="py-2.5 px-4">Utilisateur</th>
-              <th className="py-2.5 px-4">Adresse Email</th>
-              <th className="py-2.5 px-4">Rôle</th>
-              <th className="py-2.5 px-4">Inscription</th>
-              <th className="py-2.5 px-4 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-[var(--card-border)]">
-            {items.map((user) => {
-              const isAdmin = user.role === 'ADMIN';
-              const isUpdating = updatingId === user.id;
-              const isResetting = resettingId === user.id;
-
-              return (
-                <tr key={user.id} className="hover:bg-[var(--card-hover)] transition-colors">
-                  <td className="py-2.5 px-4">
-                    <div className="flex items-center gap-2.5">
-                      <div
-                        className={`w-7 h-7 rounded-full border flex items-center justify-center text-xs font-bold shrink-0 ${
-                          isAdmin
-                            ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400'
-                            : 'bg-[var(--accent-light)] border-[var(--accent-border)] text-[var(--accent-text)]'
-                        }`}
-                      >
-                        {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
-                      </div>
-                      <div className="min-w-0">
-                        <div className="font-semibold text-[var(--foreground)] truncate">
-                          {user.name || 'Sans nom'}
-                        </div>
-                        <div className="text-[10px] font-mono text-[var(--text-muted)] truncate">
-                          ID: {user.id.slice(0, 8)}...
-                        </div>
-                      </div>
-                    </div>
-                  </td>
-
-                  <td className="py-2.5 px-4 font-mono text-[11px] text-[var(--foreground)]">
-                    <div className="flex items-center gap-1.5">
-                      <span className="truncate max-w-[200px]">{user.email}</span>
-                      <button
-                        onClick={() => {
-                          navigator.clipboard.writeText(user.email);
-                          toast.success('Email copié !');
-                        }}
-                        className="text-[var(--text-subtle)] hover:text-[var(--foreground)] p-0.5 cursor-pointer"
-                        title="Copier l'email"
-                      >
-                        <Copy size={11} />
-                      </button>
-                    </div>
-                  </td>
-
-                  <td className="py-2.5 px-4 whitespace-nowrap">
-                    {isAdmin ? (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25">
-                        <ShieldCheck size={11} />
-                        <span>ADMIN</span>
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium bg-[var(--input-bg)] text-[var(--text-muted)] border border-[var(--card-border)]">
-                        <User size={11} />
-                        <span>MEMBRE</span>
-                      </span>
-                    )}
-                  </td>
-
-                  <td className="py-2.5 px-4 whitespace-nowrap font-mono text-[11px] text-[var(--text-muted)]">
-                    {formatDate(user.createdAt)}
-                  </td>
-
-                  <td className="py-2.5 px-4 text-right whitespace-nowrap">
-                    <div className="flex items-center justify-end gap-1.5">
-                      <button
-                        onClick={() => handleResetPassword(user)}
-                        disabled={isResetting}
-                        title="Envoyer email de réinitialisation"
-                        className="p-1 rounded-md border border-[var(--card-border)] bg-[var(--input-bg)] hover:bg-[var(--card-hover)] text-[var(--text-muted)] hover:text-[var(--foreground)] transition cursor-pointer disabled:opacity-50"
-                      >
-                        {isResetting ? <Loader2 size={12} className="animate-spin" /> : <KeyRound size={12} />}
-                      </button>
-
-                      <button
-                        onClick={() => handleToggleRole(user)}
-                        disabled={isUpdating}
-                        className={`px-2 py-1 rounded-md text-[11px] font-semibold border transition cursor-pointer disabled:opacity-50 ${
-                          isAdmin
-                            ? 'border-[var(--card-border)] bg-[var(--input-bg)] text-[var(--text-muted)] hover:text-rose-500 hover:border-rose-500/30'
-                            : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20'
-                        }`}
-                      >
-                        {isUpdating ? (
-                          <Loader2 size={11} className="animate-spin" />
-                        ) : isAdmin ? (
-                          'Rétrograder'
-                        ) : (
-                          'Promouvoir Admin'
-                        )}
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
 
   return (
     <AdminShell>
-      <div className="space-y-5 max-w-5xl mx-auto pb-12">
-        {/* En-tête de page standardisé */}
+      <div className="w-full space-y-5 pb-8">
         <PageHeader
-          title="Utilisateurs & Privilèges"
-          description="Supervision des comptes membres, gestion des rôles administrateurs et accès."
+          title="Gestion des Utilisateurs"
+          description="Administration des comptes, gestion des permissions, modération et suivi d'engagement citoyen."
+          badge={
+            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10.5px] font-mono font-medium border border-[var(--card-border)] bg-[var(--card)] text-[var(--accent)]">
+              {totalCount} compte(s) enregistré(s)
+            </span>
+          }
           icon={UsersIcon}
           actions={
             <button
+              type="button"
               onClick={() => void loadUsers()}
-              disabled={isLoading}
-              title="Rafraîchir"
-              className="p-1.5 rounded-lg border border-[var(--card-border)] bg-[var(--card)] hover:bg-[var(--card-hover)] text-[var(--text-muted)] hover:text-[var(--foreground)] transition cursor-pointer shadow-xs"
+              title="Actualiser la liste"
+              className="p-1.5 rounded-md border border-[var(--card-border)] bg-[var(--card)] hover:bg-[var(--card-hover)] text-[var(--text-muted)] hover:text-[var(--foreground)] transition cursor-pointer"
             >
-              <RotateCcw size={13} className={isLoading ? 'animate-spin' : ''} />
+              <RotateCcw size={14} className={isLoading ? 'animate-spin' : ''} />
             </button>
           }
         />
 
-        {/* 4 Métriques compactes */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-          <div className="p-3 rounded-xl border border-[var(--card-border)] bg-[var(--card)] space-y-0.5">
-            <div className="text-[11px] text-[var(--text-muted)] flex items-center justify-between">
-              <span>Total inscrits</span>
-              <UsersIcon size={12} className="text-[var(--accent)]" />
-            </div>
-            <div className="text-base font-bold font-mono text-[var(--foreground)] mt-0.5">{stats.total}</div>
-          </div>
-
-          <div className="p-3 rounded-xl border border-[var(--card-border)] bg-[var(--card)] space-y-0.5">
-            <div className="text-[11px] text-[var(--text-muted)] flex items-center justify-between">
-              <span>Administrateurs</span>
-              <ShieldCheck size={12} className="text-emerald-500" />
-            </div>
-            <div className="text-base font-bold font-mono text-emerald-600 dark:text-emerald-400 mt-0.5">{stats.admins}</div>
-          </div>
-
-          <div className="p-3 rounded-xl border border-[var(--card-border)] bg-[var(--card)] space-y-0.5">
-            <div className="text-[11px] text-[var(--text-muted)] flex items-center justify-between">
-              <span>Membres</span>
-              <UserCheck size={12} className="text-sky-500" />
-            </div>
-            <div className="text-base font-bold font-mono text-[var(--foreground)] mt-0.5">{stats.members}</div>
-          </div>
-
-          <div className="p-3 rounded-xl border border-[var(--card-border)] bg-[var(--card)] space-y-0.5">
-            <div className="text-[11px] text-[var(--text-muted)] flex items-center justify-between">
-              <span>Récents (30j)</span>
-              <Calendar size={12} className="text-amber-500" />
-            </div>
-            <div className="text-base font-bold font-mono text-amber-600 dark:text-amber-400 mt-0.5">{stats.recent}</div>
-          </div>
-        </div>
-
-        {/* Barre d'outils compacte (Recherche, Filtres rôle, Tri, Vue) */}
-        <div className="p-3 rounded-xl border border-[var(--card-border)] bg-[var(--card)] space-y-2.5 shadow-xs">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-            <div className="relative flex-1">
-              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
-              <input
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Rechercher par nom, email ou identifiant..."
-                className="w-full pl-8 pr-7 py-1.5 text-xs rounded-lg bg-[var(--input-bg)] border border-[var(--input-border)] text-[var(--foreground)] outline-none focus:border-[var(--accent)]"
-              />
-              {search && (
-                <button
-                  onClick={() => setSearch('')}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--foreground)] cursor-pointer"
-                >
-                  <X size={12} />
-                </button>
-              )}
-            </div>
-
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1.5 text-xs text-[var(--text-muted)]">
-                <ArrowUpDown size={12} />
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value as SortOption)}
-                  className="px-2 py-1 text-xs rounded-lg bg-[var(--input-bg)] border border-[var(--input-border)] text-[var(--foreground)] cursor-pointer outline-none"
-                >
-                  <option value="date_desc">Plus récents</option>
-                  <option value="date_asc">Plus anciens</option>
-                  <option value="name_asc">Nom A → Z</option>
-                  <option value="name_desc">Nom Z → A</option>
-                  <option value="role_first">Admins d&apos;abord</option>
-                </select>
-              </div>
-
-              {/* Commutateur de vue */}
-              <div className="flex items-center rounded-lg border border-[var(--card-border)] p-0.5 bg-[var(--input-bg)]">
-                <button
-                  onClick={() => setViewMode('flat')}
-                  title="Vue liste standard"
-                  className={`p-1 rounded-md text-xs transition cursor-pointer ${
-                    viewMode === 'flat'
-                      ? 'bg-[var(--card)] text-[var(--foreground)] font-semibold shadow-xs'
-                      : 'text-[var(--text-muted)] hover:text-[var(--foreground)]'
-                  }`}
-                >
-                  <List size={13} />
-                </button>
-                <button
-                  onClick={() => setViewMode('grouped')}
-                  title="Vue groupée par rôle"
-                  className={`p-1 rounded-md text-xs transition cursor-pointer ${
-                    viewMode === 'grouped'
-                      ? 'bg-[var(--card)] text-[var(--foreground)] font-semibold shadow-xs'
-                      : 'text-[var(--text-muted)] hover:text-[var(--foreground)]'
-                  }`}
-                >
-                  <Layers size={13} />
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Filtres de rôle en pilules discrètes */}
-          <div className="flex items-center gap-1.5 pt-2 border-t border-[var(--card-border)]">
-            <button
-              onClick={() => setRoleFilter('ALL')}
-              className={`px-2.5 py-1 rounded-lg text-xs font-medium transition cursor-pointer ${
-                roleFilter === 'ALL'
-                  ? 'bg-[var(--accent)] text-white shadow-xs'
-                  : 'bg-[var(--input-bg)] text-[var(--text-muted)] hover:text-[var(--foreground)]'
-              }`}
-            >
-              Tous ({stats.total})
-            </button>
-
-            <button
-              onClick={() => setRoleFilter('ADMIN')}
-              className={`px-2.5 py-1 rounded-lg text-xs font-medium transition flex items-center gap-1 cursor-pointer ${
-                roleFilter === 'ADMIN'
-                  ? 'bg-emerald-600 text-white shadow-xs'
-                  : 'bg-[var(--input-bg)] text-[var(--text-muted)] hover:text-[var(--foreground)]'
-              }`}
-            >
-              <ShieldCheck size={11} />
-              <span>Admins ({stats.admins})</span>
-            </button>
-
-            <button
-              onClick={() => setRoleFilter('USER')}
-              className={`px-2.5 py-1 rounded-lg text-xs font-medium transition flex items-center gap-1 cursor-pointer ${
-                roleFilter === 'USER'
-                  ? 'bg-sky-600 text-white shadow-xs'
-                  : 'bg-[var(--input-bg)] text-[var(--text-muted)] hover:text-[var(--foreground)]'
-              }`}
-            >
-              <User size={11} />
-              <span>Membres ({stats.members})</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Contenu : Tables d'utilisateurs */}
-        {isLoading ? (
-          <div className="py-16 flex flex-col items-center justify-center gap-2 text-[var(--text-muted)]">
-            <Loader2 size={18} className="animate-spin text-[var(--accent)]" />
-            <span className="text-xs">Chargement des utilisateurs...</span>
-          </div>
-        ) : filteredAndSortedUsers.length === 0 ? (
-          <div className="py-16 text-center text-[var(--text-muted)] rounded-xl border border-[var(--card-border)] bg-[var(--card)] p-6 space-y-2">
-            <UsersIcon size={24} className="mx-auto mb-1 opacity-30" />
-            <p className="text-xs font-medium">Aucun utilisateur ne correspond à vos filtres</p>
-            <button
-              onClick={() => { setSearch(''); setRoleFilter('ALL'); }}
-              className="text-xs text-[var(--accent)] hover:underline cursor-pointer"
-            >
-              Réinitialiser les filtres
-            </button>
-          </div>
-        ) : viewMode === 'grouped' ? (
-          <div className="space-y-4">
-            {groupedUsers.admins.length > 0 && renderUserTable(groupedUsers.admins, 'Administrateurs du Système')}
-            {groupedUsers.members.length > 0 && renderUserTable(groupedUsers.members, 'Membres de la Communauté')}
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {renderUserTable(paginatedUsers)}
-
-            {/* Pagination compacte */}
-            {totalPages > 1 && (
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-1 text-xs text-[var(--text-muted)]">
-                <div className="flex items-center gap-2">
-                  <span>Lignes :</span>
-                  <select
-                    value={pageSize}
-                    onChange={(e) => setPageSize(Number(e.target.value))}
-                    className="px-2 py-0.5 text-xs rounded-md bg-[var(--card)] border border-[var(--card-border)] text-[var(--foreground)] cursor-pointer"
-                  >
-                    <option value={10}>10</option>
-                    <option value={15}>15</option>
-                    <option value={25}>25</option>
-                    <option value={50}>50</option>
-                  </select>
-                  <span>
-                    {(currentPage - 1) * pageSize + 1}–{Math.min(currentPage * pageSize, filteredAndSortedUsers.length)} sur {filteredAndSortedUsers.length}
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-1.5 self-end sm:self-auto">
-                  <button
-                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                    disabled={currentPage === 1}
-                    className="p-1 rounded-md border border-[var(--card-border)] bg-[var(--card)] hover:bg-[var(--card-hover)] disabled:opacity-30 cursor-pointer"
-                  >
-                    <ChevronLeft size={13} />
-                  </button>
-                  <span className="font-mono text-xs px-1">
-                    {currentPage} / {totalPages}
-                  </span>
-                  <button
-                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                    disabled={currentPage === totalPages}
-                    className="p-1 rounded-md border border-[var(--card-border)] bg-[var(--card)] hover:bg-[var(--card-hover)] disabled:opacity-30 cursor-pointer"
-                  >
-                    <ChevronRight size={13} />
-                  </button>
-                </div>
-              </div>
+        {/* Barre de filtres et recherche */}
+        <div className="p-3.5 rounded-xl border border-[var(--card-border)] bg-[var(--card)] flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 shadow-xs">
+          <div className="flex-1 relative">
+            <Search
+              size={14}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]"
+            />
+            <input
+              type="text"
+              placeholder="Rechercher par nom, email ou pseudo..."
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="w-full pl-9 pr-3 py-1.5 rounded-lg text-xs bg-[var(--background)] border border-[var(--card-border)] text-[var(--foreground)] placeholder-[var(--text-muted)] focus:outline-hidden focus:border-[var(--accent)] transition"
+            />
+            {search && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearch('');
+                  setCurrentPage(1);
+                }}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--foreground)]"
+              >
+                <X size={12} />
+              </button>
             )}
           </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Filtre Rôle */}
+            <select
+              value={roleFilter}
+              onChange={(e) => {
+                setRoleFilter(e.target.value as RoleFilter);
+                setCurrentPage(1);
+              }}
+              className="px-2.5 py-1.5 rounded-lg text-xs bg-[var(--background)] border border-[var(--card-border)] text-[var(--foreground)] focus:outline-hidden cursor-pointer"
+            >
+              <option value="ALL">Tous les rôles</option>
+              <option value="ADMIN">Administrateurs</option>
+              <option value="MODERATOR">Modérateurs</option>
+              <option value="CONTRIBUTOR">Contributeurs</option>
+              <option value="USER">Membres</option>
+            </select>
+
+            {/* Filtre Statut */}
+            <select
+              value={statusFilter}
+              onChange={(e) => {
+                setStatusFilter(e.target.value as StatusFilter);
+                setCurrentPage(1);
+              }}
+              className="px-2.5 py-1.5 rounded-lg text-xs bg-[var(--background)] border border-[var(--card-border)] text-[var(--foreground)] focus:outline-hidden cursor-pointer"
+            >
+              <option value="ALL">Tous les statuts</option>
+              <option value="ACTIVE">Actifs uniquement</option>
+              <option value="BANNED">Suspendus uniquement</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Tableau des utilisateurs */}
+        <div className="rounded-xl border border-[var(--card-border)] bg-[var(--card)] overflow-hidden shadow-xs">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr className="border-b border-[var(--card-border)] bg-[var(--card-hover)] text-[var(--text-muted)] font-mono text-[11px] uppercase tracking-wider">
+                  <th className="py-2.5 px-3 font-medium">Utilisateur</th>
+                  <th className="py-2.5 px-3 font-medium">Rôle</th>
+                  <th className="py-2.5 px-3 font-medium">Statut</th>
+                  <th className="py-2.5 px-3 font-medium">Inscription</th>
+                  <th className="py-2.5 px-3 font-medium text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[var(--card-border)]">
+                {isLoading ? (
+                  <tr>
+                    <td colSpan={5} className="py-12 text-center text-[var(--text-muted)]">
+                      <Loader2 size={18} className="animate-spin inline-block mr-2" />
+                      Chargement des comptes...
+                    </td>
+                  </tr>
+                ) : users.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="py-10 text-center text-[var(--text-muted)]">
+                      Aucun utilisateur ne correspond aux critères de recherche.
+                    </td>
+                  </tr>
+                ) : (
+                  users.map((u) => {
+                    const isSelf = u.id === currentUserId;
+                    const isBanned = Boolean(u.banned);
+                    const badge = ROLE_BADGES[u.role] || ROLE_BADGES.USER;
+
+                    return (
+                      <tr
+                        key={u.id}
+                        className={`hover:bg-[var(--card-hover)] transition-colors ${
+                          isBanned ? 'bg-red-500/5' : ''
+                        }`}
+                      >
+                        <td className="py-3 px-3">
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-8 h-8 rounded-full bg-[var(--background)] border border-[var(--card-border)] flex items-center justify-center font-bold text-xs text-[var(--text-muted)] shrink-0 overflow-hidden">
+                              {u.image ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img
+                                  src={u.image}
+                                  alt={u.name}
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                (u.name || 'U').charAt(0).toUpperCase()
+                              )}
+                            </div>
+                            <div className="min-w-0">
+                              <div className="font-semibold text-[var(--foreground)] truncate flex items-center gap-1.5">
+                                {u.name}
+                                {isSelf && (
+                                  <span className="text-[10px] px-1.5 py-0.2 rounded-sm bg-purple-500/20 text-purple-600 dark:text-purple-300 font-mono">
+                                    Vous
+                                  </span>
+                                )}
+                              </div>
+                              <div className="text-[11px] text-[var(--text-muted)] truncate font-mono">
+                                {u.email}
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+
+                        <td className="py-3 px-3">
+                          <span
+                            className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10.5px] font-semibold border ${badge.bg} ${badge.text} ${badge.border}`}
+                          >
+                            {badge.label}
+                          </span>
+                        </td>
+
+                        <td className="py-3 px-3">
+                          {isBanned ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10.5px] font-semibold bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20">
+                              <Ban size={10} /> Suspendu
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10.5px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                              <CheckCircle2 size={10} /> Actif
+                            </span>
+                          )}
+                        </td>
+
+                        <td className="py-3 px-3 text-[11px] text-[var(--text-muted)] font-mono">
+                          {new Date(u.createdAt).toLocaleDateString('fr-FR')}
+                        </td>
+
+                        <td className="py-3 px-3 text-right">
+                          <div className="inline-flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => void handleOpenDetails(u.id)}
+                              title="Voir la fiche détaillée"
+                              className="p-1.5 rounded-md hover:bg-[var(--background)] text-[var(--text-muted)] hover:text-[var(--foreground)] transition cursor-pointer"
+                            >
+                              <Eye size={14} />
+                            </button>
+
+                            <button
+                              type="button"
+                              disabled={isSelf}
+                              onClick={() => setRoleModalState({ isOpen: true, user: u, newRole: u.role })}
+                              title={isSelf ? 'Auto-modification interdite' : 'Modifier les permissions'}
+                              className="p-1.5 rounded-md hover:bg-[var(--background)] text-[var(--text-muted)] hover:text-[var(--foreground)] disabled:opacity-30 disabled:cursor-not-allowed transition cursor-pointer"
+                            >
+                              <ShieldCheck size={14} />
+                            </button>
+
+                            {isBanned ? (
+                              <button
+                                type="button"
+                                onClick={() => handleUnban(u)}
+                                title="Réactiver le compte"
+                                className="p-1.5 rounded-md hover:bg-emerald-500/10 text-emerald-600 transition cursor-pointer"
+                              >
+                                <CheckCircle2 size={14} />
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                disabled={isSelf || u.role === 'ADMIN'}
+                                onClick={() =>
+                                  setBanModalState({
+                                    isOpen: true,
+                                    user: u,
+                                    reason: '',
+                                    expiresAt: '',
+                                  })
+                                }
+                                title={
+                                  isSelf || u.role === 'ADMIN'
+                                    ? 'Impossible de suspendre un administrateur'
+                                    : 'Suspendre le compte'
+                                }
+                                className="p-1.5 rounded-md hover:bg-red-500/10 text-red-500 disabled:opacity-30 disabled:cursor-not-allowed transition cursor-pointer"
+                              >
+                                <Ban size={14} />
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Barre de pagination */}
+          {totalPages > 1 && (
+            <div className="p-3 border-t border-[var(--card-border)] bg-[var(--card-hover)] flex items-center justify-between text-xs text-[var(--text-muted)]">
+              <div>
+                Page <span className="font-semibold text-[var(--foreground)]">{currentPage}</span> sur{' '}
+                <span className="font-semibold text-[var(--foreground)]">{totalPages}</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  disabled={currentPage <= 1 || isLoading}
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  className="px-2.5 py-1 rounded-md border border-[var(--card-border)] bg-[var(--card)] hover:bg-[var(--card-hover)] disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition flex items-center gap-1"
+                >
+                  <ChevronLeft size={13} /> Précédent
+                </button>
+                <button
+                  type="button"
+                  disabled={currentPage >= totalPages || isLoading}
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  className="px-2.5 py-1 rounded-md border border-[var(--card-border)] bg-[var(--card)] hover:bg-[var(--card-hover)] disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition flex items-center gap-1"
+                >
+                  Suivant <ChevronRight size={13} />
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Modal : Fiche Utilisateur Détaillée */}
+        {selectedUserDetail && (
+          <Modal
+            isOpen={true}
+            onClose={() => setSelectedUserDetail(null)}
+            title="Fiche Utilisateur"
+            maxWidth="2xl"
+          >
+            <div className="space-y-5 text-xs">
+              {/* Carte Profil */}
+              <div className="p-4 rounded-xl border border-[var(--card-border)] bg-[var(--background)] flex items-start gap-4">
+                <div className="w-12 h-12 rounded-full bg-[var(--card)] border border-[var(--card-border)] flex items-center justify-center font-bold text-base text-[var(--accent)] shrink-0 overflow-hidden">
+                  {selectedUserDetail.user.image ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={selectedUserDetail.user.image}
+                      alt={selectedUserDetail.user.name}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    (selectedUserDetail.user.name || 'U').charAt(0).toUpperCase()
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-bold text-sm text-[var(--foreground)]">
+                      {selectedUserDetail.user.name}
+                    </span>
+                    <span
+                      className={`px-2 py-0.5 rounded-md text-[10px] font-semibold border ${
+                        (ROLE_BADGES[selectedUserDetail.user.role] || ROLE_BADGES.USER).bg
+                      } ${(ROLE_BADGES[selectedUserDetail.user.role] || ROLE_BADGES.USER).text} ${
+                        (ROLE_BADGES[selectedUserDetail.user.role] || ROLE_BADGES.USER).border
+                      }`}
+                    >
+                      {(ROLE_BADGES[selectedUserDetail.user.role] || ROLE_BADGES.USER).label}
+                    </span>
+                    {selectedUserDetail.user.banned && (
+                      <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-red-500/10 text-red-500 border border-red-500/20">
+                        Compte Suspendu
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-[11px] text-[var(--text-muted)] font-mono mt-0.5">
+                    {selectedUserDetail.user.email} • ID: {selectedUserDetail.user.id}
+                  </div>
+                  {selectedUserDetail.user.banned && selectedUserDetail.user.banReason && (
+                    <div className="mt-2 p-2 rounded-lg bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-[11px]">
+                      <strong>Motif de suspension :</strong> {selectedUserDetail.user.banReason}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Métriques d'engagement */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-center">
+                <div className="p-2.5 rounded-lg border border-[var(--card-border)] bg-[var(--background)]">
+                  <div className="text-[10px] font-mono text-[var(--text-muted)] uppercase">Niveau</div>
+                  <div className="text-base font-bold text-[var(--accent)] mt-0.5">
+                    {selectedUserDetail.progress?.level || 1}
+                  </div>
+                </div>
+                <div className="p-2.5 rounded-lg border border-[var(--card-border)] bg-[var(--background)]">
+                  <div className="text-[10px] font-mono text-[var(--text-muted)] uppercase">Total XP</div>
+                  <div className="text-base font-bold text-[var(--foreground)] mt-0.5">
+                    {selectedUserDetail.progress?.totalXp || 0}
+                  </div>
+                </div>
+                <div className="p-2.5 rounded-lg border border-[var(--card-border)] bg-[var(--background)]">
+                  <div className="text-[10px] font-mono text-[var(--text-muted)] uppercase">Contributions</div>
+                  <div className="text-base font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">
+                    {selectedUserDetail.metrics.contributions.approved} / {selectedUserDetail.metrics.contributions.total}
+                  </div>
+                </div>
+                <div className="p-2.5 rounded-lg border border-[var(--card-border)] bg-[var(--background)]">
+                  <div className="text-[10px] font-mono text-[var(--text-muted)] uppercase">Quiz UGC</div>
+                  <div className="text-base font-bold text-blue-600 dark:text-blue-400 mt-0.5">
+                    {selectedUserDetail.metrics.counts.quizSets || 0}
+                  </div>
+                </div>
+              </div>
+
+              {/* Historique des signalements */}
+              {selectedUserDetail.reportsAgainstUser.length > 0 && (
+                <div className="space-y-2">
+                  <div className="font-semibold text-xs flex items-center gap-1.5 text-amber-600 dark:text-amber-400">
+                    <AlertTriangle size={13} />
+                    Signalements enregistrés contre ce compte ({selectedUserDetail.reportsAgainstUser.length})
+                  </div>
+                  <div className="space-y-1.5 max-h-36 overflow-y-auto">
+                    {selectedUserDetail.reportsAgainstUser.map((rep) => (
+                      <div
+                        key={rep.id}
+                        className="p-2 rounded-lg border border-amber-500/20 bg-amber-500/5 text-[11px] flex justify-between items-center"
+                      >
+                        <div>
+                          <span className="font-semibold text-[var(--foreground)]">{rep.reason}</span>
+                          {rep.description && (
+                            <span className="text-[var(--text-muted)] ml-2">— {rep.description}</span>
+                          )}
+                        </div>
+                        <span className="text-[10px] font-mono text-[var(--text-muted)]">
+                          {new Date(rep.createdAt).toLocaleDateString('fr-FR')}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Actions Rapides Administrateur */}
+              <div className="pt-2 border-t border-[var(--card-border)] flex flex-wrap items-center justify-between gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleResetPassword(selectedUserDetail.user)}
+                  className="px-3 py-1.5 rounded-lg text-xs font-medium border border-[var(--card-border)] bg-[var(--card)] hover:bg-[var(--card-hover)] text-[var(--foreground)] transition cursor-pointer flex items-center gap-1.5"
+                >
+                  <KeyRound size={13} /> Réinitialiser mot de passe
+                </button>
+
+                <div className="flex items-center gap-2">
+                  {selectedUserDetail.user.banned ? (
+                    <button
+                      type="button"
+                      onClick={() => handleUnban(selectedUserDetail.user)}
+                      className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white transition cursor-pointer flex items-center gap-1.5 shadow-xs"
+                    >
+                      <CheckCircle2 size={13} /> Réactiver le compte
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled={selectedUserDetail.user.id === currentUserId || selectedUserDetail.user.role === 'ADMIN'}
+                      onClick={() =>
+                        setBanModalState({
+                          isOpen: true,
+                          user: selectedUserDetail.user,
+                          reason: '',
+                          expiresAt: '',
+                        })
+                      }
+                      className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-600 hover:bg-red-700 text-white disabled:opacity-40 disabled:cursor-not-allowed transition cursor-pointer flex items-center gap-1.5 shadow-xs"
+                    >
+                      <Ban size={13} /> Suspendre ce compte
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    disabled={selectedUserDetail.user.id === currentUserId}
+                    onClick={() => handleDeleteUser(selectedUserDetail.user)}
+                    className="p-1.5 rounded-lg hover:bg-red-500/10 text-red-500 disabled:opacity-30 disabled:cursor-not-allowed transition cursor-pointer"
+                    title="Supprimer définitivement"
+                  >
+                    <Trash2 size={15} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </Modal>
+        )}
+
+        {/* Modal : Suspendre / Bannir */}
+        {banModalState.isOpen && banModalState.user && (
+          <Modal
+            isOpen={true}
+            onClose={() => setBanModalState({ isOpen: false, user: null, reason: '', expiresAt: '' })}
+            title={`Suspendre le compte de ${banModalState.user.name}`}
+            maxWidth="md"
+          >
+            <div className="space-y-4 text-xs">
+              <p className="text-[var(--text-muted)]">
+                L&apos;utilisateur ne pourra plus se connecter et toutes ses sessions actives seront
+                révoquées immédiatement.
+              </p>
+
+              <div>
+                <label className="block text-xs font-semibold mb-1 text-[var(--foreground)]">
+                  Motif de la sanction <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  rows={3}
+                  value={banModalState.reason}
+                  onChange={(e) =>
+                    setBanModalState((s) => ({ ...s, reason: e.target.value }))
+                  }
+                  placeholder="Ex: Propos injurieux répétés dans les commentaires..."
+                  className="w-full p-2.5 rounded-lg bg-[var(--background)] border border-[var(--card-border)] text-xs text-[var(--foreground)] placeholder-[var(--text-muted)] focus:outline-hidden focus:border-red-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold mb-1 text-[var(--foreground)]">
+                  Date d&apos;expiration (Optionnel — laisser vide pour suspension définitive)
+                </label>
+                <input
+                  type="date"
+                  value={banModalState.expiresAt}
+                  onChange={(e) =>
+                    setBanModalState((s) => ({ ...s, expiresAt: e.target.value }))
+                  }
+                  className="w-full p-2 rounded-lg bg-[var(--background)] border border-[var(--card-border)] text-xs text-[var(--foreground)] focus:outline-hidden"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2 border-t border-[var(--card-border)]">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setBanModalState({ isOpen: false, user: null, reason: '', expiresAt: '' })
+                  }
+                  className="px-3 py-1.5 rounded-lg border border-[var(--card-border)] bg-[var(--card)] text-[var(--text-muted)] hover:text-[var(--foreground)]"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmBan}
+                  className="px-4 py-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white font-semibold transition"
+                >
+                  Confirmer la suspension
+                </button>
+              </div>
+            </div>
+          </Modal>
+        )}
+
+        {/* Modal : Modifier Rôle */}
+        {roleModalState.isOpen && roleModalState.user && (
+          <Modal
+            isOpen={true}
+            onClose={() => setRoleModalState({ isOpen: false, user: null, newRole: 'USER' })}
+            title={`Modifier les permissions de ${roleModalState.user.name}`}
+            maxWidth="md"
+          >
+            <div className="space-y-4 text-xs">
+              <p className="text-[var(--text-muted)]">
+                Sélectionnez le nouveau rôle pour <strong>{roleModalState.user.email}</strong> :
+              </p>
+
+              <div className="space-y-2">
+                {(['USER', 'CONTRIBUTOR', 'MODERATOR', 'ADMIN'] as UserRole[]).map((r) => (
+                  <label
+                    key={r}
+                    className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition ${
+                      roleModalState.newRole === r
+                        ? 'border-[var(--accent)] bg-[var(--accent)]/5'
+                        : 'border-[var(--card-border)] bg-[var(--background)] hover:bg-[var(--card-hover)]'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="radio"
+                        name="role"
+                        value={r}
+                        checked={roleModalState.newRole === r}
+                        onChange={() => setRoleModalState((s) => ({ ...s, newRole: r }))}
+                        className="accent-[var(--accent)]"
+                      />
+                      <span className="font-semibold text-xs text-[var(--foreground)]">
+                        {ROLE_BADGES[r]?.label || r}
+                      </span>
+                    </div>
+                  </label>
+                ))}
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2 border-t border-[var(--card-border)]">
+                <button
+                  type="button"
+                  onClick={() => setRoleModalState({ isOpen: false, user: null, newRole: 'USER' })}
+                  className="px-3 py-1.5 rounded-lg border border-[var(--card-border)] bg-[var(--card)] text-[var(--text-muted)] hover:text-[var(--foreground)]"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmRoleChange}
+                  className="px-4 py-1.5 rounded-lg bg-[var(--accent)] hover:opacity-90 text-white font-semibold transition"
+                >
+                  Enregistrer
+                </button>
+              </div>
+            </div>
+          </Modal>
+        )}
+
+        {/* Modal générique de confirmation */}
+        {confirmModal && (
+          <ConfirmModal
+            isOpen={confirmModal.isOpen}
+            onClose={() => setConfirmModal(null)}
+            title={confirmModal.title}
+            description={confirmModal.description}
+            variant={confirmModal.variant || 'primary'}
+            onConfirm={async () => {
+              await confirmModal.action();
+              setConfirmModal(null);
+            }}
+          />
         )}
       </div>
     </AdminShell>
