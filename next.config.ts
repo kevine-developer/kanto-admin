@@ -27,6 +27,14 @@ const nextConfig: NextConfig = {
         hostname: "api-kanto.gastsar.fr",
       },
       {
+        protocol: "https",
+        hostname: "lh3.googleusercontent.com",
+      },
+      {
+        protocol: "https",
+        hostname: "*.googleusercontent.com",
+      },
+      {
         protocol: "http",
         hostname: "localhost",
       },
@@ -76,7 +84,7 @@ const nextConfig: NextConfig = {
               "script-src 'self' 'unsafe-inline' 'unsafe-eval'", // unsafe-eval requis par Next.js dev
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "font-src 'self' https://fonts.gstatic.com",
-              `img-src 'self' data: https://res.cloudinary.com https://images.unsplash.com https://api-kanto.gastsar.fr blob: ${process.env.NEXT_PUBLIC_API_URL ?? ""} ${process.env.NEXT_PUBLIC_BACKEND_URL ?? ""} ${isDev ? "http:" : ""}`.trim().replace(/\s+/g, " "),
+              `img-src 'self' data: https://res.cloudinary.com https://images.unsplash.com https://api-kanto.gastsar.fr https://lh3.googleusercontent.com https://*.googleusercontent.com blob: ${process.env.NEXT_PUBLIC_API_URL ?? ""} ${process.env.NEXT_PUBLIC_BACKEND_URL ?? ""} ${isDev ? "http:" : ""}`.trim().replace(/\s+/g, " "),
               `media-src 'self' data: blob: https://res.cloudinary.com https://api-kanto.gastsar.fr ${process.env.NEXT_PUBLIC_API_URL ?? ""} ${process.env.NEXT_PUBLIC_BACKEND_URL ?? ""} ${isDev ? "http:" : ""}`.trim().replace(/\s+/g, " "),
               isDev
                 ? "connect-src 'self' http: ws: https: wss:"
