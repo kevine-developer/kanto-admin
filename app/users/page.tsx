@@ -5,7 +5,7 @@ import { AdminShell } from '@/components/layout/AdminShell';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Modal, ConfirmModal } from '@/components/ui';
 import { systemService } from '@/services/system.service';
-import { UserAccount, UserDetails, UserRole } from '@/types';
+import { UserAccount, UserDetails, UserRole, SubscriptionTier } from '@/types';
 import { useSession } from '@/lib/auth-client';
 import {
   Search,
@@ -22,12 +22,42 @@ import {
   Eye,
   Trash2,
   AlertTriangle,
+  Crown,
+  Sparkles,
 } from 'lucide-react';
 import { useToast } from '@/lib/hooks/useToast';
 import { resolveMediaUrl } from '@/lib/utils/media';
 
 type RoleFilter = 'ALL' | 'ADMIN' | 'MODERATOR' | 'CONTRIBUTOR' | 'USER';
 type StatusFilter = 'ALL' | 'ACTIVE' | 'BANNED';
+type TierFilter = 'ALL' | 'VIP' | 'PREMIUM' | 'FREE';
+
+const TIER_BADGES: Record<
+  SubscriptionTier,
+  { label: string; bg: string; text: string; border: string; adsDisabled: boolean }
+> = {
+  VIP: {
+    label: 'VIP',
+    bg: 'bg-amber-500/10 dark:bg-amber-500/20',
+    text: 'text-amber-600 dark:text-amber-400',
+    border: 'border-amber-500/30',
+    adsDisabled: true,
+  },
+  PREMIUM: {
+    label: 'Premium',
+    bg: 'bg-indigo-500/10 dark:bg-indigo-500/20',
+    text: 'text-indigo-600 dark:text-indigo-400',
+    border: 'border-indigo-500/30',
+    adsDisabled: true,
+  },
+  FREE: {
+    label: 'Standard',
+    bg: 'bg-zinc-500/10 dark:bg-zinc-500/20',
+    text: 'text-zinc-600 dark:text-zinc-400',
+    border: 'border-zinc-500/20',
+    adsDisabled: false,
+  },
+};
 
 const ROLE_BADGES: Record<
   UserRole,
@@ -73,6 +103,7 @@ export default function UsersAdminPage() {
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState<RoleFilter>('ALL');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL');
+  const [tierFilter, setTierFilter] = useState<TierFilter>('ALL');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(15);
 
@@ -122,6 +153,7 @@ export default function UsersAdminPage() {
         search: search.trim() || undefined,
         role: roleFilter !== 'ALL' ? roleFilter : undefined,
         status: statusFilter !== 'ALL' ? statusFilter : undefined,
+        tier: tierFilter !== 'ALL' ? tierFilter : undefined,
       });
 
       setUsers(res.data);
@@ -138,7 +170,7 @@ export default function UsersAdminPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [currentPage, pageSize, search, roleFilter, statusFilter, toast]);
+  }, [currentPage, pageSize, search, roleFilter, statusFilter, tierFilter, toast]);
 
   useEffect(() => {
     void loadUsers();
@@ -247,6 +279,37 @@ export default function UsersAdminPage() {
     }
   };
 
+  // Basculer le statut VIP (Sans publicité AdMob)
+  const handleToggleVip = (user: UserAccount) => {
+    const isVip = user.tier === 'VIP';
+    const newTier: SubscriptionTier = isVip ? 'FREE' : 'VIP';
+
+    setConfirmModal({
+      isOpen: true,
+      title: isVip
+        ? 'Rétablir le compte en Standard ?'
+        : '👑 Accorder le statut VIP et désactiver les pubs ?',
+      description: isVip
+        ? `Le compte de ${user.name} (${user.email}) repassera en Standard. Les publicités AdMob seront réactivées dans son application mobile.`
+        : `Le compte de ${user.name} (${user.email}) passera au statut VIP. Toutes les publicités (bannières, interstitiels, vidéos récompensées) seront automatiquement désactivées sur son application mobile.`,
+      variant: isVip ? 'warning' : 'primary',
+      action: async () => {
+        try {
+          const res = await systemService.updateUserTier(user.id, newTier);
+          toast.success(res.message);
+          void loadUsers();
+          if (selectedUserDetail?.user.id === user.id) {
+            void handleOpenDetails(user.id);
+          }
+        } catch (err: unknown) {
+          toast.error(
+            err instanceof Error ? err.message : 'Erreur lors de la mise à jour du statut VIP',
+          );
+        }
+      },
+    });
+  };
+
   return (
     <AdminShell>
       <div className="w-full space-y-5 pb-8">
@@ -332,6 +395,21 @@ export default function UsersAdminPage() {
               <option value="ACTIVE">Actifs uniquement</option>
               <option value="BANNED">Suspendus uniquement</option>
             </select>
+
+            {/* Filtre Tier & Publicités */}
+            <select
+              value={tierFilter}
+              onChange={(e) => {
+                setTierFilter(e.target.value as TierFilter);
+                setCurrentPage(1);
+              }}
+              className="px-2.5 py-1.5 rounded-lg text-xs bg-[var(--background)] border border-[var(--card-border)] text-[var(--foreground)] focus:outline-hidden cursor-pointer"
+            >
+              <option value="ALL">Tous les statuts pub</option>
+              <option value="VIP">👑 VIP (Sans publicité)</option>
+              <option value="PREMIUM">💎 Premium (Sans publicité)</option>
+              <option value="FREE">Standard (Avec publicités)</option>
+            </select>
           </div>
         </div>
 
@@ -344,6 +422,7 @@ export default function UsersAdminPage() {
                   <th className="py-2.5 px-3 font-medium">Utilisateur</th>
                   <th className="py-2.5 px-3 font-medium">Rôle</th>
                   <th className="py-2.5 px-3 font-medium">Statut</th>
+                  <th className="py-2.5 px-3 font-medium">Abonnement & Pubs</th>
                   <th className="py-2.5 px-3 font-medium">Inscription</th>
                   <th className="py-2.5 px-3 font-medium text-right">Actions</th>
                 </tr>
@@ -351,14 +430,14 @@ export default function UsersAdminPage() {
               <tbody className="divide-y divide-[var(--card-border)]">
                 {isLoading ? (
                   <tr>
-                    <td colSpan={5} className="py-12 text-center text-[var(--text-muted)]">
+                    <td colSpan={6} className="py-12 text-center text-[var(--text-muted)]">
                       <Loader2 size={18} className="animate-spin inline-block mr-2" />
                       Chargement des comptes...
                     </td>
                   </tr>
                 ) : users.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="py-10 text-center text-[var(--text-muted)]">
+                    <td colSpan={6} className="py-10 text-center text-[var(--text-muted)]">
                       Aucun utilisateur ne correspond aux critères de recherche.
                     </td>
                   </tr>
@@ -367,6 +446,7 @@ export default function UsersAdminPage() {
                     const isSelf = u.id === currentUserId;
                     const isBanned = Boolean(u.banned);
                     const badge = ROLE_BADGES[u.role] || ROLE_BADGES.USER;
+                    const tierBadge = TIER_BADGES[u.tier] || TIER_BADGES.FREE;
 
                     return (
                       <tr
@@ -435,6 +515,30 @@ export default function UsersAdminPage() {
                           )}
                         </td>
 
+                        <td className="py-3 px-3">
+                          <div className="flex flex-col gap-0.5">
+                            <span
+                              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10.5px] font-semibold border w-fit ${tierBadge.bg} ${tierBadge.text} ${tierBadge.border}`}
+                            >
+                              {u.tier === 'VIP' ? (
+                                <Crown size={11} className="text-amber-500 fill-amber-500/30" />
+                              ) : u.tier === 'PREMIUM' ? (
+                                <Sparkles size={11} className="text-indigo-500" />
+                              ) : null}
+                              {tierBadge.label}
+                            </span>
+                            <span
+                              className={`text-[10px] font-mono ${
+                                tierBadge.adsDisabled
+                                  ? 'text-emerald-600 dark:text-emerald-400 font-medium'
+                                  : 'text-[var(--text-muted)]'
+                              }`}
+                            >
+                              {tierBadge.adsDisabled ? '🚫 Sans pub' : '📢 Pubs actives'}
+                            </span>
+                          </div>
+                        </td>
+
                         <td className="py-3 px-3 text-[11px] text-[var(--text-muted)] font-mono">
                           {new Date(u.createdAt).toLocaleDateString('fr-FR')}
                         </td>
@@ -458,6 +562,26 @@ export default function UsersAdminPage() {
                               className="p-1.5 rounded-md hover:bg-[var(--background)] text-[var(--text-muted)] hover:text-[var(--foreground)] disabled:opacity-30 disabled:cursor-not-allowed transition cursor-pointer"
                             >
                               <ShieldCheck size={14} />
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => handleToggleVip(u)}
+                              title={
+                                u.tier === 'VIP'
+                                  ? 'Retirer le statut VIP (Réactiver les publicités)'
+                                  : '👑 Accorder le statut VIP (Désactiver toutes les publicités)'
+                              }
+                              className={`p-1.5 rounded-md transition cursor-pointer ${
+                                u.tier === 'VIP'
+                                  ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 hover:bg-amber-500/25'
+                                  : 'hover:bg-amber-500/10 text-[var(--text-muted)] hover:text-amber-600'
+                              }`}
+                            >
+                              <Crown
+                                size={14}
+                                className={u.tier === 'VIP' ? 'fill-amber-500/30' : ''}
+                              />
                             </button>
 
                             {isBanned ? (
@@ -577,6 +701,18 @@ export default function UsersAdminPage() {
                     >
                       {(ROLE_BADGES[selectedUserDetail.user.role] || ROLE_BADGES.USER).label}
                     </span>
+                    <span
+                      className={`px-2 py-0.5 rounded-md text-[10px] font-semibold border inline-flex items-center gap-1 ${
+                        (TIER_BADGES[selectedUserDetail.user.tier] || TIER_BADGES.FREE).bg
+                      } ${(TIER_BADGES[selectedUserDetail.user.tier] || TIER_BADGES.FREE).text} ${
+                        (TIER_BADGES[selectedUserDetail.user.tier] || TIER_BADGES.FREE).border
+                      }`}
+                    >
+                      {selectedUserDetail.user.tier === 'VIP' && (
+                        <Crown size={11} className="fill-amber-500/30 text-amber-500" />
+                      )}
+                      {(TIER_BADGES[selectedUserDetail.user.tier] || TIER_BADGES.FREE).label}
+                    </span>
                     {selectedUserDetail.user.banned && (
                       <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-red-500/10 text-red-500 border border-red-500/20">
                         Compte Suspendu
@@ -592,6 +728,71 @@ export default function UsersAdminPage() {
                     </div>
                   )}
                 </div>
+              </div>
+
+              {/* Statut Publicitaire & VIP */}
+              <div className="p-3.5 rounded-xl border border-[var(--card-border)] bg-[var(--background)] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-semibold text-xs text-[var(--foreground)] flex items-center gap-1.5">
+                      <Crown
+                        size={14}
+                        className={
+                          selectedUserDetail.user.tier === 'VIP'
+                            ? 'text-amber-500 fill-amber-500/30'
+                            : 'text-[var(--text-muted)]'
+                        }
+                      />
+                      Statut Publicitaire :
+                    </span>
+                    <span
+                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10.5px] font-semibold border ${
+                        (TIER_BADGES[selectedUserDetail.user.tier] || TIER_BADGES.FREE).bg
+                      } ${(TIER_BADGES[selectedUserDetail.user.tier] || TIER_BADGES.FREE).text} ${
+                        (TIER_BADGES[selectedUserDetail.user.tier] || TIER_BADGES.FREE).border
+                      }`}
+                    >
+                      {(TIER_BADGES[selectedUserDetail.user.tier] || TIER_BADGES.FREE).label}
+                    </span>
+                    <span
+                      className={`text-[10px] font-mono px-2 py-0.5 rounded-md border ${
+                        (TIER_BADGES[selectedUserDetail.user.tier] || TIER_BADGES.FREE).adsDisabled
+                          ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 font-medium'
+                          : 'bg-zinc-500/10 text-[var(--text-muted)] border-zinc-500/20'
+                      }`}
+                    >
+                      {(TIER_BADGES[selectedUserDetail.user.tier] || TIER_BADGES.FREE).adsDisabled
+                        ? '🚫 Publicités désactivées'
+                        : '📢 Publicités actives'}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-[var(--text-muted)] leading-relaxed">
+                    {selectedUserDetail.user.tier === 'VIP'
+                      ? "Cet utilisateur bénéficie du statut VIP. Toutes les publicités AdMob (bannières, interstitiels, vidéos récompensées) sont intégralement désactivées sur l'application mobile."
+                      : selectedUserDetail.user.tier === 'PREMIUM'
+                      ? "Cet utilisateur dispose d'un abonnement Premium actif sans publicité."
+                      : "Compte Standard. Les publicités AdMob sont normalement diffusées dans l'application mobile."}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleToggleVip(selectedUserDetail.user)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold shrink-0 transition cursor-pointer flex items-center justify-center gap-1.5 border shadow-xs ${
+                    selectedUserDetail.user.tier === 'VIP'
+                      ? 'border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300 hover:bg-amber-500/20'
+                      : 'border-amber-500 bg-amber-500 text-white hover:bg-amber-600'
+                  }`}
+                >
+                  <Crown
+                    size={13}
+                    className={
+                      selectedUserDetail.user.tier === 'VIP' ? 'fill-amber-500/40 text-amber-600' : ''
+                    }
+                  />
+                  {selectedUserDetail.user.tier === 'VIP'
+                    ? 'Retirer VIP (Réactiver pubs)'
+                    : '👑 Rendre VIP (Sans pub)'}
+                </button>
               </div>
 
               {/* Métriques d'engagement */}

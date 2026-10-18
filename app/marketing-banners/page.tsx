@@ -401,6 +401,10 @@ export default function MarketingBannersAdminPage() {
                       src={banner.imageUrl}
                       alt={banner.titleFr}
                       className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.src =
+                          'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=800&q=80';
+                      }}
                     />
                     <div
                       className="absolute bottom-0 left-0 right-0 h-1"

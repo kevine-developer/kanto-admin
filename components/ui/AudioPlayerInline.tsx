@@ -21,34 +21,47 @@ export function AudioPlayerInline({
   const [isPlaying, setIsPlaying] = useState(false);
   const [duration, setDuration] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
+  const [hasError, setHasError] = useState(false);
 
   const fullUrl = resolveMediaUrl(url);
 
   useEffect(() => {
     setIsPlaying(false);
     setCurrentTime(0);
+    setHasError(false);
     if (audioRef.current) {
       audioRef.current.pause();
-      audioRef.current.load();
     }
   }, [fullUrl]);
 
   if (!url) return null;
 
   const togglePlay = () => {
-    if (!audioRef.current) return;
+    if (!audioRef.current || hasError) return;
     if (isPlaying) {
       audioRef.current.pause();
       setIsPlaying(false);
     } else {
-      audioRef.current.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
+      audioRef.current
+        .play()
+        .then(() => setIsPlaying(true))
+        .catch(() => {
+          setIsPlaying(false);
+          setHasError(true);
+        });
     }
   };
 
   const handleRestart = () => {
-    if (!audioRef.current) return;
+    if (!audioRef.current || hasError) return;
     audioRef.current.currentTime = 0;
-    audioRef.current.play().then(() => setIsPlaying(true)).catch(() => {});
+    audioRef.current
+      .play()
+      .then(() => setIsPlaying(true))
+      .catch(() => {
+        setIsPlaying(false);
+        setHasError(true);
+      });
   };
 
   const formatTime = (secs: number) => {
@@ -59,21 +72,36 @@ export function AudioPlayerInline({
 
   return (
     <div
-      className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] ${className}`}
+      className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] ${className} ${
+        hasError ? 'border-amber-500/40 bg-amber-500/5' : ''
+      }`}
     >
       <audio
         ref={audioRef}
         src={fullUrl}
+        preload="none"
         onTimeUpdate={() => setCurrentTime(audioRef.current?.currentTime || 0)}
-        onLoadedMetadata={() => setDuration(audioRef.current?.duration || 0)}
+        onLoadedMetadata={() => {
+          setDuration(audioRef.current?.duration || 0);
+          setHasError(false);
+        }}
         onEnded={() => setIsPlaying(false)}
+        onError={() => {
+          setIsPlaying(false);
+          setHasError(true);
+        }}
       />
 
       <button
         type="button"
         onClick={togglePlay}
-        className="w-6 h-6 rounded-full bg-[var(--accent)] text-white flex items-center justify-center cursor-pointer hover:opacity-90 transition shrink-0"
-        title={isPlaying ? 'Pause' : 'Écouter'}
+        disabled={hasError}
+        className={`w-6 h-6 rounded-full text-white flex items-center justify-center cursor-pointer transition shrink-0 ${
+          hasError
+            ? 'bg-amber-600/50 cursor-not-allowed opacity-60'
+            : 'bg-[var(--accent)] hover:opacity-90'
+        }`}
+        title={hasError ? 'Fichier audio non trouvé' : isPlaying ? 'Pause' : 'Écouter'}
       >
         {isPlaying ? <Pause size={10} /> : <Play size={10} className="ml-0.5" />}
       </button>

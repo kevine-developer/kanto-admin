@@ -29,7 +29,9 @@ import {
   FileText,
   Smartphone,
   History,
+  Mail,
 } from 'lucide-react';
+
 
 interface AuthUser {
   name?: string | null;
@@ -79,12 +81,14 @@ const NAV_GROUPS: { label: string; items: { href: string; icon: React.ElementTyp
     label: 'Comptes & Système',
     items: [
       { href: '/users',         icon: Users,      label: 'Utilisateurs & Rôles' },
+      { href: '/emails',        icon: Mail,       label: 'E-mails Resend' },
       { href: '/audit-logs',    icon: History,    label: "Journal d'Audit" },
       { href: '/beta-testers',  icon: Smartphone, label: 'Bêta-Testeurs Play' },
       { href: '/cgu',           icon: FileText,   label: 'CGU & Juridique' },
       { href: '/notifications', icon: Bell,       label: 'Notifications Push' },
     ],
   },
+
 ];
 
 /**
