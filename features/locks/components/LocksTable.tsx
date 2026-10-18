@@ -90,6 +90,9 @@ export function LocksTable({
                           src={resolveMediaUrl(item.imageUrl)}
                           alt={item.nameFr}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                          onError={(e) => {
+                            e.currentTarget.src = '/images/logo.png';
+                          }}
                         />
                         {item.imageUrl.includes('cloudinary.com') && (
                           <span

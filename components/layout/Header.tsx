@@ -3,6 +3,7 @@
 import { usePathname } from 'next/navigation';
 import { Sun, Moon, PanelLeft } from 'lucide-react';
 import { useTheme } from '@/lib/theme-context';
+import { AdminAlertsBell } from './AdminAlertsBell';
 
 // Mapping pathname → titre de page
 const PAGE_TITLES: Record<string, string> = {
@@ -86,6 +87,9 @@ export function Header() {
           <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent)]" />
           <span>Kanto Admin</span>
         </div>
+
+        {/* Centre d'alertes & modération */}
+        <AdminAlertsBell />
 
         {/* Toggle thème */}
         <button
