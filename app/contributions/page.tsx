@@ -114,15 +114,37 @@ export default function AdminContributionsPage() {
   const loadData = useCallback(async () => {
     try {
       setIsLoading(true);
-      const [pendingData, statsData, reportsData] = await Promise.all([
+      const [pendingRes, statsRes, reportsRes] = await Promise.allSettled([
         contributionsService.getPending(),
         contributionsService.getStats(),
         contributionsService.getReports(),
       ]);
 
-      setContributions(pendingData);
-      setStats(statsData);
-      setReports(reportsData);
+      if (pendingRes.status === 'fulfilled') {
+        setContributions(pendingRes.value);
+      } else {
+        console.error('Erreur chargement contributions en attente:', pendingRes.reason);
+      }
+
+      if (statsRes.status === 'fulfilled') {
+        setStats(statsRes.value);
+      } else {
+        console.error('Erreur chargement statistiques admin:', statsRes.reason);
+      }
+
+      if (reportsRes.status === 'fulfilled') {
+        setReports(reportsRes.value);
+      } else {
+        console.error('Erreur chargement signalements admin:', reportsRes.reason);
+      }
+
+      if (
+        pendingRes.status === 'rejected' &&
+        statsRes.status === 'rejected' &&
+        reportsRes.status === 'rejected'
+      ) {
+        toast.error('Impossible de charger les données de modération.');
+      }
     } catch (err: unknown) {
       console.error('Erreur chargement admin contributions:', err);
       toast.error('Impossible de charger les données de modération.');
