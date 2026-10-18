@@ -21,16 +21,12 @@ import {
   Search,
   RotateCcw,
   Copy,
-  Info,
   Send,
   Trash2,
   Loader2,
-  ChevronRight,
   ShieldCheck,
   Ban,
-  Calendar,
   X,
-  ExternalLink,
 } from 'lucide-react';
 
 const STATUS_CONFIG: Record<

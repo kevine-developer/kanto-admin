@@ -4,7 +4,6 @@ import React, { useEffect, useState, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import {
   Bell,
-  AlertTriangle,
   Flag,
   FileText,
   Copy,
@@ -41,7 +40,7 @@ export function AdminAlertsBell() {
   const [data, setData] = useState<AdminAlertsResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [filter, setFilter] = useState<'all' | 'critical' | 'reports' | 'contributions'>('all');
-  const [dismissedLocally, setDismissedLocally] = useState<Set<string>>(new Set());
+  const [dismissedLocally, _setDismissedLocally] = useState<Set<string>>(new Set());
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const loadAlerts = useCallback(async (silent = false) => {

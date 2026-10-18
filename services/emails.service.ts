@@ -13,7 +13,7 @@ export type EmailDeliveryStatus =
 export interface EmailLogEvent {
   type: string;
   at: string;
-  data?: Record<string, any>;
+  data?: Record<string, unknown>;
   note?: string;
   error?: string;
   resendId?: string;
@@ -34,7 +34,7 @@ export interface EmailLogItem {
   errorReason: string | null;
   attempts: number;
   lastAttemptAt: string | null;
-  metadata: Record<string, any> | null;
+  metadata: Record<string, unknown> | null;
   events: EmailLogEvent[] | null;
   createdAt: string;
   updatedAt: string;
