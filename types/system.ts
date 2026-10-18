@@ -17,7 +17,8 @@ export interface NotificationItem {
 }
 
 export type UserRole = 'ADMIN' | 'MODERATOR' | 'CONTRIBUTOR' | 'USER';
-export type SubscriptionTier = 'FREE' | 'PREMIUM';
+export type SubscriptionTier = 'FREE' | 'PREMIUM' | 'VIP';
+
 
 export interface UserAccount {
   id: string;

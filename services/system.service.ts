@@ -4,6 +4,7 @@ import {
   UserAccount,
   UserDetails,
   UserRole,
+  SubscriptionTier,
   DashboardMetrics,
   AdminAuditLog,
 } from '@/types';
@@ -33,6 +34,7 @@ export const systemService = {
     search?: string;
     role?: string;
     status?: string;
+    tier?: string;
   }): Promise<{
     data: UserAccount[];
     meta?: { total: number; page: number; limit: number; totalPages: number };
@@ -43,6 +45,7 @@ export const systemService = {
     if (params?.search) query.set('search', params.search);
     if (params?.role && params.role !== 'ALL') query.set('role', params.role);
     if (params?.status && params.status !== 'ALL') query.set('status', params.status);
+    if (params?.tier && params.tier !== 'ALL') query.set('tier', params.tier);
 
     const qs = query.toString();
     const res = await fetchApi<{
@@ -66,6 +69,20 @@ export const systemService = {
       body: JSON.stringify({ role }),
     });
   },
+
+  async updateUserTier(
+    id: string,
+    tier: SubscriptionTier,
+  ): Promise<{ success: boolean; message: string; user: any }> {
+    return fetchApi<{ success: boolean; message: string; user: any }>(
+      `/admin/users/${id}/tier`,
+      {
+        method: 'PATCH',
+        body: JSON.stringify({ tier }),
+      },
+    );
+  },
+
 
   async banUser(
     id: string,
