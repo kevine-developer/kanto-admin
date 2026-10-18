@@ -24,6 +24,7 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import { useToast } from '@/lib/hooks/useToast';
+import { resolveMediaUrl } from '@/lib/utils/media';
 
 type RoleFilter = 'ALL' | 'ADMIN' | 'MODERATOR' | 'CONTRIBUTOR' | 'USER';
 type StatusFilter = 'ALL' | 'ACTIVE' | 'BANNED';
@@ -377,15 +378,25 @@ export default function UsersAdminPage() {
                         <td className="py-3 px-3">
                           <div className="flex items-center gap-2.5">
                             <div className="w-8 h-8 rounded-full bg-[var(--background)] border border-[var(--card-border)] flex items-center justify-center font-bold text-xs text-[var(--text-muted)] shrink-0 overflow-hidden">
-                              {u.image ? (
+                              {u.image &&
+                              !u.image.includes('default-avatar') &&
+                              !u.image.includes('default_avatar') ? (
                                 // eslint-disable-next-line @next/next/no-img-element
                                 <img
-                                  src={u.image}
+                                  src={resolveMediaUrl(u.image)}
                                   alt={u.name}
                                   className="w-full h-full object-cover"
+                                  onError={(e) => {
+                                    e.currentTarget.src = '/images/logo.png';
+                                  }}
                                 />
                               ) : (
-                                (u.name || 'U').charAt(0).toUpperCase()
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img
+                                  src="/images/logo.png"
+                                  alt="Kanto"
+                                  className="w-full h-full object-cover"
+                                />
                               )}
                             </div>
                             <div className="min-w-0">
@@ -531,15 +542,25 @@ export default function UsersAdminPage() {
               {/* Carte Profil */}
               <div className="p-4 rounded-xl border border-[var(--card-border)] bg-[var(--background)] flex items-start gap-4">
                 <div className="w-12 h-12 rounded-full bg-[var(--card)] border border-[var(--card-border)] flex items-center justify-center font-bold text-base text-[var(--accent)] shrink-0 overflow-hidden">
-                  {selectedUserDetail.user.image ? (
+                  {selectedUserDetail.user.image &&
+                  !selectedUserDetail.user.image.includes('default-avatar') &&
+                  !selectedUserDetail.user.image.includes('default_avatar') ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
-                      src={selectedUserDetail.user.image}
+                      src={resolveMediaUrl(selectedUserDetail.user.image)}
                       alt={selectedUserDetail.user.name}
                       className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.src = '/images/logo.png';
+                      }}
                     />
                   ) : (
-                    (selectedUserDetail.user.name || 'U').charAt(0).toUpperCase()
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src="/images/logo.png"
+                      alt="Kanto"
+                      className="w-full h-full object-cover"
+                    />
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
