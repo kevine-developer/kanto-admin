@@ -7,6 +7,7 @@ import { useSession, signOut } from '@/lib/auth-client';
 import {
   LayoutDashboard,
   BookOpen,
+  BookMarked,
   ScrollText,
   Mic,
   Quote,
@@ -66,6 +67,7 @@ const NAV_GROUPS: { label: string; items: { href: string; icon: React.ElementTyp
       { href: '/proverbes', icon: ScrollText, label: 'Proverbes & Fady' },
       { href: '/kabary',    icon: Mic,        label: 'Discours & Kabary' },
       { href: '/citations', icon: Quote,      label: 'Citations & Auteurs' },
+      { href: '/raki-teny', icon: BookMarked, label: 'Mots Rares & Insolites' },
     ],
   },
   {
