@@ -28,8 +28,8 @@ import {
 } from 'lucide-react';
 
 /**
- * Page d'administration des slides du carrousel de bienvenue Kanto.
- * Permet d'administrer les 7 photos culturelles, l'ordre d'apparition, les textes et images.
+ * Page d'administration des photos du carrousel de bienvenue Kanto.
+ * Permet d'administrer les photos d'ambiance du carrousel d'accueil, l'ordre d'apparition et leur activation.
  */
 export default function WelcomeSlidesAdminPage() {
   const [slides, setSlides] = useState<WelcomeSlide[]>([]);
@@ -44,14 +44,8 @@ export default function WelcomeSlidesAdminPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingSlide, setEditingSlide] = useState<WelcomeSlide | null>(null);
 
-  // Form State
-  const [formTitle, setFormTitle] = useState('');
-  const [formTitleMg, setFormTitleMg] = useState('');
-  const [formBadge, setFormBadge] = useState('');
-  const [formBadgeMg, setFormBadgeMg] = useState('');
-  const [formTag, setFormTag] = useState('');
+  // Form State (Image & Statut uniquement)
   const [formImageUrl, setFormImageUrl] = useState('');
-  const [formAccentColor, setFormAccentColor] = useState('#4A6741');
   const [formIsActive, setFormIsActive] = useState(true);
 
   const loadSlides = useCallback(async () => {
@@ -63,7 +57,7 @@ export default function WelcomeSlidesAdminPage() {
       const msg =
         err instanceof Error
           ? err.message
-          : 'Erreur lors du chargement des slides';
+          : 'Erreur lors du chargement des photos';
       setFeedback({ type: 'error', text: msg });
     } finally {
       setIsLoading(false);
@@ -76,26 +70,14 @@ export default function WelcomeSlidesAdminPage() {
 
   const openCreateModal = () => {
     setEditingSlide(null);
-    setFormTitle('');
-    setFormTitleMg('');
-    setFormBadge('');
-    setFormBadgeMg('');
-    setFormTag('');
     setFormImageUrl('');
-    setFormAccentColor('#4A6741');
     setFormIsActive(true);
     setIsModalOpen(true);
   };
 
   const openEditModal = (slide: WelcomeSlide) => {
     setEditingSlide(slide);
-    setFormTitle(slide.title);
-    setFormTitleMg(slide.titleMg || '');
-    setFormBadge(slide.badge);
-    setFormBadgeMg(slide.badgeMg);
-    setFormTag(slide.tag || '');
     setFormImageUrl(slide.imageUrl);
-    setFormAccentColor(slide.accentColor || '#4A6741');
     setFormIsActive(slide.isActive);
     setIsModalOpen(true);
   };
@@ -110,7 +92,7 @@ export default function WelcomeSlidesAdminPage() {
       );
       setFeedback({
         type: 'success',
-        text: `Slide « ${slide.title} » ${updated.isActive ? 'activée' : 'désactivée'}.`,
+        text: `Photo #${slide.orderIndex + 1} ${updated.isActive ? 'activée' : 'désactivée'}.`,
       });
     } catch (err: unknown) {
       const msg =
@@ -119,8 +101,8 @@ export default function WelcomeSlidesAdminPage() {
     }
   };
 
-  const handleDelete = async (id: string, title: string) => {
-    if (!window.confirm(`Supprimer définitivement la photo « ${title} » ?`)) {
+  const handleDelete = async (id: string, index: number) => {
+    if (!window.confirm(`Supprimer définitivement la photo #${index + 1} ?`)) {
       return;
     }
     try {
@@ -128,7 +110,7 @@ export default function WelcomeSlidesAdminPage() {
       setSlides((prev) => prev.filter((s) => s.id !== id));
       setFeedback({
         type: 'success',
-        text: `Slide « ${title} » supprimée avec succès.`,
+        text: `Photo #${index + 1} supprimée avec succès.`,
       });
     } catch (err: unknown) {
       const msg =
@@ -175,10 +157,10 @@ export default function WelcomeSlidesAdminPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formTitle.trim() || !formBadge.trim() || !formImageUrl.trim()) {
+    if (!formImageUrl.trim()) {
       setFeedback({
         type: 'error',
-        text: 'Veuillez renseigner le titre, le badge et l’URL de l’image.',
+        text: 'Veuillez téléverser une photo ou renseigner son URL.',
       });
       return;
     }
@@ -187,13 +169,7 @@ export default function WelcomeSlidesAdminPage() {
       setIsSubmitting(true);
       if (editingSlide) {
         const payload: UpdateWelcomeSlideInput = {
-          title: formTitle.trim(),
-          titleMg: formTitleMg.trim() || null,
-          badge: formBadge.trim(),
-          badgeMg: formBadgeMg.trim() || formBadge.trim(),
-          tag: formTag.trim() || null,
           imageUrl: formImageUrl.trim(),
-          accentColor: formAccentColor.trim() || '#4A6741',
           isActive: formIsActive,
         };
         const updated = await welcomeSlidesService.updateSlide(
@@ -205,17 +181,14 @@ export default function WelcomeSlidesAdminPage() {
         );
         setFeedback({
           type: 'success',
-          text: `Slide « ${updated.title} » mise à jour.`,
+          text: `Photo #${editingSlide.orderIndex + 1} mise à jour.`,
         });
       } else {
         const payload: CreateWelcomeSlideInput = {
-          title: formTitle.trim(),
-          titleMg: formTitleMg.trim() || null,
-          badge: formBadge.trim(),
-          badgeMg: formBadgeMg.trim() || formBadge.trim(),
-          tag: formTag.trim() || null,
           imageUrl: formImageUrl.trim(),
-          accentColor: formAccentColor.trim() || '#4A6741',
+          title: 'Photo carrousel',
+          badge: 'Photo',
+          badgeMg: 'Sary',
           orderIndex: slides.length,
           isActive: formIsActive,
         };
@@ -223,7 +196,7 @@ export default function WelcomeSlidesAdminPage() {
         setSlides((prev) => [...prev, created]);
         setFeedback({
           type: 'success',
-          text: `Nouvelle slide « ${created.title} » ajoutée.`,
+          text: `Nouvelle photo ajoutée au carrousel.`,
         });
       }
       setIsModalOpen(false);
@@ -251,7 +224,7 @@ export default function WelcomeSlidesAdminPage() {
                   Écran d&apos;Accueil — Carrousel de Bienvenue
                 </h1>
                 <p className="text-sm text-muted-foreground mt-0.5">
-                  Gestion des photos culturelles en arc courbé sur l&apos;application mobile Kanto ({slides.length} photos)
+                  Gestion des photos en arc courbé sur l&apos;écran d&apos;accueil Kanto ({slides.length} photos)
                 </p>
               </div>
             </div>
@@ -324,11 +297,11 @@ export default function WelcomeSlidesAdminPage() {
               className="mt-2 inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-primary text-primary-foreground hover:bg-primary/90"
             >
               <Plus className="w-4 h-4" />
-              Créer la première photo
+              Ajouter la première photo
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
             {slides.map((slide, index) => (
               <div
                 key={slide.id}
@@ -336,12 +309,12 @@ export default function WelcomeSlidesAdminPage() {
                   slide.isActive ? 'border-border' : 'border-border/50 opacity-60'
                 }`}
               >
-                {/* Aperçu Photo Card */}
-                <div className="relative aspect-[4/3] bg-muted overflow-hidden">
+                {/* Aperçu Photo Card (100% épurée) */}
+                <div className="relative aspect-[9/16] sm:aspect-[4/5] bg-muted overflow-hidden">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={slide.imageUrl}
-                    alt={slide.title}
+                    alt={`Photo #${slide.orderIndex + 1}`}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     loading="lazy"
                     onError={(e) => {
@@ -349,18 +322,11 @@ export default function WelcomeSlidesAdminPage() {
                         'https://images.unsplash.com/photo-1518770660439-4636190af475?w=600&auto=format&fit=crop&q=80';
                     }}
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none" />
 
-                  {/* Badges en superposition */}
-                  <div className="absolute top-3 left-3 flex items-center gap-1.5">
-                    <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-black/60 backdrop-blur-md text-white border border-white/10">
+                  {/* Badge numéro d'ordre */}
+                  <div className="absolute top-3 left-3">
+                    <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-black/70 backdrop-blur-md text-white border border-white/10 shadow-sm">
                       #{slide.orderIndex + 1}
-                    </span>
-                    <span
-                      className="px-2.5 py-0.5 rounded-full text-xs font-bold text-white shadow-sm"
-                      style={{ backgroundColor: slide.accentColor || '#4A6741' }}
-                    >
-                      {slide.badgeMg || slide.badge}
                     </span>
                   </div>
 
@@ -370,8 +336,8 @@ export default function WelcomeSlidesAdminPage() {
                     title={slide.isActive ? 'Désactiver' : 'Activer'}
                     className={`absolute top-3 right-3 p-1.5 rounded-full backdrop-blur-md transition-colors ${
                       slide.isActive
-                        ? 'bg-emerald-500/80 text-white hover:bg-emerald-600'
-                        : 'bg-black/60 text-muted-foreground hover:text-white'
+                        ? 'bg-emerald-500/90 text-white hover:bg-emerald-600'
+                        : 'bg-black/70 text-white/60 hover:text-white'
                     }`}
                   >
                     {slide.isActive ? (
@@ -380,76 +346,46 @@ export default function WelcomeSlidesAdminPage() {
                       <ToggleLeft className="w-5 h-5" />
                     )}
                   </button>
-
-                  {/* Titres sur l'image */}
-                  <div className="absolute bottom-3 left-3 right-3 text-white">
-                    <p className="text-xs uppercase tracking-wider font-semibold opacity-80">
-                      {slide.badge} {slide.tag ? `• ${slide.tag}` : ''}
-                    </p>
-                    <h3 className="text-base font-bold truncate">
-                      {slide.title}
-                    </h3>
-                  </div>
                 </div>
 
-                {/* Détails & Actions */}
-                <div className="p-4 flex-1 flex flex-col justify-between gap-3 bg-card">
-                  <div className="text-xs text-muted-foreground space-y-1">
-                    {slide.titleMg && (
-                      <p>
-                        <span className="font-medium text-foreground">MG :</span>{' '}
-                        {slide.titleMg}
-                      </p>
-                    )}
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-foreground">Accent :</span>
-                      <span
-                        className="w-3.5 h-3.5 rounded-full inline-block border border-border"
-                        style={{ backgroundColor: slide.accentColor }}
-                      />
-                      <span>{slide.accentColor}</span>
-                    </div>
+                {/* Barre d'outils d'action */}
+                <div className="p-3 bg-card border-t border-border flex items-center justify-between gap-1">
+                  {/* Réordonnancement */}
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => handleMoveOrder(index, 'up')}
+                      disabled={index === 0}
+                      title="Déplacer vers la gauche / monter"
+                      className="p-1.5 rounded-lg border border-border hover:bg-muted text-foreground disabled:opacity-30 disabled:pointer-events-none transition-colors"
+                    >
+                      <ArrowUp className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => handleMoveOrder(index, 'down')}
+                      disabled={index === slides.length - 1}
+                      title="Déplacer vers la droite / descendre"
+                      className="p-1.5 rounded-lg border border-border hover:bg-muted text-foreground disabled:opacity-30 disabled:pointer-events-none transition-colors"
+                    >
+                      <ArrowDown className="w-4 h-4" />
+                    </button>
                   </div>
 
-                  {/* Barre d'outils d'action */}
-                  <div className="pt-2 border-t border-border/60 flex items-center justify-between gap-1">
-                    {/* Réordonnancement */}
-                    <div className="flex items-center gap-1">
-                      <button
-                        onClick={() => handleMoveOrder(index, 'up')}
-                        disabled={index === 0}
-                        title="Monter d'une position"
-                        className="p-1.5 rounded-lg border border-border hover:bg-muted text-foreground disabled:opacity-30 disabled:pointer-events-none transition-colors"
-                      >
-                        <ArrowUp className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleMoveOrder(index, 'down')}
-                        disabled={index === slides.length - 1}
-                        title="Descendre d'une position"
-                        className="p-1.5 rounded-lg border border-border hover:bg-muted text-foreground disabled:opacity-30 disabled:pointer-events-none transition-colors"
-                      >
-                        <ArrowDown className="w-4 h-4" />
-                      </button>
-                    </div>
-
-                    {/* Édition / Suppression */}
-                    <div className="flex items-center gap-1">
-                      <button
-                        onClick={() => openEditModal(slide)}
-                        title="Modifier la photo"
-                        className="p-1.5 rounded-lg border border-border hover:bg-muted text-foreground transition-colors"
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(slide.id, slide.title)}
-                        title="Supprimer"
-                        className="p-1.5 rounded-lg border border-border hover:bg-rose-500/10 text-rose-500 transition-colors"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
+                  {/* Édition / Suppression */}
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => openEditModal(slide)}
+                      title="Modifier la photo"
+                      className="p-1.5 rounded-lg border border-border hover:bg-muted text-foreground transition-colors"
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => handleDelete(slide.id, index)}
+                      title="Supprimer"
+                      className="p-1.5 rounded-lg border border-border hover:bg-rose-500/10 text-rose-500 transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </div>
                 </div>
               </div>
@@ -457,7 +393,7 @@ export default function WelcomeSlidesAdminPage() {
           </div>
         )}
 
-        {/* Modal d'Ajout / Édition */}
+        {/* Modal d'Ajout / Édition (Image et Statut uniquement) */}
         {isModalOpen && (
           <div className="fixed inset-0 z-50 overflow-y-auto flex items-start justify-center p-4 pt-6 sm:pt-10 md:pt-12 bg-black/60 backdrop-blur-sm animate-in fade-in">
             <div className="bg-card border border-border rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-3 duration-150">
@@ -468,7 +404,7 @@ export default function WelcomeSlidesAdminPage() {
                     <Layers className="w-4 h-4" />
                   </div>
                   <h2 className="text-lg font-bold text-foreground">
-                    {editingSlide ? 'Modifier la photo' : 'Nouvelle photo carrousel'}
+                    {editingSlide ? 'Modifier la photo' : 'Ajouter une photo'}
                   </h2>
                 </div>
                 <button
@@ -481,115 +417,8 @@ export default function WelcomeSlidesAdminPage() {
 
               {/* Form Modal */}
               <form onSubmit={handleSubmit} className="p-5 space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label htmlFor="ws-title" className="block text-xs font-semibold text-foreground mb-1">
-                      Titre principal *
-                    </label>
-                    <input
-                      id="ws-title"
-                      name="title"
-                      type="text"
-                      required
-                      value={formTitle}
-                      onChange={(e) => setFormTitle(e.target.value)}
-                      placeholder="ex: Ikotofetsy sy Imahakà"
-                      className="w-full px-3 py-2 text-sm rounded-lg border border-border bg-background text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="ws-title-mg" className="block text-xs font-semibold text-foreground mb-1">
-                      Titre Malagasy
-                    </label>
-                    <input
-                      id="ws-title-mg"
-                      name="titleMg"
-                      type="text"
-                      value={formTitleMg}
-                      onChange={(e) => setFormTitleMg(e.target.value)}
-                      placeholder="ex: Ikotofetsy sy Imahakà"
-                      className="w-full px-3 py-2 text-sm rounded-lg border border-border bg-background text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label htmlFor="ws-badge" className="block text-xs font-semibold text-foreground mb-1">
-                      Badge FR *
-                    </label>
-                    <input
-                      id="ws-badge"
-                      name="badge"
-                      type="text"
-                      required
-                      value={formBadge}
-                      onChange={(e) => setFormBadge(e.target.value)}
-                      placeholder="ex: Contes"
-                      className="w-full px-3 py-2 text-sm rounded-lg border border-border bg-background text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="ws-badge-mg" className="block text-xs font-semibold text-foreground mb-1">
-                      Badge Malagasy *
-                    </label>
-                    <input
-                      id="ws-badge-mg"
-                      name="badgeMg"
-                      type="text"
-                      required
-                      value={formBadgeMg}
-                      onChange={(e) => setFormBadgeMg(e.target.value)}
-                      placeholder="ex: Angano"
-                      className="w-full px-3 py-2 text-sm rounded-lg border border-border bg-background text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label htmlFor="ws-tag" className="block text-xs font-semibold text-foreground mb-1">
-                      Sous-titre / Tag
-                    </label>
-                    <input
-                      id="ws-tag"
-                      name="tag"
-                      type="text"
-                      value={formTag}
-                      onChange={(e) => setFormTag(e.target.value)}
-                      placeholder="ex: Récits & Audio"
-                      className="w-full px-3 py-2 text-sm rounded-lg border border-border bg-background text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="ws-accent-color" className="block text-xs font-semibold text-foreground mb-1">
-                      Couleur d&apos;accent (Hex)
-                    </label>
-                    <div className="flex items-center gap-2">
-                      <input
-                        id="ws-accent-color"
-                        name="accentColor"
-                        type="color"
-                        value={formAccentColor}
-                        onChange={(e) => setFormAccentColor(e.target.value)}
-                        className="w-9 h-9 p-0.5 rounded-lg border border-border bg-background cursor-pointer"
-                      />
-                      <input
-                        id="ws-accent-color-hex"
-                        name="accentColorHex"
-                        type="text"
-                        aria-label="Code hexadécimal couleur d'accent"
-                        value={formAccentColor}
-                        onChange={(e) => setFormAccentColor(e.target.value)}
-                        placeholder="#4A6741"
-                        className="flex-1 px-3 py-2 text-sm rounded-lg border border-border bg-background text-foreground uppercase"
-                      />
-                    </div>
-                  </div>
-                </div>
-
                 <div>
-                  <label htmlFor="ws-image-url" className="block text-xs font-semibold text-foreground mb-1">
+                  <label htmlFor="ws-image-url" className="block text-xs font-semibold text-foreground mb-1.5">
                     Photo du carrousel (Téléversement Cloudinary ou URL) *
                   </label>
                   <ImageUploadDropzone
@@ -607,13 +436,13 @@ export default function WelcomeSlidesAdminPage() {
                       value={formImageUrl}
                       onChange={(e) => setFormImageUrl(e.target.value)}
                       placeholder="Ou collez directement une URL d'image (Cloudinary, Unsplash...)"
-                      className="w-full px-3 py-1.5 text-xs rounded-lg border border-border bg-background text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+                      className="w-full px-3 py-2 text-xs rounded-lg border border-border bg-background text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
                     />
                   </div>
                 </div>
 
                 {/* Checkbox Actif */}
-                <div className="flex items-center gap-2 pt-1">
+                <div className="flex items-center gap-2 pt-2">
                   <input
                     type="checkbox"
                     id="isActiveCheck"
@@ -649,7 +478,7 @@ export default function WelcomeSlidesAdminPage() {
                     ) : (
                       <Save className="w-4 h-4" />
                     )}
-                    {editingSlide ? 'Enregistrer' : 'Créer'}
+                    {editingSlide ? 'Enregistrer' : 'Ajouter'}
                   </button>
                 </div>
               </form>
