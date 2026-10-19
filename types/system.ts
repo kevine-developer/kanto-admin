@@ -28,6 +28,7 @@ export interface UserAccount {
   emailVerified: boolean;
   role: UserRole;
   tier: SubscriptionTier;
+  tierExpiresAt?: string | null;
   banned?: boolean | null;
   banReason?: string | null;
   banExpires?: string | null;

@@ -73,12 +73,14 @@ export const systemService = {
   async updateUserTier(
     id: string,
     tier: SubscriptionTier,
+    durationDays?: number,
+    reason?: string,
   ): Promise<{ success: boolean; message: string; user: UserAccount }> {
     return fetchApi<{ success: boolean; message: string; user: UserAccount }>(
       `/admin/users/${id}/tier`,
       {
         method: 'PATCH',
-        body: JSON.stringify({ tier }),
+        body: JSON.stringify({ tier, durationDays, reason }),
       },
     );
   },

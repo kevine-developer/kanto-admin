@@ -101,6 +101,12 @@ const TEMPLATE_LABELS: Record<string, string> = {
   CONTRIBUTION_APPROVED: 'Contribution publiée',
   CONTRIBUTION_STATUS_UPDATE: 'Statut contribution',
   MODERATION_ALERT: 'Alerte modération',
+  VIP_GRANTED: '👑 VIP : Attribution',
+  VIP_EXTENDED: '🎉 VIP : Prolongation',
+  VIP_EXPIRING_SOON: '⏳ VIP : Expiration imminente',
+  VIP_EXPIRED: 'VIP : Expiré',
+  USER_BANNED: '🚫 Compte suspendu',
+  USER_UNBANNED: '✅ Compte réactivé',
   ACCOUNT_DELETION: 'Suppression RGPD',
   TRANSACTIONAL: 'Transactionnel',
 };
