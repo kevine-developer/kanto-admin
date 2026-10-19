@@ -7,4 +7,5 @@ export * from './contributions.service';
 export * from './progression.service';
 export * from './beta-testers.service';
 export * from './emails.service';
+export * from './raki-teny.service';
 

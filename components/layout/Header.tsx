@@ -18,6 +18,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/proverbes':     'Proverbes & Fady',
   '/kabary':        'Discours & Kabary',
   '/citations':     'Citations & Auteurs',
+  '/raki-teny':     'Mots Rares & Insolites',
   '/true-false':    'Vrai ou Faux',
   '/word-puzzle':   "Remets dans l'ordre",
   '/missing-word':  'Mot Manquant',
