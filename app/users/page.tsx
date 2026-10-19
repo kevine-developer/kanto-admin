@@ -134,6 +134,21 @@ export default function UsersAdminPage() {
     newRole: 'USER',
   });
 
+  // Modal de gestion du statut VIP
+  const [vipModalState, setVipModalState] = useState<{
+    isOpen: boolean;
+    user: UserAccount | null;
+    durationDays: number;
+    reason: string;
+    isExtension: boolean;
+  }>({
+    isOpen: false,
+    user: null,
+    durationDays: 30,
+    reason: '',
+    isExtension: false,
+  });
+
   // Modal de confirmation (débannissement, suppression)
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
@@ -279,35 +294,58 @@ export default function UsersAdminPage() {
     }
   };
 
-  // Basculer le statut VIP (Sans publicité AdMob)
-  const handleToggleVip = (user: UserAccount) => {
+  // Ouvrir la modale VIP
+  const handleOpenVipModal = (user: UserAccount) => {
     const isVip = user.tier === 'VIP';
-    const newTier: SubscriptionTier = isVip ? 'FREE' : 'VIP';
-
-    setConfirmModal({
+    setVipModalState({
       isOpen: true,
-      title: isVip
-        ? 'Rétablir le compte en Standard ?'
-        : '👑 Accorder le statut VIP et désactiver les pubs ?',
-      description: isVip
-        ? `Le compte de ${user.name} (${user.email}) repassera en Standard. Les publicités AdMob seront réactivées dans son application mobile.`
-        : `Le compte de ${user.name} (${user.email}) passera au statut VIP. Toutes les publicités (bannières, interstitiels, vidéos récompensées) seront automatiquement désactivées sur son application mobile.`,
-      variant: isVip ? 'warning' : 'primary',
-      action: async () => {
-        try {
-          const res = await systemService.updateUserTier(user.id, newTier);
-          toast.success(res.message);
-          void loadUsers();
-          if (selectedUserDetail?.user.id === user.id) {
-            void handleOpenDetails(user.id);
-          }
-        } catch (err: unknown) {
-          toast.error(
-            err instanceof Error ? err.message : 'Erreur lors de la mise à jour du statut VIP',
-          );
-        }
-      },
+      user,
+      durationDays: 30,
+      reason: '',
+      isExtension: isVip,
     });
+  };
+
+  // Confirmer l'attribution ou prolongation VIP
+  const handleConfirmVipGrant = async () => {
+    if (!vipModalState.user) return;
+    try {
+      const res = await systemService.updateUserTier(
+        vipModalState.user.id,
+        'VIP',
+        vipModalState.durationDays > 0 ? vipModalState.durationDays : undefined,
+        vipModalState.reason.trim() || undefined,
+      );
+      toast.success(res.message);
+      setVipModalState({ isOpen: false, user: null, durationDays: 30, reason: '', isExtension: false });
+      void loadUsers();
+      if (selectedUserDetail?.user.id === vipModalState.user.id) {
+        void handleOpenDetails(vipModalState.user.id);
+      }
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Erreur mise à jour statut VIP');
+    }
+  };
+
+  // Révoquer le statut VIP (retour à Standard FREE)
+  const handleConfirmVipRevoke = async () => {
+    if (!vipModalState.user) return;
+    try {
+      const res = await systemService.updateUserTier(
+        vipModalState.user.id,
+        'FREE',
+        undefined,
+        vipModalState.reason.trim() || 'Retrait manuel du statut VIP par l’administration',
+      );
+      toast.success(res.message);
+      setVipModalState({ isOpen: false, user: null, durationDays: 30, reason: '', isExtension: false });
+      void loadUsers();
+      if (selectedUserDetail?.user.id === vipModalState.user.id) {
+        void handleOpenDetails(vipModalState.user.id);
+      }
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Erreur révocation statut VIP');
+    }
   };
 
   return (
@@ -534,7 +572,11 @@ export default function UsersAdminPage() {
                                   : 'text-[var(--text-muted)]'
                               }`}
                             >
-                              {tierBadge.adsDisabled ? '🚫 Sans pub' : '📢 Pubs actives'}
+                              {tierBadge.adsDisabled
+                                ? u.tierExpiresAt
+                                  ? `🚫 Sans pub · Exp. ${new Date(u.tierExpiresAt).toLocaleDateString('fr-FR')}`
+                                  : '🚫 Sans pub · Permanent'
+                                : '📢 Pubs actives'}
                             </span>
                           </div>
                         </td>
@@ -566,10 +608,10 @@ export default function UsersAdminPage() {
 
                             <button
                               type="button"
-                              onClick={() => handleToggleVip(u)}
+                              onClick={() => handleOpenVipModal(u)}
                               title={
                                 u.tier === 'VIP'
-                                  ? 'Retirer le statut VIP (Réactiver les publicités)'
+                                  ? 'Gérer le statut VIP (Prolonger ou retirer)'
                                   : '👑 Accorder le statut VIP (Désactiver toutes les publicités)'
                               }
                               className={`p-1.5 rounded-md transition cursor-pointer ${
@@ -773,10 +815,20 @@ export default function UsersAdminPage() {
                       ? "Cet utilisateur dispose d'un abonnement Premium actif sans publicité."
                       : "Compte Standard. Les publicités AdMob sont normalement diffusées dans l'application mobile."}
                   </p>
+                  {selectedUserDetail.user.tierExpiresAt && (
+                    <div className="text-[11px] font-mono text-amber-600 dark:text-amber-400 font-medium">
+                      ⏳ Expire le : {new Date(selectedUserDetail.user.tierExpiresAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                    </div>
+                  )}
+                  {selectedUserDetail.user.tier === 'VIP' && !selectedUserDetail.user.tierExpiresAt && (
+                    <div className="text-[11px] font-mono text-emerald-600 dark:text-emerald-400 font-medium">
+                      ✨ Accès VIP permanent (sans expiration)
+                    </div>
+                  )}
                 </div>
                 <button
                   type="button"
-                  onClick={() => handleToggleVip(selectedUserDetail.user)}
+                  onClick={() => handleOpenVipModal(selectedUserDetail.user)}
                   className={`px-3 py-1.5 rounded-lg text-xs font-semibold shrink-0 transition cursor-pointer flex items-center justify-center gap-1.5 border shadow-xs ${
                     selectedUserDetail.user.tier === 'VIP'
                       ? 'border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300 hover:bg-amber-500/20'
@@ -790,8 +842,8 @@ export default function UsersAdminPage() {
                     }
                   />
                   {selectedUserDetail.user.tier === 'VIP'
-                    ? 'Retirer VIP (Réactiver pubs)'
-                    : '👑 Rendre VIP (Sans pub)'}
+                    ? '👑 Gérer le VIP (Prolonger / Retirer)'
+                    : '👑 Accorder le statut VIP'}
                 </button>
               </div>
 
@@ -1023,6 +1075,116 @@ export default function UsersAdminPage() {
                 >
                   Enregistrer
                 </button>
+              </div>
+            </div>
+          </Modal>
+        )}
+
+        {/* Modal : Gestion VIP */}
+        {vipModalState.isOpen && vipModalState.user && (
+          <Modal
+            isOpen={true}
+            onClose={() =>
+              setVipModalState({ isOpen: false, user: null, durationDays: 30, reason: '', isExtension: false })
+            }
+            title={
+              vipModalState.isExtension
+                ? `👑 Prolonger ou gérer le VIP de ${vipModalState.user.name}`
+                : `👑 Accorder le statut VIP à ${vipModalState.user.name}`
+            }
+            maxWidth="md"
+          >
+            <div className="space-y-4 text-xs">
+              <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-300">
+                <div className="font-semibold flex items-center gap-1.5 mb-1">
+                  <Crown size={14} className="fill-amber-500/30 text-amber-600" />
+                  Privilèges VIP accordés
+                </div>
+                <p className="text-[11px] leading-relaxed text-[var(--foreground)]">
+                  Le statut VIP désactive immédiatement toutes les publicités (bannières, interstitiels, vidéos récompensées) sur l&apos;application mobile Kanto MG de l&apos;utilisateur.
+                </p>
+                {vipModalState.user.tierExpiresAt && (
+                  <div className="mt-2 text-[10.5px] font-mono text-amber-700 dark:text-amber-300 font-semibold">
+                    Échéance actuelle : {new Date(vipModalState.user.tierExpiresAt).toLocaleDateString('fr-FR')} (la prolongation s&apos;ajoutera à cette date)
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="block font-semibold text-[var(--foreground)] mb-1.5">
+                  Durée de validité de l&apos;avantage :
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { label: '30 jours (1 mois)', value: 30 },
+                    { label: '90 jours (3 mois)', value: 90 },
+                    { label: '365 jours (1 an)', value: 365 },
+                    { label: 'Permanent (à vie)', value: 0 },
+                  ].map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setVipModalState((s) => ({ ...s, durationDays: opt.value }))}
+                      className={`p-2.5 rounded-lg border text-left transition cursor-pointer flex items-center justify-between ${
+                        vipModalState.durationDays === opt.value
+                          ? 'border-amber-500 bg-amber-500/10 text-amber-700 dark:text-amber-300 font-semibold'
+                          : 'border-[var(--card-border)] bg-[var(--background)] hover:bg-[var(--card-hover)] text-[var(--foreground)]'
+                      }`}
+                    >
+                      <span>{opt.label}</span>
+                      {vipModalState.durationDays === opt.value && (
+                        <CheckCircle2 size={13} className="text-amber-600" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-[var(--foreground)] mb-1">
+                  Motif administratif (facultatif) :
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ex : Récompense contributeur d'élite, cadeau partenaire..."
+                  value={vipModalState.reason}
+                  onChange={(e) => setVipModalState((s) => ({ ...s, reason: e.target.value }))}
+                  className="w-full px-3 py-1.5 rounded-lg text-xs bg-[var(--background)] border border-[var(--card-border)] text-[var(--foreground)] focus:outline-hidden focus:border-[var(--accent)]"
+                />
+              </div>
+
+              <div className="flex items-center justify-between gap-2 pt-3 border-t border-[var(--card-border)]">
+                {vipModalState.isExtension ? (
+                  <button
+                    type="button"
+                    onClick={handleConfirmVipRevoke}
+                    className="px-3 py-1.5 rounded-lg border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 font-semibold transition cursor-pointer"
+                  >
+                    Retirer le VIP (Standard)
+                  </button>
+                ) : (
+                  <span />
+                )}
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setVipModalState({ isOpen: false, user: null, durationDays: 30, reason: '', isExtension: false })
+                    }
+                    className="px-3 py-1.5 rounded-lg border border-[var(--card-border)] bg-[var(--card)] text-[var(--text-muted)] hover:text-[var(--foreground)]"
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleConfirmVipGrant}
+                    className="px-4 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-semibold transition cursor-pointer flex items-center gap-1.5 shadow-xs"
+                  >
+                    <Crown size={13} />
+                    {vipModalState.isExtension ? 'Confirmer la prolongation' : 'Accorder le statut VIP'}
+                  </button>
+                </div>
               </div>
             </div>
           </Modal>
