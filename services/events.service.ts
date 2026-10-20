@@ -69,7 +69,7 @@ export interface EventAdminItem {
   isFeatured: boolean;
   rulesMg?: string | null;
   rulesFr?: string | null;
-  metadata?: any;
+  metadata?: Record<string, unknown> | null;
   cancelledReason?: string | null;
   createdAt: string;
   updatedAt: string;
@@ -168,7 +168,7 @@ export interface CreateEventInput {
   isFeatured?: boolean;
   rulesMg?: string;
   rulesFr?: string;
-  metadata?: any;
+  metadata?: Record<string, unknown>;
   rewards?: {
     rewardType: EventRewardType;
     titleMg: string;

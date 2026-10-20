@@ -12,13 +12,13 @@ import {
   EventParticipationType,
   EventRewardType,
   AdminEventParticipantItem,
+  CreateEventInput,
 } from '@/services/events.service';
 import {
   Calendar,
   Plus,
   Search,
   Users,
-  Trophy,
   Gift,
   Zap,
   Award,
@@ -28,15 +28,12 @@ import {
   Archive,
   Trash2,
   Edit,
-  Eye,
   RefreshCw,
   Loader2,
   X,
   Play,
   Pause,
   Ban,
-  ArrowRight,
-  ExternalLink,
   ChevronLeft,
   ChevronRight,
   Sparkles,
@@ -128,7 +125,7 @@ export default function EventsAdminPage() {
       setIsOverviewLoading(true);
       const data = await eventsAdminService.getOverview();
       setOverview(data);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Erreur chargement overview:', err);
     } finally {
       setIsOverviewLoading(false);
@@ -151,8 +148,9 @@ export default function EventsAdminPage() {
         total: res.pagination?.total ?? 0,
         totalPages: res.pagination?.totalPages ?? 1,
       }));
-    } catch (err: any) {
-      toast.error(err.message || 'Impossible de charger la liste des événements.');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Impossible de charger la liste des événements.';
+      toast.error(msg);
     } finally {
       setIsLoading(false);
     }
@@ -179,8 +177,9 @@ export default function EventsAdminPage() {
       setParticipants(res.items || []);
       setParticipantsTotal(res.pagination?.total ?? 0);
       setParticipantsTotalPages(res.pagination?.totalPages ?? 1);
-    } catch (err: any) {
-      toast.error(err.message || 'Erreur lors du chargement des participants.');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Erreur lors du chargement des participants.';
+      toast.error(msg);
     } finally {
       setIsParticipantsLoading(false);
     }
@@ -252,7 +251,11 @@ export default function EventsAdminPage() {
     setFormIsFeatured(event.isFeatured);
     setFormRulesFr(event.rulesFr || '');
     setFormRulesMg(event.rulesMg || '');
-    setFormGameModuleId(event.metadata?.gameModuleId || '');
+    const moduleMetadata =
+      typeof event.metadata?.gameModuleId === 'string'
+        ? event.metadata.gameModuleId
+        : '';
+    setFormGameModuleId(moduleMetadata);
     setFormRewards(
       event.rewards?.map((r) => ({
         rewardType: r.rewardType,
@@ -286,7 +289,7 @@ export default function EventsAdminPage() {
 
     try {
       setIsSubmitting(true);
-      const payload: any = {
+      const payload: CreateEventInput = {
         titleFr: formTitleFr.trim(),
         titleMg: formTitleMg.trim(),
         shortDescFr: formShortDescFr.trim() || undefined,
@@ -322,8 +325,9 @@ export default function EventsAdminPage() {
 
       setIsFormModalOpen(false);
       await Promise.all([loadEvents(), loadOverview()]);
-    } catch (err: any) {
-      toast.error(err.message || 'Erreur lors de l’enregistrement de l’événement.');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Erreur lors de l’enregistrement de l’événement.';
+      toast.error(msg);
     } finally {
       setIsSubmitting(false);
     }
@@ -354,8 +358,9 @@ export default function EventsAdminPage() {
       setStatusModalEvent(null);
       setTargetStatus(null);
       await Promise.all([loadEvents(), loadOverview()]);
-    } catch (err: any) {
-      toast.error(err.message || 'Impossible de modifier le statut de l’événement.');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Impossible de modifier le statut de l’événement.';
+      toast.error(msg);
     } finally {
       setIsStatusUpdating(false);
     }
@@ -376,8 +381,9 @@ export default function EventsAdminPage() {
       }
       setDeleteModalEvent(null);
       await Promise.all([loadEvents(), loadOverview()]);
-    } catch (err: any) {
-      toast.error(err.message || 'Erreur lors de la suppression de l’événement.');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Erreur lors de la suppression de l’événement.';
+      toast.error(msg);
     } finally {
       setIsDeleting(false);
     }
@@ -1026,7 +1032,7 @@ export default function EventsAdminPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-semibold text-[var(--foreground)] mb-1">
-                      Titre de l'événement (Français) *
+                      Titre de l&apos;événement (Français) *
                     </label>
                     <input
                       type="text"
@@ -1040,7 +1046,7 @@ export default function EventsAdminPage() {
 
                   <div>
                     <label className="block text-xs font-semibold text-[var(--foreground)] mb-1">
-                      Lohatenin'ny hetsika (Malagasy) *
+                      Lohatenin&apos;ny hetsika (Malagasy) *
                     </label>
                     <input
                       type="text"
@@ -1251,7 +1257,7 @@ export default function EventsAdminPage() {
                     className="w-4 h-4 rounded text-[var(--accent)]"
                   />
                   <label htmlFor="isFeatured" className="text-xs font-semibold text-[var(--foreground)] cursor-pointer">
-                    Mettre en avant comme événement « À la une » (affiché en tête du carrousel d'accueil mobile)
+                    Mettre en avant comme événement « À la une » (affiché en tête du carrousel d&apos;accueil mobile)
                   </label>
                 </div>
 

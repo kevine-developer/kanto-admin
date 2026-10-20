@@ -39,7 +39,7 @@ export default function ReferralsAdminPage() {
     totalPages: 1,
   });
 
-  const [isLoading, setIsLoading] = useState(true);
+  const [_isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
@@ -56,7 +56,7 @@ export default function ReferralsAdminPage() {
       if (data.config) {
         setConfigForm(data.config);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.warn('Erreur chargement overview parrainage :', err);
     }
   }, []);
@@ -71,7 +71,7 @@ export default function ReferralsAdminPage() {
       });
       setReferrals(res.items);
       setPagination(res.pagination);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.warn('Erreur chargement liste parrainages :', err);
     }
   }, [statusFilter, searchQuery]);
@@ -104,10 +104,12 @@ export default function ReferralsAdminPage() {
         type: 'success',
         text: 'Configuration du programme de parrainage mise à jour avec succès.',
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const errorMessage =
+        err instanceof Error ? err.message : 'Erreur lors de la mise à jour de la configuration.';
       setFeedback({
         type: 'error',
-        text: err?.message || 'Erreur lors de la mise à jour de la configuration.',
+        text: errorMessage,
       });
     } finally {
       setIsSavingConfig(false);
@@ -476,7 +478,7 @@ export default function ReferralsAdminPage() {
           <div>
             <h3 className="text-base font-bold">Règles et Récompenses du Parrainage</h3>
             <p className="text-xs text-muted-foreground mt-1">
-              Modifiez les seuils de gains d'XP, les pièces Vola et les limites anti-fraude sans redémarrage serveur.
+              Modifiez les seuils de gains d&apos;XP, les pièces Vola et les limites anti-fraude sans redémarrage serveur.
             </p>
           </div>
 
@@ -613,7 +615,7 @@ export default function ReferralsAdminPage() {
                 required
               />
               <span className="text-[10px] text-muted-foreground mt-1 block">
-                Protection anti-spam : au-delà de ce nombre, les filleuls sont enregistrés sans distribuer d'XP supplémentaire au parrain.
+                Protection anti-spam : au-delà de ce nombre, les filleuls sont enregistrés sans distribuer d&apos;XP supplémentaire au parrain.
               </span>
             </div>
 
