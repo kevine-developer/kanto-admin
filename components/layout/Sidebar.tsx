@@ -6,6 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useSession, signOut } from '@/lib/auth-client';
 import {
   LayoutDashboard,
+  Calendar,
   BookOpen,
   BookMarked,
   ScrollText,
@@ -28,6 +29,7 @@ import {
   Images,
   Sparkles,
   FileText,
+  Gift,
   Smartphone,
   History,
   Mail,
@@ -47,7 +49,9 @@ const NAV_GROUPS: { label: string; items: { href: string; icon: React.ElementTyp
     label: 'Pilotage & Activité',
     items: [
       { href: '/',              icon: LayoutDashboard, label: "Vue d'ensemble" },
+      { href: '/events',        icon: Calendar,        label: 'Événements & Défis' },
       { href: '/contributions', icon: HeartHandshake,  label: 'Contributions' },
+      { href: '/referrals',     icon: Gift,            label: 'Parrainage & Filleuls' },
     ],
   },
   {
