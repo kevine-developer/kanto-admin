@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { AdminShell } from '@/components/layout/AdminShell';
 import { useToast } from '@/lib/hooks/useToast';
 import {
@@ -56,8 +56,22 @@ export default function EventsAdminPage() {
 
   // Filtres
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [categoryFilter, setCategoryFilter] = useState('ALL');
+
+  const toastRef = useRef(toast);
+  useEffect(() => {
+    toastRef.current = toast;
+  }, [toast]);
+
+  // Debounce de recherche pour éviter de saturer l'API
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [search]);
 
   // Modal Création / Édition
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
@@ -140,7 +154,7 @@ export default function EventsAdminPage() {
         limit: pagination.limit,
         status: statusFilter,
         category: categoryFilter,
-        search: search.trim() || undefined,
+        search: debouncedSearch.trim() || undefined,
       });
       setEvents(res.items || []);
       setPagination((prev) => ({
@@ -150,11 +164,11 @@ export default function EventsAdminPage() {
       }));
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Impossible de charger la liste des événements.';
-      toast.error(msg);
+      toastRef.current.error(msg);
     } finally {
       setIsLoading(false);
     }
-  }, [pagination.page, pagination.limit, statusFilter, categoryFilter, search, toast]);
+  }, [pagination.page, pagination.limit, statusFilter, categoryFilter, debouncedSearch]);
 
   useEffect(() => {
     loadOverview();

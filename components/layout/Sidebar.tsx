@@ -27,7 +27,7 @@ import {
   Megaphone,
   Landmark,
   Images,
-  Sparkles,
+  Flame,
   FileText,
   Gift,
   Smartphone,
@@ -58,7 +58,7 @@ const NAV_GROUPS: { label: string; items: { href: string; icon: React.ElementTyp
     label: 'Vitrine & Médias Mobile',
     items: [
       { href: '/welcome-slides',    icon: Images,     label: "Écran d'Accueil" },
-      { href: '/marketing-banners', icon: Sparkles,   label: 'Bannières Marketing' },
+      { href: '/marketing-banners', icon: Flame,      label: 'Bannières Marketing' },
       { href: '/locks',             icon: Layers,     label: 'Visuels Jeux & Catégories' },
       { href: '/announcements',      icon: Megaphone,  label: 'Annonces Système' },
     ],
