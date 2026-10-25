@@ -30,7 +30,7 @@ export default function LocksAdminPage() {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedType, setSelectedType] = useState<
-    'ALL' | 'GAME' | 'CATEGORY' | 'LOCKED' | 'HIDDEN'
+    'ALL' | 'GAME' | 'CATEGORY' | 'FEATURE' | 'LOCKED' | 'HIDDEN'
   >('ALL');
 
   // Modale Ajout / Modification
@@ -99,6 +99,7 @@ export default function LocksAdminPage() {
 
   const gamesCount = modules.filter((m) => m.type === 'GAME').length;
   const categoriesCount = modules.filter((m) => m.type === 'CATEGORY').length;
+  const featuresCount = modules.filter((m) => m.type === 'FEATURE').length;
   const hiddenCount = modules.filter((m) => m.isVisible === false).length;
 
   return (
@@ -107,7 +108,7 @@ export default function LocksAdminPage() {
         {/* En-tête standardisé */}
         <PageHeader
           title="Visuels & Disponibilité"
-          description="Photos de présentation, titres bilingues et disponibilité des jeux et catégories."
+          description="Photos de présentation, titres bilingues et visuels des jeux, catégories et fonctionnalités (Défi du jour, etc.)."
           icon={Layers}
           badge={
             <span
@@ -140,7 +141,7 @@ export default function LocksAdminPage() {
         />
 
         {/* Métriques compactes */}
-        <div className="grid grid-cols-4 gap-2.5">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
           <div className="p-3 rounded-lg border border-[var(--card-border)] bg-[var(--card)]">
             <div className="text-[10px] uppercase font-mono tracking-wider text-[var(--text-subtle)]">
               Total Modules
@@ -172,6 +173,16 @@ export default function LocksAdminPage() {
 
           <div className="p-3 rounded-lg border border-[var(--card-border)] bg-[var(--card)]">
             <div className="text-[10px] uppercase font-mono tracking-wider text-[var(--text-subtle)] flex items-center justify-between">
+              <span>Fonctions</span>
+              <Layers className="w-3 h-3 text-amber-500" />
+            </div>
+            <div className="text-lg font-bold font-mono text-[var(--foreground)] mt-0.5">
+              {featuresCount}
+            </div>
+          </div>
+
+          <div className="p-3 rounded-lg border border-[var(--card-border)] bg-[var(--card)]">
+            <div className="text-[10px] uppercase font-mono tracking-wider text-[var(--text-subtle)] flex items-center justify-between">
               <span>Verrouillés</span>
               {stats.locked > 0 && <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />}
             </div>
@@ -188,6 +199,7 @@ export default function LocksAdminPage() {
               { id: 'ALL' as const, label: `Tous (${stats.total})` },
               { id: 'GAME' as const, label: `Jeux (${gamesCount})` },
               { id: 'CATEGORY' as const, label: `Catégories (${categoriesCount})` },
+              { id: 'FEATURE' as const, label: `Fonctions (${featuresCount})` },
               { id: 'LOCKED' as const, label: `Verrouillés (${stats.locked})` },
               { id: 'HIDDEN' as const, label: `Masqués (${hiddenCount})` },
             ].map((tab) => (

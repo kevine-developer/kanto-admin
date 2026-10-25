@@ -31,7 +31,7 @@ export interface LocksResponse {
 
 export interface CreateModuleDto {
   key: string;
-  type: 'GAME' | 'CATEGORY';
+  type: ModuleType;
   nameFr: string;
   nameMg: string;
   imageUrl?: string | null;
@@ -42,7 +42,7 @@ export interface CreateModuleDto {
 }
 
 export interface UpdateModuleDto {
-  type?: 'GAME' | 'CATEGORY';
+  type?: ModuleType;
   nameFr?: string;
   nameMg?: string;
   imageUrl?: string | null;

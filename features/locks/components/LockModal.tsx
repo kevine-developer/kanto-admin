@@ -3,8 +3,8 @@
 import React, { useState } from 'react';
 import { Modal, Field, ImageUploadDropzone } from '@/components/ui';
 import { PRESET_LOCK_REASONS } from '@/constants/presets';
-import { ModuleLockItem, CreateModuleDto, UpdateModuleDto } from '@/types/lock';
-import { Gamepad2, BookOpen } from 'lucide-react';
+import { ModuleLockItem, CreateModuleDto, UpdateModuleDto, ModuleType } from '@/types/lock';
+import { Gamepad2, BookOpen, Layers } from 'lucide-react';
 import { slugify } from '@/lib/utils/media';
 
 interface LockModalProps {
@@ -21,8 +21,8 @@ export function LockModal({
   onSave,
 }: LockModalProps) {
   const isEditing = !!editingModule;
-  const [formType, setFormType] = useState<'GAME' | 'CATEGORY'>(
-    editingModule?.type === 'CATEGORY' ? 'CATEGORY' : 'GAME'
+  const [formType, setFormType] = useState<ModuleType>(
+    editingModule?.type || 'GAME'
   );
   const [formNameFr, setFormNameFr] = useState(editingModule?.nameFr || '');
   const [formNameMg, setFormNameMg] = useState(editingModule?.nameMg || '');
@@ -40,16 +40,16 @@ export function LockModal({
     setFormNameFr(value);
     if (!isEditing) {
       const slug = slugify(value).replace(/-/g, '');
-      const prefix = formType === 'GAME' ? 'game:' : 'category:';
+      const prefix = formType === 'GAME' ? 'game:' : formType === 'FEATURE' ? 'feature:' : 'category:';
       setFormKey(prefix + slug);
     }
   };
 
-  const handleTypeChange = (newType: 'GAME' | 'CATEGORY') => {
+  const handleTypeChange = (newType: ModuleType) => {
     setFormType(newType);
     if (!isEditing) {
       const slug = slugify(formNameFr).replace(/-/g, '');
-      const prefix = newType === 'GAME' ? 'game:' : 'category:';
+      const prefix = newType === 'GAME' ? 'game:' : newType === 'FEATURE' ? 'feature:' : 'category:';
       setFormKey(prefix + slug);
     }
   };
@@ -116,31 +116,44 @@ export function LockModal({
           <span className="block text-[10.5px] font-mono text-[var(--text-muted)] mb-1 uppercase tracking-wider">
             Type de module :
           </span>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-3 gap-2">
             <button
               type="button"
               onClick={() => handleTypeChange('GAME')}
-              className={`py-1.5 px-3 rounded-md border text-xs font-medium flex items-center justify-center gap-1.5 cursor-pointer transition ${
+              className={`py-1.5 px-2 rounded-md border text-xs font-medium flex items-center justify-center gap-1 cursor-pointer transition ${
                 formType === 'GAME'
                   ? 'border-emerald-500 bg-emerald-50/50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300'
                   : 'border-[var(--input-border)] bg-[var(--input-bg)] text-[var(--text-muted)] hover:text-[var(--foreground)]'
               }`}
             >
               <Gamepad2 className="w-3.5 h-3.5" />
-              <span>Jeu Malagasy</span>
+              <span>Jeu</span>
             </button>
 
             <button
               type="button"
               onClick={() => handleTypeChange('CATEGORY')}
-              className={`py-1.5 px-3 rounded-md border text-xs font-medium flex items-center justify-center gap-1.5 cursor-pointer transition ${
+              className={`py-1.5 px-2 rounded-md border text-xs font-medium flex items-center justify-center gap-1 cursor-pointer transition ${
                 formType === 'CATEGORY'
                   ? 'border-sky-500 bg-sky-50/50 text-sky-800 dark:bg-sky-950/40 dark:text-sky-300'
                   : 'border-[var(--input-border)] bg-[var(--input-bg)] text-[var(--text-muted)] hover:text-[var(--foreground)]'
               }`}
             >
               <BookOpen className="w-3.5 h-3.5" />
-              <span>Catégorie Culturelle</span>
+              <span>Catégorie</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleTypeChange('FEATURE')}
+              className={`py-1.5 px-2 rounded-md border text-xs font-medium flex items-center justify-center gap-1 cursor-pointer transition ${
+                formType === 'FEATURE'
+                  ? 'border-purple-500 bg-purple-50/50 text-purple-800 dark:bg-purple-950/40 dark:text-purple-300'
+                  : 'border-[var(--input-border)] bg-[var(--input-bg)] text-[var(--text-muted)] hover:text-[var(--foreground)]'
+              }`}
+            >
+              <Layers className="w-3.5 h-3.5" />
+              <span>Fonctionnalité</span>
             </button>
           </div>
         </div>

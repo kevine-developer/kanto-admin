@@ -6,6 +6,7 @@ import { resolveMediaUrl } from '@/lib/utils/media';
 import {
   Gamepad2,
   BookOpen,
+  Layers,
   Lock,
   Check,
   Loader2,
@@ -110,6 +111,8 @@ export function LocksTable({
                       <div className="w-16 h-10 rounded-lg bg-[var(--input-bg)] border border-dashed border-[var(--card-border)] flex flex-col items-center justify-center text-[var(--text-subtle)] group-hover:border-[var(--accent)] group-hover:text-[var(--accent)] transition-colors">
                         {item.type === 'GAME' ? (
                           <Gamepad2 className="w-3.5 h-3.5" />
+                        ) : item.type === 'FEATURE' ? (
+                          <Layers className="w-3.5 h-3.5 text-purple-500" />
                         ) : (
                           <BookOpen className="w-3.5 h-3.5" />
                         )}
@@ -145,6 +148,11 @@ export function LocksTable({
                     <span className="inline-flex items-center gap-1 text-[10px] font-mono text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 px-1.5 py-0.5 rounded">
                       <Gamepad2 className="w-2.5 h-2.5" />
                       LALAO
+                    </span>
+                  ) : item.type === 'FEATURE' ? (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-mono text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800 px-1.5 py-0.5 rounded">
+                      <Layers className="w-2.5 h-2.5" />
+                      FONCTION
                     </span>
                   ) : (
                     <span className="inline-flex items-center gap-1 text-[10px] font-mono text-sky-700 dark:text-sky-300 bg-sky-50 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-800 px-1.5 py-0.5 rounded">

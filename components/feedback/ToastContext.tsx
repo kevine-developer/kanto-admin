@@ -45,12 +45,15 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     [removeToast]
   );
 
-  const toastMethods = {
-    success: (msg: string, dur?: number) => addToast('success', msg, dur),
-    error: (msg: string, dur?: number) => addToast('error', msg, dur),
-    warning: (msg: string, dur?: number) => addToast('warning', msg, dur),
-    info: (msg: string, dur?: number) => addToast('info', msg, dur),
-  };
+  const toastMethods = React.useMemo(
+    () => ({
+      success: (msg: string, dur?: number) => addToast('success', msg, dur),
+      error: (msg: string, dur?: number) => addToast('error', msg, dur),
+      warning: (msg: string, dur?: number) => addToast('warning', msg, dur),
+      info: (msg: string, dur?: number) => addToast('info', msg, dur),
+    }),
+    [addToast]
+  );
 
   const typeConfig: Record<
     ToastType,
