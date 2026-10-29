@@ -33,6 +33,7 @@ import {
   Smartphone,
   History,
   Mail,
+  Compass,
 } from 'lucide-react';
 
 
@@ -77,6 +78,7 @@ const NAV_GROUPS: { label: string; items: { href: string; icon: React.ElementTyp
   {
     label: 'Jeux & Gamification',
     items: [
+      { href: '/game-wizard',  icon: Compass,    label: 'Assistant de Jeux' },
       { href: '/true-false',   icon: CheckCheck, label: 'Vrai ou Faux' },
       { href: '/word-puzzle',  icon: Puzzle,     label: "Remets dans l'ordre" },
       { href: '/missing-word', icon: HelpCircle, label: 'Mot Manquant' },

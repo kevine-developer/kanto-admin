@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { AdminShell } from '@/components/layout/AdminShell';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Pagination, ConfirmModal } from '@/components/ui';
@@ -20,19 +21,28 @@ import {
   Download,
   Upload,
   FileSpreadsheet,
+  FileCode2,
   CheckCircle2,
+  AlertTriangle,
+  Info,
 } from 'lucide-react';
 
-interface ParsedCsvRow {
+interface ParsedImportRow {
   malagasy: string;
   french: string;
   meaning: string;
   example: string;
   category: 'PROVERBE' | 'EXPRESSION' | 'DICTON';
   difficulty: 'EASY' | 'MEDIUM' | 'HARD';
+  themes?: string[];
+  origins?: string[];
+  phonetic?: string;
   dialectName: string;
   dialectText: string;
+  dialectVariants?: Array<{ dialectName: string; text: string; notes?: string }>;
   isValid: boolean;
+  isDuplicate?: boolean;
+  duplicateReason?: string;
 }
 
 interface MalagasyItem {
@@ -69,7 +79,7 @@ interface MalagasyItem {
 const inputCls =
   'w-full px-3 py-1.5 text-xs rounded-lg bg-[var(--input-bg)] border border-[var(--input-border)] text-[var(--foreground)] focus:outline-none focus:border-[var(--accent)] transition placeholder:text-[var(--text-subtle)]';
 
-export default function ProverbesAdminPage() {
+function ProverbesAdminPageContent() {
   const { toast } = useToast();
   const [items, setItems] = useState<MalagasyItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -106,7 +116,7 @@ export default function ProverbesAdminPage() {
   const [isExporting, setIsExporting] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [importFile, setImportFile] = useState<File | null>(null);
-  const [parsedRows, setParsedRows] = useState<ParsedCsvRow[]>([]);
+  const [parsedRows, setParsedRows] = useState<ParsedImportRow[]>([]);
   const [isParsing, setIsParsing] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [skipDuplicates, setSkipDuplicates] = useState(true);
@@ -117,6 +127,17 @@ export default function ProverbesAdminPage() {
     errorsCount: number;
     errors: Array<{ row: number; text: string; reason: string }>;
   } | null>(null);
+
+  const searchParams = useSearchParams();
+  const hasTriggeredImportRef = useRef(false);
+
+  useEffect(() => {
+    if (hasTriggeredImportRef.current) return;
+    if (searchParams?.get('import') === 'true' || searchParams?.get('import') === '1') {
+      hasTriggeredImportRef.current = true;
+      setIsImportModalOpen(true);
+    }
+  }, [searchParams]);
 
   const loadItems = useCallback(async () => {
     try {
@@ -299,9 +320,9 @@ export default function ProverbesAdminPage() {
   // Télécharger le modèle de CSV type (Template)
   const downloadTemplateCsv = () => {
     const templateContent =
-      '\uFEFFMalagasy,Traduction Francaise,Signification,Exemple,Categorie,Difficulte,Dialecte,Variante Dialectale\r\n' +
-      '"Ny fihavanana toy ny ketsa, raha fafy tsy maniry fa raha afindra vao vanona","La fraternité est comme de jeunes plants de riz...","La vraie fraternité se cultive et se consolide par les actes d entraide.","Rehefa misy fahoriana...","PROVERBE","EASY","",""\r\n' +
-      '"Aza manao lamban-tsomonda","Ne fais pas comme le vêtement de deuil porté à l envers","Ne sois pas hypocrite dans tes attitudes et paroles.","","PROVERBE","MEDIUM","",""';
+      '\uFEFFMalagasy,Traduction Francaise,Signification,Exemple,Categorie,Difficulte,Themes,Origines,Phonetique,Dialecte,Variante Dialectale\r\n' +
+      '"Ny fihavanana toy ny ketsa, raha fafy tsy maniry fa raha afindra vao vanona","La fraternité est comme de jeunes plants de riz...","La vraie fraternité se cultive et se consolide par les actes d entraide.","Rehefa misy fahoriana...","PROVERBE","EASY","Fihavanana, Solidarite","Hautes Terres","ni fihavanana toui ni ketsa...","",""\r\n' +
+      '"Aza manao lamban-tsomonda","Ne fais pas comme le vêtement de deuil porté à l envers","Ne sois pas hypocrite dans tes attitudes et paroles.","","PROVERBE","MEDIUM","Sagesse, Honnetete","General","","",""';
 
     const blob = new Blob([templateContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -314,8 +335,49 @@ export default function ProverbesAdminPage() {
     URL.revokeObjectURL(url);
   };
 
-  // Analyseur CSV côté client avec support des guillemets
-  const parseCsvText = (text: string) => {
+  // Télécharger le modèle JSON type (Template)
+  const downloadTemplateJson = () => {
+    const templateData = [
+      {
+        malagasy: 'Ny hazo no vanon-ko lakana, ny tany naniriany no tsara.',
+        french: 'Si l\'arbre est devenu une bonne pirogue, c\'est que la terre où il a poussé était fertile.',
+        meaning: 'La réussite et la valeur morale d\'une personne s\'expliquent avant tout par l\'éducation reçue au sein de sa famille.',
+        example: 'Nahavita fianarana ambony sady mahalala fomba ianao : ny hazo no vanon-ko lakana, ny tany naniriany no tsara.',
+        themes: ['Éducation', 'Famille', 'Sagesse'],
+        category: 'PROVERBE',
+        difficulty: 'EASY',
+        origins: ['Général'],
+        phonetic: 'ni hazou nou vanoun-kou lakana, ni tani naniriani nou tsara',
+        dialectVariants: []
+      },
+      {
+        malagasy: 'Ny fihavanana tahaka ny landy : maty ifonosana, velona itafiana, ary ny madilana arahim-panondro.',
+        french: 'Le fihavanana est comme la soie : morts, on s\'en enveloppe ; vivants, on s\'en revêt...',
+        meaning: 'Le lien social et familial accompagne la vie entière. Lorsqu\'il se fragilise, on le consolide avec patience et délicatesse.',
+        example: 'Aoka hifamela heloka isika fa ny fihavanana tahaka ny landy.',
+        themes: ['Fihavanana', 'Réconciliation', 'Solidarité'],
+        category: 'PROVERBE',
+        difficulty: 'MEDIUM',
+        origins: ['Hautes Terres'],
+        phonetic: 'ni fihavanana tahaka ni landi...'
+      }
+    ];
+
+    const blob = new Blob([JSON.stringify(templateData, null, 2)], {
+      type: 'application/json;charset=utf-8;',
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', 'modele-import-proverbes-kanto.json');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  // Analyseur CSV côté client
+  const parseCsvText = (text: string): ParsedImportRow[] => {
     const firstLine = text.split(/\r\n|\n|\r/)[0] || '';
     const delimiter = firstLine.includes(';') && !firstLine.includes(',') ? ';' : ',';
 
@@ -363,7 +425,7 @@ export default function ProverbesAdminPage() {
       h.toLowerCase().replace(/[^a-z0-9]/g, '')
     );
 
-    const mappedItems: ParsedCsvRow[] = [];
+    const mappedItems: ParsedImportRow[] = [];
     for (let r = 1; r < rows.length; r++) {
       const row = rows[r];
       const record: Record<string, string> = {};
@@ -388,6 +450,16 @@ export default function ProverbesAdminPage() {
       ) as 'EASY' | 'MEDIUM' | 'HARD';
       const dialectName = record['dialecte'] || record['dialectname'] || '';
       const dialectText = record['variante'] || record['variantedialectale'] || record['dialecttext'] || '';
+      const phonetic = record['phonetique'] || record['phonetic'] || '';
+      const themesRaw = record['themes'] || record['theme'] || '';
+      const originsRaw = record['origines'] || record['origins'] || record['origine'] || '';
+
+      const themes = themesRaw
+        ? themesRaw.split(',').map((t) => t.trim()).filter(Boolean)
+        : undefined;
+      const origins = originsRaw
+        ? originsRaw.split(',').map((o) => o.trim()).filter(Boolean)
+        : undefined;
 
       if (malagasy || french || meaning) {
         mappedItems.push({
@@ -397,6 +469,9 @@ export default function ProverbesAdminPage() {
           example,
           category,
           difficulty,
+          themes,
+          origins,
+          phonetic: phonetic || undefined,
           dialectName,
           dialectText,
           isValid: Boolean(malagasy.trim() && french.trim() && meaning.trim()),
@@ -404,6 +479,162 @@ export default function ProverbesAdminPage() {
       }
     }
     return mappedItems;
+  };
+
+  // Analyseur JSON côté client
+  const parseJsonText = (text: string): ParsedImportRow[] => {
+    let rawData: unknown;
+    try {
+      rawData = JSON.parse(text);
+    } catch {
+      throw new Error('Fichier JSON invalide. Veuillez vérifier la syntaxe.');
+    }
+
+    type RawRecord = Record<string, unknown>;
+    let itemsArray: RawRecord[] = [];
+    if (Array.isArray(rawData)) {
+      itemsArray = rawData.filter((it): it is RawRecord => Boolean(it && typeof it === 'object'));
+    } else if (rawData && typeof rawData === 'object') {
+      const obj = rawData as RawRecord;
+      if (Array.isArray(obj.items)) {
+        itemsArray = (obj.items as unknown[]).filter((it): it is RawRecord => Boolean(it && typeof it === 'object'));
+      } else if (Array.isArray(obj.data)) {
+        itemsArray = (obj.data as unknown[]).filter((it): it is RawRecord => Boolean(it && typeof it === 'object'));
+      } else if (Array.isArray(obj.proverbes)) {
+        itemsArray = (obj.proverbes as unknown[]).filter((it): it is RawRecord => Boolean(it && typeof it === 'object'));
+      } else if (Array.isArray(obj.rows)) {
+        itemsArray = (obj.rows as unknown[]).filter((it): it is RawRecord => Boolean(it && typeof it === 'object'));
+      } else {
+        itemsArray = [obj];
+      }
+    }
+
+    return itemsArray.map((item) => {
+      const malagasy = String(
+        item.malagasy || item.malagasyText || item.texte || item.proverbe || item.text || ''
+      ).trim();
+      const french = String(
+        item.french || item.frenchTranslation || item.traduction || item.francais || item.frenchText || ''
+      ).trim();
+      const meaning = String(
+        item.meaning || item.sens || item.explication || item.definition || ''
+      ).trim();
+      const example = String(item.example || item.exemple || '').trim();
+
+      let category: 'PROVERBE' | 'EXPRESSION' | 'DICTON' = 'PROVERBE';
+      const cat = String(item.category || item.categorie || 'PROVERBE').toUpperCase();
+      if (cat.includes('DICTON')) category = 'DICTON';
+      else if (cat.includes('EXPRESSION')) category = 'EXPRESSION';
+
+      let difficulty: 'EASY' | 'MEDIUM' | 'HARD' = 'EASY';
+      const diff = String(item.difficulty || item.difficulte || 'EASY').toUpperCase();
+      if (diff === 'MEDIUM') difficulty = 'MEDIUM';
+      else if (diff === 'HARD') difficulty = 'HARD';
+
+      const themes = Array.isArray(item.themes)
+        ? (item.themes as unknown[]).map((t) => String(t).trim()).filter(Boolean)
+        : typeof item.themes === 'string'
+        ? item.themes.split(',').map((t) => t.trim()).filter(Boolean)
+        : undefined;
+
+      const origins = Array.isArray(item.origins)
+        ? (item.origins as unknown[]).map((o) => String(o).trim()).filter(Boolean)
+        : typeof item.origins === 'string'
+        ? item.origins.split(',').map((o) => o.trim()).filter(Boolean)
+        : undefined;
+
+      const phonetic = item.phonetic ? String(item.phonetic).trim() : undefined;
+      const dialectName = item.dialectName ? String(item.dialectName).trim() : '';
+      const dialectText = item.dialectText ? String(item.dialectText).trim() : '';
+      const dialectVariants = Array.isArray(item.dialectVariants)
+        ? (item.dialectVariants as unknown[])
+            .filter((v): v is RawRecord => Boolean(v && typeof v === 'object'))
+            .filter((v) => Boolean(v.dialectName && v.text))
+            .map((v) => ({
+              dialectName: String(v.dialectName).trim(),
+              text: String(v.text).trim(),
+              notes: v.notes ? String(v.notes).trim() : undefined,
+            }))
+        : undefined;
+
+      const isValid = Boolean(malagasy && french && meaning);
+
+      return {
+        malagasy,
+        french,
+        meaning,
+        example,
+        category,
+        difficulty,
+        themes,
+        origins,
+        phonetic,
+        dialectName,
+        dialectText,
+        dialectVariants,
+        isValid,
+      };
+    });
+  };
+
+  // Détection des doublons en base et au sein du lot importé
+  const checkBatchDuplicates = async (rows: ParsedImportRow[]): Promise<ParsedImportRow[]> => {
+    const textsToCheck = rows
+      .filter((r) => r.isValid && r.malagasy)
+      .map((r) => r.malagasy);
+
+    let serverDuplicates: Set<string> = new Set();
+    const normalize = (t: string) =>
+      t.toLowerCase().replace(/[\s\p{P}]+/gu, '').trim();
+
+    try {
+      const res = await fetchApi<{ duplicates: string[] }>('/items/check-duplicates', {
+        method: 'POST',
+        body: JSON.stringify({ texts: textsToCheck }),
+      });
+      if (res?.duplicates && Array.isArray(res.duplicates)) {
+        serverDuplicates = new Set(res.duplicates.map((d) => normalize(d)));
+      }
+    } catch {
+      // Fallback local avec les items déjà chargés
+      const localLoadedSet = new Set(items.map((it) => normalize(it.malagasy)));
+      serverDuplicates = localLoadedSet;
+    }
+
+    const seenInBatch = new Set<string>();
+
+    return rows.map((row) => {
+      if (!row.isValid) {
+        return {
+          ...row,
+          isDuplicate: false,
+        };
+      }
+
+      const norm = normalize(row.malagasy);
+
+      if (serverDuplicates.has(norm)) {
+        return {
+          ...row,
+          isDuplicate: true,
+          duplicateReason: 'Déjà enregistré en base de données',
+        };
+      }
+
+      if (seenInBatch.has(norm)) {
+        return {
+          ...row,
+          isDuplicate: true,
+          duplicateReason: 'En double dans ce fichier',
+        };
+      }
+
+      seenInBatch.add(norm);
+      return {
+        ...row,
+        isDuplicate: false,
+      };
+    });
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -415,14 +646,25 @@ export default function ProverbesAdminPage() {
     setImportResult(null);
 
     const reader = new FileReader();
-    reader.onload = (event) => {
+    reader.onload = async (event) => {
       try {
         const text = String(event.target?.result || '');
-        const items = parseCsvText(text);
-        setParsedRows(items);
-      } catch (err) {
-        console.error('Erreur lecture CSV', err);
-        toast.error('Impossible de lire le fichier CSV.');
+        const isJson = file.name.endsWith('.json') || text.trim().startsWith('[') || text.trim().startsWith('{');
+        const rawItems = isJson ? parseJsonText(text) : parseCsvText(text);
+
+        if (rawItems.length === 0) {
+          toast.error('Aucun enregistrement valide trouvé dans le fichier.');
+          setParsedRows([]);
+          return;
+        }
+
+        // Vérification des doublons
+        const verifiedItems = await checkBatchDuplicates(rawItems);
+        setParsedRows(verifiedItems);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : 'Impossible de lire le fichier.';
+        console.error('Erreur lecture fichier', err);
+        toast.error(msg);
       } finally {
         setIsParsing(false);
       }
@@ -431,9 +673,9 @@ export default function ProverbesAdminPage() {
   };
 
   const handleExecuteImport = async () => {
-    const validRows = parsedRows.filter((r) => r.isValid);
+    const validRows = parsedRows.filter((r) => r.isValid && (!skipDuplicates || !r.isDuplicate));
     if (validRows.length === 0) {
-      toast.error('Aucune ligne valide à importer');
+      toast.error('Aucun nouveau proverbe valide à importer');
       return;
     }
 
@@ -445,7 +687,7 @@ export default function ProverbesAdminPage() {
         duplicatesSkipped: number;
         errorsCount: number;
         errors: Array<{ row: number; text: string; reason: string }>;
-      }>('/items/import-csv', {
+      }>('/items/import', {
         method: 'POST',
         body: JSON.stringify({
           items: validRows,
@@ -456,14 +698,33 @@ export default function ProverbesAdminPage() {
       setImportResult(res);
       toast.success(`${res.importedCount} proverbe(s) importé(s) avec succès !`);
       void loadItems();
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Erreur lors de l’importation';
-      toast.error(msg);
+    } catch {
+      // Fallback sur /items/import-csv si nécessaire
+      try {
+        const res = await fetchApi<{
+          totalReceived: number;
+          importedCount: number;
+          duplicatesSkipped: number;
+          errorsCount: number;
+          errors: Array<{ row: number; text: string; reason: string }>;
+        }>('/items/import-csv', {
+          method: 'POST',
+          body: JSON.stringify({
+            items: validRows,
+            skipDuplicates,
+          }),
+        });
+        setImportResult(res);
+        toast.success(`${res.importedCount} proverbe(s) importé(s) avec succès !`);
+        void loadItems();
+      } catch (fallbackErr: unknown) {
+        const msg = fallbackErr instanceof Error ? fallbackErr.message : 'Erreur lors de l’importation';
+        toast.error(msg);
+      }
     } finally {
       setIsImporting(false);
     }
   };
-
   return (
     <AdminShell>
       <div className="w-full space-y-4 max-w-6xl mx-auto pb-12">
@@ -1016,15 +1277,15 @@ export default function ProverbesAdminPage() {
           </div>
         )}
 
-        {/* Modal Import CSV & Excel */}
+        {/* Modal Import Intelligent JSON, CSV & Excel */}
         {isImportModalOpen && (
           <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs overflow-y-auto flex items-start justify-center p-4 pt-8 md:pt-12 animate-in fade-in duration-150">
-            <div className="bg-[var(--card)] rounded-2xl border border-[var(--card-border)] shadow-2xl max-w-xl w-full max-h-[calc(100vh-4rem)] flex flex-col overflow-hidden">
+            <div className="bg-[var(--card)] rounded-2xl border border-[var(--card-border)] shadow-2xl max-w-2xl w-full max-h-[calc(100vh-4rem)] flex flex-col overflow-hidden">
               <div className="px-5 py-3.5 border-b border-[var(--card-border)] bg-[var(--input-bg)] flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <FileSpreadsheet size={16} className="text-[var(--accent)]" />
+                  <Upload size={16} className="text-[var(--accent)]" />
                   <span className="text-sm font-semibold text-[var(--foreground)]">
-                    Importation par lot (CSV / Excel)
+                    Importation par lot & Détection des doublons (JSON / CSV)
                   </span>
                 </div>
                 <button
@@ -1036,103 +1297,175 @@ export default function ProverbesAdminPage() {
               </div>
 
               <div className="p-5 space-y-4 overflow-y-auto flex-1 text-xs">
-                {/* Guide & Template */}
-                <div className="p-3.5 rounded-xl border border-[var(--card-border)] bg-[var(--input-bg)] flex items-center justify-between gap-3">
-                  <div>
-                    <div className="font-semibold text-[var(--foreground)]">Modèle CSV standard</div>
-                    <div className="text-[11px] text-[var(--text-muted)] mt-0.5">
-                      Colonnes requises : <code>Malagasy</code>, <code>Traduction Francaise</code>, <code>Signification</code>.
+                {/* Guide & Modèles téléchargeables */}
+                <div className="p-3.5 rounded-xl border border-[var(--card-border)] bg-[var(--input-bg)] space-y-2.5">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <div className="font-semibold text-[var(--foreground)] flex items-center gap-1.5">
+                        <Info size={13} className="text-[var(--accent)]" />
+                        Formats supportés : JSON & CSV (UTF-8)
+                      </div>
+                      <div className="text-[11px] text-[var(--text-muted)] mt-1 leading-relaxed">
+                        Champs requis : <code>malagasy</code>, <code>french</code>, <code>meaning</code>.
+                        <br />
+                        Champs optionnels : <code>themes</code>, <code>category</code>, <code>difficulty</code>, <code>origins</code>, <code>phonetic</code>.
+                      </div>
                     </div>
                   </div>
-                  <button
-                    onClick={downloadTemplateCsv}
-                    className="px-3 py-1.5 rounded-lg border border-[var(--card-border)] bg-[var(--card)] hover:bg-[var(--card-hover)] font-medium text-[11px] flex items-center gap-1.5 transition cursor-pointer shadow-xs shrink-0"
-                  >
-                    <Download size={12} />
-                    <span>Télécharger modèle</span>
-                  </button>
+
+                  <div className="pt-2 border-t border-[var(--card-border)] flex flex-wrap items-center gap-2">
+                    <span className="text-[11px] text-[var(--text-muted)] font-medium">Modèles prêts à l&apos;emploi :</span>
+                    <button
+                      type="button"
+                      onClick={downloadTemplateJson}
+                      className="px-2.5 py-1 rounded-lg border border-[var(--card-border)] bg-[var(--card)] hover:bg-[var(--card-hover)] font-medium text-[11px] flex items-center gap-1.5 transition cursor-pointer shadow-xs"
+                    >
+                      <FileCode2 size={12} className="text-emerald-500" />
+                      <span>Modèle JSON</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={downloadTemplateCsv}
+                      className="px-2.5 py-1 rounded-lg border border-[var(--card-border)] bg-[var(--card)] hover:bg-[var(--card-hover)] font-medium text-[11px] flex items-center gap-1.5 transition cursor-pointer shadow-xs"
+                    >
+                      <FileSpreadsheet size={12} className="text-blue-500" />
+                      <span>Modèle CSV</span>
+                    </button>
+                  </div>
                 </div>
 
                 {/* Sélecteur de fichier */}
                 <div>
-                  <label htmlFor="csv-file-input" className="block text-xs font-semibold text-[var(--foreground)] mb-1">
-                    Sélectionner un fichier CSV (*.csv)
+                  <label htmlFor="import-file-input" className="block text-xs font-semibold text-[var(--foreground)] mb-1">
+                    Sélectionner un fichier (*.json, *.csv)
                   </label>
                   <input
-                    id="csv-file-input"
+                    id="import-file-input"
                     type="file"
-                    accept=".csv,text/csv"
+                    accept=".json,.csv,.txt,application/json,text/csv"
                     onChange={handleFileChange}
                     className="w-full text-xs text-[var(--text-muted)] file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-[var(--accent)] file:text-white hover:file:opacity-90 cursor-pointer"
                   />
                   {importFile && (
                     <div className="text-[11px] text-[var(--text-muted)] mt-1.5 truncate">
-                      Fichier sélectionné : <span className="font-semibold text-[var(--foreground)]">{importFile.name}</span> ({(importFile.size / 1024).toFixed(1)} Ko)
+                      Fichier analysé : <span className="font-semibold text-[var(--foreground)]">{importFile.name}</span> ({(importFile.size / 1024).toFixed(1)} Ko)
                     </div>
                   )}
                 </div>
 
                 {/* Option Doublons */}
-                <label className="flex items-center gap-2 cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={skipDuplicates}
-                    onChange={(e) => setSkipDuplicates(e.target.checked)}
-                    className="w-4 h-4 rounded text-[var(--accent)]"
-                  />
-                  <span className="text-xs text-[var(--foreground)]">
-                    Ignorer automatiquement les proverbes déjà existants en base
-                  </span>
-                </label>
+                <div className="p-2.5 rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] flex items-center justify-between gap-3">
+                  <label className="flex items-center gap-2 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={skipDuplicates}
+                      onChange={(e) => setSkipDuplicates(e.target.checked)}
+                      className="w-4 h-4 rounded text-[var(--accent)] accent-[var(--accent)]"
+                    />
+                    <span className="text-xs font-medium text-[var(--foreground)]">
+                      Ignorer automatiquement les doublons détectés
+                    </span>
+                  </label>
+                  <span className="text-[10.5px] text-[var(--text-muted)]">Recommandé en production</span>
+                </div>
 
-                {/* État de chargement du parsing */}
+                {/* État de chargement du parsing / vérification */}
                 {isParsing && (
-                  <div className="flex items-center gap-2 text-xs text-[var(--text-muted)]">
-                    <Loader2 size={13} className="animate-spin text-[var(--accent)]" />
-                    <span>Analyse des lignes du fichier en cours...</span>
+                  <div className="flex items-center gap-2 p-3 rounded-lg bg-[var(--input-bg)] border border-[var(--card-border)] text-xs text-[var(--text-muted)]">
+                    <Loader2 size={14} className="animate-spin text-[var(--accent)]" />
+                    <span>Analyse des proverbes et vérification des doublons en base...</span>
                   </div>
                 )}
 
-                {/* Aperçu des lignes détectées */}
+                {/* Aperçu des lignes et détection visuelle des doublons */}
                 {parsedRows.length > 0 && !importResult && (
-                  <div className="space-y-2 pt-2 border-t border-[var(--card-border)]">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="font-semibold text-[var(--foreground)]">
-                        {parsedRows.filter((r) => r.isValid).length} ligne(s) valide(s) détectée(s)
-                      </span>
-                      {parsedRows.some((r) => !r.isValid) && (
-                        <span className="text-amber-500 font-medium">
-                          {parsedRows.filter((r) => !r.isValid).length} ligne(s) incomplète(s) ignorée(s)
-                        </span>
-                      )}
+                  <div className="space-y-2.5 pt-2 border-t border-[var(--card-border)]">
+                    {/* Statistiques de prévisualisation */}
+                    <div className="grid grid-cols-4 gap-2 text-center text-xs">
+                      <div className="p-2 rounded-lg bg-[var(--input-bg)] border border-[var(--card-border)]">
+                        <div className="text-base font-bold text-[var(--foreground)]">{parsedRows.length}</div>
+                        <div className="text-[10px] text-[var(--text-muted)]">Total détecté</div>
+                      </div>
+                      <div className="p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400">
+                        <div className="text-base font-bold">
+                          {parsedRows.filter((r) => r.isValid && !r.isDuplicate).length}
+                        </div>
+                        <div className="text-[10px]">Nouveaux</div>
+                      </div>
+                      <div className="p-2 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400">
+                        <div className="text-base font-bold">
+                          {parsedRows.filter((r) => r.isValid && r.isDuplicate).length}
+                        </div>
+                        <div className="text-[10px]">Doublons</div>
+                      </div>
+                      <div className="p-2 rounded-lg bg-red-500/10 border border-red-500/30 text-red-600 dark:text-red-400">
+                        <div className="text-base font-bold">
+                          {parsedRows.filter((r) => !r.isValid).length}
+                        </div>
+                        <div className="text-[10px]">Incomplets</div>
+                      </div>
                     </div>
 
-                    <div className="max-h-48 overflow-y-auto rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] p-2 space-y-1.5">
-                      {parsedRows.slice(0, 5).map((row, idx) => (
+                    {/* Liste des proverbes analysés */}
+                    <div className="max-h-56 overflow-y-auto rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] p-2 space-y-1.5">
+                      {parsedRows.map((row, idx) => (
                         <div
                           key={idx}
-                          className={`p-2 rounded text-[11px] border ${
-                            row.isValid
-                              ? 'border-[var(--card-border)] bg-[var(--card)]'
-                              : 'border-amber-500/30 bg-amber-500/10 text-amber-600'
+                          className={`p-2.5 rounded-lg text-[11px] border transition ${
+                            !row.isValid
+                              ? 'border-red-500/30 bg-red-500/5 text-red-600 dark:text-red-400'
+                              : row.isDuplicate
+                              ? 'border-amber-500/30 bg-amber-500/5 text-[var(--foreground)]'
+                              : 'border-[var(--card-border)] bg-[var(--card)] text-[var(--foreground)]'
                           }`}
                         >
-                          <div className="font-semibold">« {row.malagasy || '(Texte manquant)'} »</div>
-                          <div className="text-[var(--text-muted)] truncate">{row.french}</div>
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="font-semibold leading-snug">
+                              « {row.malagasy || '(Texte manquant)'} »
+                            </div>
+                            <div className="shrink-0 flex items-center gap-1.5">
+                              {!row.isValid ? (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9.5px] font-semibold bg-red-500/10 text-red-600 border border-red-500/20">
+                                  <AlertTriangle size={10} /> Incomplet
+                                </span>
+                              ) : row.isDuplicate ? (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9.5px] font-semibold bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30">
+                                  <AlertTriangle size={10} /> {row.duplicateReason || 'Doublon'}
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9.5px] font-semibold bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30">
+                                  <CheckCircle2 size={10} /> Nouveau
+                                </span>
+                              )}
+                              <span className="text-[9.5px] font-mono px-1.5 py-0.5 rounded border border-[var(--card-border)] bg-[var(--input-bg)] text-[var(--text-muted)]">
+                                {row.category}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="text-[var(--text-muted)] mt-1 truncate">
+                            {row.french || '(Traduction manquante)'}
+                          </div>
+                          {row.themes && row.themes.length > 0 && (
+                            <div className="flex items-center gap-1 mt-1.5 flex-wrap">
+                              {row.themes.map((th, tIdx) => (
+                                <span
+                                  key={tIdx}
+                                  className="text-[9px] px-1.5 py-0.2 rounded bg-[var(--accent)]/10 text-[var(--accent)] border border-[var(--accent)]/20"
+                                >
+                                  {th}
+                                </span>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       ))}
-                      {parsedRows.length > 5 && (
-                        <div className="text-[10px] text-center text-[var(--text-muted)] pt-1">
-                          + {parsedRows.length - 5} autre(s) proverbe(s)...
-                        </div>
-                      )}
                     </div>
                   </div>
                 )}
 
                 {/* Rapport post-importation */}
                 {importResult && (
-                  <div className="p-3.5 rounded-xl border border-[var(--card-border)] bg-[var(--input-bg)] space-y-2">
+                  <div className="p-3.5 rounded-xl border border-[var(--card-border)] bg-[var(--input-bg)] space-y-2 animate-in fade-in">
                     <div className="flex items-center gap-2 text-emerald-600 font-semibold text-xs">
                       <CheckCircle2 size={15} />
                       <span>Importation terminée avec succès !</span>
@@ -1166,7 +1499,10 @@ export default function ProverbesAdminPage() {
                 {!importResult && (
                   <button
                     type="button"
-                    disabled={isImporting || parsedRows.filter((r) => r.isValid).length === 0}
+                    disabled={
+                      isImporting ||
+                      parsedRows.filter((r) => r.isValid && (!skipDuplicates || !r.isDuplicate)).length === 0
+                    }
                     onClick={handleExecuteImport}
                     className="px-4 py-1.5 rounded-lg bg-[var(--accent)] text-white text-xs font-semibold hover:opacity-90 transition disabled:opacity-50 flex items-center gap-1.5 cursor-pointer shadow-xs"
                   >
@@ -1177,7 +1513,7 @@ export default function ProverbesAdminPage() {
                       </>
                     ) : (
                       <span>
-                        Importer {parsedRows.filter((r) => r.isValid).length} proverbe(s)
+                        Importer {parsedRows.filter((r) => r.isValid && (!skipDuplicates || !r.isDuplicate)).length} proverbe(s)
                       </span>
                     )}
                   </button>
@@ -1188,5 +1524,21 @@ export default function ProverbesAdminPage() {
         )}
       </div>
     </AdminShell>
+  );
+}
+
+export default function ProverbesAdminPage() {
+  return (
+    <Suspense
+      fallback={
+        <AdminShell>
+          <div className="flex items-center justify-center min-h-[300px]">
+            <Loader2 className="w-6 h-6 animate-spin text-[var(--accent)]" />
+          </div>
+        </AdminShell>
+      }
+    >
+      <ProverbesAdminPageContent />
+    </Suspense>
   );
 }
