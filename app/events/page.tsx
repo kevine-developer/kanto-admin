@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { AdminShell } from '@/components/layout/AdminShell';
 import { useToast } from '@/lib/hooks/useToast';
 import {
@@ -36,10 +37,10 @@ import {
   Ban,
   ChevronLeft,
   ChevronRight,
-  Sparkles,
+  Flame,
 } from 'lucide-react';
 
-export default function EventsAdminPage() {
+function EventsAdminPageContent() {
   const { toast } = useToast();
 
   // États principaux
@@ -64,6 +65,18 @@ export default function EventsAdminPage() {
   useEffect(() => {
     toastRef.current = toast;
   }, [toast]);
+
+  const searchParams = useSearchParams();
+  const hasAutoCreatedRef = useRef(false);
+
+  useEffect(() => {
+    if (hasAutoCreatedRef.current) return;
+    if (searchParams?.get('create') === 'true' || searchParams?.get('create') === '1') {
+      hasAutoCreatedRef.current = true;
+      openCreateModal();
+    }
+  }, [searchParams]);
+
 
   // Debounce de recherche pour éviter de saturer l'API
   useEffect(() => {
@@ -702,7 +715,7 @@ export default function EventsAdminPage() {
                                 className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300"
                                 title="Événement à la une"
                               >
-                                <Sparkles size={10} /> À la une
+                                <Flame size={10} /> À la une
                               </span>
                             )}
                             <span className="font-semibold text-[var(--foreground)] line-clamp-1">
@@ -1398,5 +1411,22 @@ export default function EventsAdminPage() {
         )}
       </div>
     </AdminShell>
+  );
+}
+
+
+export default function EventsAdminPage() {
+  return (
+    <Suspense
+      fallback={
+        <AdminShell>
+          <div className="flex items-center justify-center min-h-[300px]">
+            <Loader2 className="w-6 h-6 animate-spin text-[var(--accent)]" />
+          </div>
+        </AdminShell>
+      }
+    >
+      <EventsAdminPageContent />
+    </Suspense>
   );
 }

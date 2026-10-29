@@ -15,7 +15,10 @@ import {
   HeartHandshake,
   LayoutDashboard,
   RotateCcw,
-  Sparkles,
+  Flame,
+  Calendar,
+  Plus,
+  Upload,
   AlertTriangle,
   FileText,
   Users,
@@ -104,6 +107,41 @@ export default function AdminDashboardPage() {
             </div>
           }
         />
+
+
+        {/* Actions Rapides Administrateur */}
+        <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 rounded-xl border border-[var(--card-border)] bg-[var(--card)] shadow-xs">
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-[var(--accent)]" />
+            <span className="text-xs font-semibold text-[var(--foreground)]">Actions Rapides :</span>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Link
+              href="/events?create=true"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-[var(--accent)] text-white hover:opacity-90 transition shadow-xs cursor-pointer"
+            >
+              <Calendar size={13} />
+              <Plus size={12} className="-ml-1" />
+              <span>Créer un événement</span>
+            </Link>
+
+            <Link
+              href="/proverbes?import=true"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-[var(--card-border)] bg-[var(--background)] hover:bg-[var(--card-hover)] text-[var(--foreground)] transition cursor-pointer"
+            >
+              <Upload size={13} className="text-blue-500" />
+              <span>Importer Proverbes & Dictons (JSON / CSV)</span>
+            </Link>
+
+            <Link
+              href="/contributions"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-[var(--card-border)] bg-[var(--background)] hover:bg-[var(--card-hover)] text-[var(--foreground)] transition cursor-pointer"
+            >
+              <HeartHandshake size={13} className="text-amber-500" />
+              <span>File de modération</span>
+            </Link>
+          </div>
+        </div>
 
         {/* 1. Alerte prioritaire d'actions requises (File de modération) */}
         {hasUrgentActions && (
@@ -253,7 +291,7 @@ export default function AdminDashboardPage() {
           <div className="lg:col-span-2 p-4 rounded-xl border border-[var(--card-border)] bg-[var(--card)] space-y-4 shadow-xs">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Sparkles size={16} className="text-[var(--accent)]" />
+                <Flame size={16} className="text-[var(--accent)]" />
                 <h3 className="font-semibold text-xs text-[var(--foreground)]">
                   Activité Jeux, Duels & Communauté
                 </h3>
