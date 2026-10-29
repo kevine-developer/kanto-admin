@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { AdminShell } from '@/components/layout/AdminShell';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { fetchApi } from '@/lib/api-client';
@@ -17,9 +17,7 @@ import {
   Layers,
   ChevronRight,
   ChevronLeft,
-  ArrowRight,
   RefreshCw,
-  Eye,
   Check,
   Smartphone,
   ShieldCheck,
@@ -61,7 +59,7 @@ interface ContentSourceItem {
   imageUrl?: string | null;
   period?: string | null;
   sourceRef?: string | null;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 interface QuestionFormState {
@@ -88,7 +86,7 @@ interface QuestionFormState {
   levelNumber: number;
 }
 
-const CATEGORIES: { id: string; label: string; icon: any }[] = [
+const CATEGORIES: { id: string; label: string; icon: React.ComponentType<{ size?: number; className?: string }> }[] = [
   { id: 'histoire_royaumes', label: 'Histoire & Royaumes', icon: Landmark },
   { id: 'citoyennete_fihavanana', label: 'Citoyenneté & Fihavanana', icon: Compass },
   { id: 'geographie_regions', label: 'Géographie & Terroirs', icon: Compass },
@@ -97,7 +95,7 @@ const CATEGORIES: { id: string; label: string; icon: any }[] = [
   { id: 'arts_musique_saveurs', label: 'Arts & Patrimoine vivant', icon: BookOpen },
 ];
 
-const SOURCE_CATEGORIES: { type: ContentSourceType; label: string; icon: any; count?: number }[] = [
+const SOURCE_CATEGORIES: { type: ContentSourceType; label: string; icon: React.ComponentType<{ size?: number; className?: string }>; count?: number }[] = [
   { type: 'PRESIDENT', label: 'Présidents & Dirigeants', icon: Landmark },
   { type: 'BANKNOTE', label: 'Billets & Monnaies', icon: Layers },
   { type: 'PROVINCE', label: 'Provinces & Blasons', icon: Compass },
@@ -119,11 +117,7 @@ export default function GameWizardPage() {
   const [searchSource, setSearchSource] = useState('');
   const [selectedSource, setSelectedSource] = useState<ContentSourceItem | null>(null);
 
-  // Mode de création (Unitaire ou Série - 10 questions par niveau complet)
-  const [creationMode, setCreationMode] = useState<'SINGLE' | 'BATCH'>('SINGLE');
-  const [batchCount, setBatchCount] = useState<number>(10);
-  const [batchItems, setBatchItems] = useState<QuestionFormState[]>([]);
-  const [activeBatchIndex, setActiveBatchIndex] = useState(0);
+  // Aperçu mobile
 
   // Aperçu mobile
   const [mobilePreviewTheme, setMobilePreviewTheme] = useState<'light' | 'dark'>('dark');
@@ -157,7 +151,7 @@ export default function GameWizardPage() {
   const [isPublishing, setIsPublishing] = useState(false);
 
   // ─── Chargement des sources de contenu Kanto ────────────────────────────────
-  const loadSources = async (type: ContentSourceType, search = '') => {
+  const loadSources = useCallback(async (type: ContentSourceType, search = '') => {
     setIsLoadingSources(true);
     try {
       const q = new URLSearchParams({ type, limit: '40' });
@@ -172,13 +166,13 @@ export default function GameWizardPage() {
     } finally {
       setIsLoadingSources(false);
     }
-  };
+  }, [toast]);
 
   useEffect(() => {
     if (selectedSourceType !== 'FREE_FORM') {
-      loadSources(selectedSourceType, searchSource);
+      void loadSources(selectedSourceType, searchSource);
     }
-  }, [selectedSourceType]);
+  }, [selectedSourceType, searchSource, loadSources]);
 
   // ─── Génération assistée de suggestions ──────────────────────────────────────
   const handleGenerateSuggestions = async (formatOverride?: GameQuestionFormat) => {
@@ -190,7 +184,7 @@ export default function GameWizardPage() {
     setIsGenerating(true);
     try {
       const targetFormat = formatOverride || formData.format;
-      const res = await fetchApi<any[]>('/admin/game-wizard/suggest', {
+      const res = await fetchApi<Array<Partial<QuestionFormState>>>('/admin/game-wizard/suggest', {
         method: 'POST',
         body: JSON.stringify({
           sourceType: selectedSource?.sourceType || selectedSourceType,
@@ -227,8 +221,9 @@ export default function GameWizardPage() {
 
         toast.success('Proposition prête : contenu extrait et formulé avec succès.');
       }
-    } catch (err: any) {
-      toast.error(err.message || 'Impossible de suggérer automatiquement pour ce contenu');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Impossible de suggérer automatiquement pour ce contenu';
+      toast.error(msg);
     } finally {
       setIsGenerating(false);
     }
@@ -359,7 +354,7 @@ export default function GameWizardPage() {
         clue: formData.clue || undefined,
       };
 
-      const res = await fetchApi<any>('/admin/game-wizard/publish', {
+      await fetchApi<{ id: string }>('/admin/game-wizard/publish', {
         method: 'POST',
         body: JSON.stringify(payload),
       });
@@ -369,8 +364,9 @@ export default function GameWizardPage() {
       // Réinitialiser ou passer à la question suivante
       setStep(1);
       setSelectedSource(null);
-    } catch (err: any) {
-      toast.error(err.message || 'Échec de l\'enregistrement de la question');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Échec de l\'enregistrement de la question';
+      toast.error(msg);
     } finally {
       setIsPublishing(false);
     }
@@ -399,7 +395,7 @@ export default function GameWizardPage() {
               return (
                 <button
                   key={s.num}
-                  onClick={() => setStep(s.num as any)}
+                  onClick={() => setStep(s.num as 1 | 2 | 3 | 4)}
                   className={`flex items-center gap-3 p-3 rounded-xl text-left transition-all ${
                     isCurrent
                       ? 'bg-[var(--sidebar-accent)] text-black font-semibold shadow-sm'
@@ -742,7 +738,7 @@ export default function GameWizardPage() {
                     Étape 3 — Rédiger et peaufiner la question
                   </h2>
                   <p className="text-xs text-[var(--text-subtle)] mt-1">
-                    Ajustez l'énoncé, vérifiez les propositions et enrichissez les explications bilingues.
+                    Ajustez l&apos;énoncé, vérifiez les propositions et enrichissez les explications bilingues.
                   </p>
                 </div>
 
@@ -783,7 +779,7 @@ export default function GameWizardPage() {
                   </label>
                   <select
                     value={formData.difficulty}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, difficulty: e.target.value as any }))}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, difficulty: e.target.value as 'EASY' | 'MEDIUM' | 'HARD' }))}
                     className="w-full px-3 py-2 text-xs rounded-xl bg-[var(--input-bg)] border border-[var(--input-border)] text-[var(--foreground)]"
                   >
                     <option value="EASY">Découverte (Facile)</option>
@@ -907,7 +903,7 @@ export default function GameWizardPage() {
               {formData.format === 'TRUE_FALSE' && (
                 <div className="space-y-3 pt-2 border-t border-[var(--card-border)]">
                   <label className="text-xs font-bold text-[var(--foreground)]">
-                    Vérité de l'affirmation *
+                    Vérité de l&apos;affirmation *
                   </label>
                   <div className="flex gap-4">
                     <button
@@ -977,7 +973,7 @@ export default function GameWizardPage() {
                     Image ou Document Visuel (Facultatif ou pour reconnaissance)
                   </label>
                   <span className="text-[10px] text-amber-500 font-medium">
-                    ⚠️ L'image ne doit pas révéler directement la réponse
+                    ⚠️ L&apos;image ne doit pas révéler directement la réponse
                   </span>
                 </div>
 
@@ -1115,7 +1111,7 @@ export default function GameWizardPage() {
                 </div>
 
                 <div className="p-3 rounded-xl bg-[var(--input-bg)] border border-[var(--card-border)] text-xs text-[var(--text-subtle)] space-y-1">
-                  <div className="font-semibold text-[var(--foreground)]">Fiche d'affectation :</div>
+                  <div className="font-semibold text-[var(--foreground)]">Fiche d&apos;affectation :</div>
                   <div>• Format : <span className="font-mono text-[var(--accent)]">{formData.format}</span></div>
                   <div>• Catégorie : <span className="font-mono">{formData.category}</span></div>
                   <div>• Difficulté : <span className="font-mono">{formData.difficulty}</span> (Niveau {formData.levelNumber})</div>
@@ -1247,7 +1243,7 @@ export default function GameWizardPage() {
                           }`}
                         >
                           <span>{choice || `Option ${i + 1}`}</span>
-                          <span className="w-4 h-4 rounded-full border border-current opacity-40" />
+                          <span className={`w-4 h-4 rounded-full border border-current ${isCorrect ? "border-[var(--accent)] bg-[var(--accent)]/20" : "opacity-40"}`} />
                         </div>
                       );
                     })}

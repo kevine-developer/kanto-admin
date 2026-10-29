@@ -112,17 +112,6 @@ function ProverbesAdminPageContent() {
     dialectText: '',
   });
 
-  const searchParams = useSearchParams();
-  const hasTriggeredImportRef = useRef(false);
-
-  useEffect(() => {
-    if (hasTriggeredImportRef.current) return;
-    if (searchParams?.get('import') === 'true' || searchParams?.get('import') === '1') {
-      hasTriggeredImportRef.current = true;
-      setIsImportModalOpen(true);
-    }
-  }, [searchParams]);
-
   // Modal Import / Export CSV & Excel
   const [isExporting, setIsExporting] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
@@ -138,6 +127,17 @@ function ProverbesAdminPageContent() {
     errorsCount: number;
     errors: Array<{ row: number; text: string; reason: string }>;
   } | null>(null);
+
+  const searchParams = useSearchParams();
+  const hasTriggeredImportRef = useRef(false);
+
+  useEffect(() => {
+    if (hasTriggeredImportRef.current) return;
+    if (searchParams?.get('import') === 'true' || searchParams?.get('import') === '1') {
+      hasTriggeredImportRef.current = true;
+      setIsImportModalOpen(true);
+    }
+  }, [searchParams]);
 
   const loadItems = useCallback(async () => {
     try {
@@ -490,16 +490,23 @@ function ProverbesAdminPageContent() {
       throw new Error('Fichier JSON invalide. Veuillez vérifier la syntaxe.');
     }
 
-    let itemsArray: any[] = [];
+    type RawRecord = Record<string, unknown>;
+    let itemsArray: RawRecord[] = [];
     if (Array.isArray(rawData)) {
-      itemsArray = rawData;
+      itemsArray = rawData.filter((it): it is RawRecord => Boolean(it && typeof it === 'object'));
     } else if (rawData && typeof rawData === 'object') {
-      const obj = rawData as Record<string, any>;
-      if (Array.isArray(obj.items)) itemsArray = obj.items;
-      else if (Array.isArray(obj.data)) itemsArray = obj.data;
-      else if (Array.isArray(obj.proverbes)) itemsArray = obj.proverbes;
-      else if (Array.isArray(obj.rows)) itemsArray = obj.rows;
-      else itemsArray = [obj];
+      const obj = rawData as RawRecord;
+      if (Array.isArray(obj.items)) {
+        itemsArray = (obj.items as unknown[]).filter((it): it is RawRecord => Boolean(it && typeof it === 'object'));
+      } else if (Array.isArray(obj.data)) {
+        itemsArray = (obj.data as unknown[]).filter((it): it is RawRecord => Boolean(it && typeof it === 'object'));
+      } else if (Array.isArray(obj.proverbes)) {
+        itemsArray = (obj.proverbes as unknown[]).filter((it): it is RawRecord => Boolean(it && typeof it === 'object'));
+      } else if (Array.isArray(obj.rows)) {
+        itemsArray = (obj.rows as unknown[]).filter((it): it is RawRecord => Boolean(it && typeof it === 'object'));
+      } else {
+        itemsArray = [obj];
+      }
     }
 
     return itemsArray.map((item) => {
@@ -525,22 +532,29 @@ function ProverbesAdminPageContent() {
       else if (diff === 'HARD') difficulty = 'HARD';
 
       const themes = Array.isArray(item.themes)
-        ? item.themes.map((t: any) => String(t).trim()).filter(Boolean)
+        ? (item.themes as unknown[]).map((t) => String(t).trim()).filter(Boolean)
         : typeof item.themes === 'string'
-        ? item.themes.split(',').map((t: string) => t.trim()).filter(Boolean)
+        ? item.themes.split(',').map((t) => t.trim()).filter(Boolean)
         : undefined;
 
       const origins = Array.isArray(item.origins)
-        ? item.origins.map((o: any) => String(o).trim()).filter(Boolean)
+        ? (item.origins as unknown[]).map((o) => String(o).trim()).filter(Boolean)
         : typeof item.origins === 'string'
-        ? item.origins.split(',').map((o: string) => o.trim()).filter(Boolean)
+        ? item.origins.split(',').map((o) => o.trim()).filter(Boolean)
         : undefined;
 
       const phonetic = item.phonetic ? String(item.phonetic).trim() : undefined;
       const dialectName = item.dialectName ? String(item.dialectName).trim() : '';
       const dialectText = item.dialectText ? String(item.dialectText).trim() : '';
       const dialectVariants = Array.isArray(item.dialectVariants)
-        ? item.dialectVariants.filter((v: any) => v && v.dialectName && v.text)
+        ? (item.dialectVariants as unknown[])
+            .filter((v): v is RawRecord => Boolean(v && typeof v === 'object'))
+            .filter((v) => Boolean(v.dialectName && v.text))
+            .map((v) => ({
+              dialectName: String(v.dialectName).trim(),
+              text: String(v.text).trim(),
+              notes: v.notes ? String(v.notes).trim() : undefined,
+            }))
         : undefined;
 
       const isValid = Boolean(malagasy && french && meaning);
@@ -684,7 +698,7 @@ function ProverbesAdminPageContent() {
       setImportResult(res);
       toast.success(`${res.importedCount} proverbe(s) importé(s) avec succès !`);
       void loadItems();
-    } catch (err: unknown) {
+    } catch {
       // Fallback sur /items/import-csv si nécessaire
       try {
         const res = await fetchApi<{

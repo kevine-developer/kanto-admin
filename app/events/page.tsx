@@ -66,17 +66,6 @@ function EventsAdminPageContent() {
     toastRef.current = toast;
   }, [toast]);
 
-  const searchParams = useSearchParams();
-  const hasAutoCreatedRef = useRef(false);
-
-  useEffect(() => {
-    if (hasAutoCreatedRef.current) return;
-    if (searchParams?.get('create') === 'true' || searchParams?.get('create') === '1') {
-      hasAutoCreatedRef.current = true;
-      openCreateModal();
-    }
-  }, [searchParams]);
-
 
   // Debounce de recherche pour éviter de saturer l'API
   useEffect(() => {
@@ -252,6 +241,17 @@ function EventsAdminPageContent() {
 
     setIsFormModalOpen(true);
   };
+
+  const searchParams = useSearchParams();
+  const hasAutoCreatedRef = useRef(false);
+
+  useEffect(() => {
+    if (hasAutoCreatedRef.current) return;
+    if (searchParams?.get('create') === 'true' || searchParams?.get('create') === '1') {
+      hasAutoCreatedRef.current = true;
+      openCreateModal();
+    }
+  }, [searchParams]);
 
   const openEditModal = (event: EventAdminItem) => {
     setEditingEvent(event);
