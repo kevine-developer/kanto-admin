@@ -198,7 +198,7 @@ export default function GameWizardPage() {
         const s = res[0];
         setFormData((prev) => ({
           ...prev,
-          format: s.format,
+          format: s.format || prev.format,
           prompt: s.prompt || prev.prompt,
           promptMg: s.promptMg || prev.promptMg,
           promptFr: s.promptFr || prev.promptFr,
