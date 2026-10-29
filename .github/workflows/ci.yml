@@ -20,7 +20,7 @@ permissions:
 
 jobs:
   build-and-lint:
-    name: Lint & Build Next.js
+    name: Lint, Test & Build Next.js
     runs-on: ubuntu-latest
 
     steps:
@@ -44,6 +44,9 @@ jobs:
 
       - name: Check Linting
         run: pnpm run lint
+
+      - name: Run Automated Tests
+        run: pnpm run test
 
       - name: Build Next.js Application
         run: pnpm run build
