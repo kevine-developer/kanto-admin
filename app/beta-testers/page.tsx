@@ -13,14 +13,11 @@ import {
   BetaEmailTemplate,
   BetaAutomationConfig,
   BetaTesterStats,
-  TesterStatus,
 } from '@/services/beta-testers.service';
 import {
   Users,
   Clock,
-  CheckCircle2,
   Send,
-  XCircle,
   Search,
   RotateCcw,
   Download,
@@ -31,46 +28,12 @@ import {
   Mail,
   Settings,
   Plus,
-  Filter,
   Eye,
-  Check,
-  AlertCircle,
-  ExternalLink,
   Edit3,
   Save,
   X,
   FileSpreadsheet,
 } from 'lucide-react';
-
-const STATUS_CONFIG: Record<
-  TesterStatus,
-  { label: string; bg: string; text: string; border: string }
-> = {
-  PENDING: {
-    label: 'En attente',
-    bg: 'bg-amber-500/10',
-    text: 'text-amber-600 dark:text-amber-400',
-    border: 'border-amber-500/25',
-  },
-  APPROVED: {
-    label: 'Approuvé',
-    bg: 'bg-blue-500/10',
-    text: 'text-blue-600 dark:text-blue-400',
-    border: 'border-blue-500/25',
-  },
-  INVITED: {
-    label: 'Invité',
-    bg: 'bg-emerald-500/10',
-    text: 'text-emerald-600 dark:text-emerald-400',
-    border: 'border-emerald-500/25',
-  },
-  REJECTED: {
-    label: 'Refusé / Désinscrit',
-    bg: 'bg-rose-500/10',
-    text: 'text-rose-600 dark:text-rose-400',
-    border: 'border-rose-500/25',
-  },
-};
 
 type ActiveTab =
   | 'participants'
@@ -499,6 +462,21 @@ export default function BetaTestersPage() {
     }
   };
 
+  const handleUpdateFeedback = async (
+    id: string,
+    partial: { status?: string; priority?: string; internalNotes?: string }
+  ) => {
+    try {
+      await betaTestersService.updateFeedback(id, partial);
+      toast.success('Retour utilisateur mis à jour.');
+      setEditingFeedback(null);
+      loadFeedbacks();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Erreur mise à jour retour.';
+      toast.error(msg);
+    }
+  };
+
   return (
     <AdminShell>
       <div className="space-y-6">
@@ -657,7 +635,7 @@ export default function BetaTestersPage() {
             }`}
           >
             <Mail className="w-3.5 h-3.5" />
-            <span>Modèles d'Emails (10)</span>
+            <span>Modèles d&apos;Emails (10)</span>
           </button>
 
           <button
@@ -1306,7 +1284,7 @@ export default function BetaTestersPage() {
 
               <div>
                 <label className="block text-xs font-medium text-stone-700 dark:text-stone-300 mb-1">
-                  Objet de l'e-mail
+                  Objet de l&apos;e-mail
                 </label>
                 <input
                   type="text"
@@ -1318,7 +1296,7 @@ export default function BetaTestersPage() {
 
               <div>
                 <label className="block text-xs font-medium text-stone-700 dark:text-stone-300 mb-1">
-                  Titre d'accroche (Header)
+                  Titre d&apos;accroche (Header)
                 </label>
                 <input
                   type="text"
@@ -1400,7 +1378,7 @@ export default function BetaTestersPage() {
               <label className="flex items-center justify-between cursor-pointer">
                 <div>
                   <span className="text-xs font-semibold text-stone-900 dark:text-stone-100 block">
-                    Confirmation automatique d'inscription
+                    Confirmation automatique d&apos;inscription
                   </span>
                   <span className="text-[11px] text-stone-400">
                     Envoie un e-mail de confirmation dès la soumission du formulaire bêta.
@@ -1420,7 +1398,7 @@ export default function BetaTestersPage() {
                     Invitation automatique dès approbation
                   </span>
                   <span className="text-[11px] text-stone-400">
-                    Expédie immédiatement le lien Google Play / TestFlight lorsque le statut passe à "Approuvé".
+                    Expédie immédiatement le lien Google Play / TestFlight lorsque le statut passe à &quot;Approuvé&quot;.
                   </span>
                 </div>
                 <input
@@ -1437,7 +1415,7 @@ export default function BetaTestersPage() {
                     Notification automatique des nouvelles versions
                   </span>
                   <span className="text-[11px] text-stone-400">
-                    Alerte par email tous les testeurs lors de la publication d'un nouveau build compatible.
+                    Alerte par email tous les testeurs lors de la publication d&apos;un nouveau build compatible.
                   </span>
                 </div>
                 <input
@@ -1533,7 +1511,7 @@ export default function BetaTestersPage() {
                   </span>
                 </div>
                 <div className="col-span-2">
-                  <span className="text-stone-400 block">Date d'inscription</span>
+                  <span className="text-stone-400 block">Date d&apos;inscription</span>
                   <span className="font-medium text-stone-800 dark:text-stone-200">
                     {new Date(detailTester.createdAt).toLocaleString('fr-FR')}
                   </span>
@@ -1695,7 +1673,7 @@ export default function BetaTestersPage() {
                   <label className="block text-stone-700 dark:text-stone-300 mb-1">Plateforme ciblée</label>
                   <select
                     value={versionFormPlatform}
-                    onChange={(e) => setVersionFormPlatform(e.target.value as any)}
+                    onChange={(e) => setVersionFormPlatform(e.target.value as 'ANDROID' | 'IOS' | 'ALL')}
                     className="w-full px-3 py-1.5 bg-stone-50 dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-lg"
                   >
                     <option value="ALL">Android & iOS</option>
@@ -1747,6 +1725,116 @@ export default function BetaTestersPage() {
                   className="px-3 py-1.5 text-xs font-semibold bg-emerald-600 text-white rounded-lg"
                 >
                   Enregistrer la version
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+        {/* ─── MODALE RETOUR UTILISATEUR ─── */}
+        {editingFeedback && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <div className="w-full max-w-lg bg-white dark:bg-stone-800 rounded-2xl p-6 border border-stone-200 dark:border-stone-700 shadow-xl space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b border-stone-100 dark:border-stone-700">
+                <h3 className="font-bold text-sm text-stone-900 dark:text-stone-100">
+                  Détail du retour : {editingFeedback.email}
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setEditingFeedback(null)}
+                  className="p-1 text-stone-400 hover:text-stone-600 dark:hover:text-stone-200"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="space-y-3 text-xs">
+                <div>
+                  <span className="text-stone-400 block mb-1">Catégorie &amp; Plateforme</span>
+                  <div className="flex gap-2">
+                    <span className="px-2 py-0.5 rounded font-bold bg-stone-100 dark:bg-stone-700 text-stone-700 dark:text-stone-300">
+                      {editingFeedback.category}
+                    </span>
+                    <span className="px-2 py-0.5 rounded font-bold bg-stone-100 dark:bg-stone-700 text-stone-700 dark:text-stone-300">
+                      {editingFeedback.platform}
+                    </span>
+                  </div>
+                </div>
+
+                {editingFeedback.title && (
+                  <div>
+                    <span className="text-stone-400 block mb-0.5">Titre</span>
+                    <p className="font-semibold text-stone-900 dark:text-stone-100">{editingFeedback.title}</p>
+                  </div>
+                )}
+
+                <div>
+                  <span className="text-stone-400 block mb-0.5">Description</span>
+                  <div className="p-3 bg-stone-50 dark:bg-stone-900 rounded-lg text-stone-800 dark:text-stone-200 whitespace-pre-wrap">
+                    {editingFeedback.description}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 pt-2">
+                  <div>
+                    <label className="block text-stone-700 dark:text-stone-300 mb-1">Statut du ticket</label>
+                    <select
+                      value={editingFeedback.status}
+                      onChange={(e) => setEditingFeedback({ ...editingFeedback, status: e.target.value })}
+                      className="w-full px-3 py-1.5 bg-stone-50 dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-lg"
+                    >
+                      <option value="NEW">Nouveau</option>
+                      <option value="IN_PROGRESS">En cours</option>
+                      <option value="RESOLVED">Résolu</option>
+                      <option value="CLOSED">Fermé</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-stone-700 dark:text-stone-300 mb-1">Priorité</label>
+                    <select
+                      value={editingFeedback.priority}
+                      onChange={(e) => setEditingFeedback({ ...editingFeedback, priority: e.target.value })}
+                      className="w-full px-3 py-1.5 bg-stone-50 dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-lg"
+                    >
+                      <option value="LOW">Faible</option>
+                      <option value="MEDIUM">Moyenne</option>
+                      <option value="HIGH">Haute</option>
+                      <option value="CRITICAL">Critique</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-stone-700 dark:text-stone-300 mb-1">Notes internes</label>
+                  <textarea
+                    rows={2}
+                    value={editingFeedback.internalNotes || ''}
+                    onChange={(e) => setEditingFeedback({ ...editingFeedback, internalNotes: e.target.value })}
+                    placeholder="Commentaire interne pour le traitement..."
+                    className="w-full px-3 py-1.5 bg-stone-50 dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-lg"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3 border-t border-stone-100 dark:border-stone-700">
+                <button
+                  type="button"
+                  onClick={() => setEditingFeedback(null)}
+                  className="px-3 py-1.5 text-xs text-stone-600 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-700 rounded-lg"
+                >
+                  Fermer
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleUpdateFeedback(editingFeedback.id, {
+                      status: editingFeedback.status,
+                      priority: editingFeedback.priority,
+                      internalNotes: editingFeedback.internalNotes || undefined,
+                    })
+                  }
+                  className="px-3 py-1.5 text-xs font-semibold bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition"
+                >
+                  Sauvegarder
                 </button>
               </div>
             </div>
