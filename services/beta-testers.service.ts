@@ -20,6 +20,7 @@ export interface BetaGroup {
 export interface BetaTester {
   id: string;
   email: string;
+  maskedEmail?: string;
   fullName?: string | null;
   platforms: string[]; // ["ANDROID"], ["IOS"], ou ["ANDROID", "IOS"]
   status: TesterStatus;
@@ -201,6 +202,15 @@ export const betaTestersService = {
 
   async getTester(id: string): Promise<BetaTester> {
     return fetchApi<BetaTester>(`/api/beta-testers/${id}`);
+  },
+
+  /**
+   * Révèle l'adresse e-mail complète d'un testeur (accès tracé dans l'audit de sécurité).
+   */
+  async revealEmail(id: string): Promise<{ success: boolean; id: string; email: string; maskedEmail: string }> {
+    return fetchApi<{ success: boolean; id: string; email: string; maskedEmail: string }>(
+      `/api/beta-testers/${id}/reveal-email`
+    );
   },
 
   async updateTester(id: string, data: Partial<BetaTester>): Promise<BetaTester> {
