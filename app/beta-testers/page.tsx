@@ -29,6 +29,10 @@ import {
   Settings,
   Plus,
   Eye,
+  EyeOff,
+  ShieldAlert,
+  ShieldCheck,
+  Lock,
   Edit3,
   Save,
   X,
@@ -112,6 +116,13 @@ export default function BetaTestersPage() {
   const [detailTester, setDetailTester] = useState<BetaTester | null>(null);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [exportedEmailsText, setExportedEmailsText] = useState('');
+
+  // ─── ÉTATS SÉCURITÉ & DÉMASQUAGE (SECTION 15 RGPD) ───
+  const [revealedEmails, setRevealedEmails] = useState<Record<string, string>>({});
+  const [isRevealingEmail, setIsRevealingEmail] = useState<Record<string, boolean>>({});
+  const [isConfirmExportOpen, setIsConfirmExportOpen] = useState(false);
+  const [exportType, setExportType] = useState<'CSV' | 'EMAILS' | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
 
   // ─── CHARGEMENT DES DONNÉES ───
   const loadTesters = useCallback(async () => {
@@ -281,35 +292,73 @@ export default function BetaTestersPage() {
     }
   };
 
-  const handleExportCsv = async () => {
-    try {
-      const res = await betaTestersService.exportCsv({
-        platform: selectedPlatform,
-        status: selectedStatus,
+  // ─── GESTIONNAIRES DÉMASQUAGE SÉCURISÉ & EXPORTS JOURNALISÉS ───
+
+  const handleToggleRevealEmail = async (testerId: string) => {
+    if (revealedEmails[testerId]) {
+      // Masquer à nouveau sans appel réseau
+      setRevealedEmails((prev) => {
+        const next = { ...prev };
+        delete next[testerId];
+        return next;
       });
-      const blob = new Blob([res.csv], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.setAttribute('href', url);
-      link.setAttribute('download', `kanto_beta_testers_${new Date().toISOString().slice(0, 10)}.csv`);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      toast.success(`${res.count} testeur(s) exporté(s) en CSV.`);
+      return;
+    }
+
+    try {
+      setIsRevealingEmail((prev) => ({ ...prev, [testerId]: true }));
+      const res = await betaTestersService.revealEmail(testerId);
+      setRevealedEmails((prev) => ({ ...prev, [testerId]: res.email }));
+      toast.success('Adresse révélée. Consultation consignée dans le journal d’audit.');
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Erreur export CSV.';
+      const msg = err instanceof Error ? err.message : 'Erreur démasquage email.';
       toast.error(msg);
+    } finally {
+      setIsRevealingEmail((prev) => ({ ...prev, [testerId]: false }));
     }
   };
 
-  const handleOpenExportEmails = async () => {
+  const handleRequestExportCsv = () => {
+    setExportType('CSV');
+    setIsConfirmExportOpen(true);
+  };
+
+  const handleRequestExportEmails = () => {
+    setExportType('EMAILS');
+    setIsConfirmExportOpen(true);
+  };
+
+  const handleConfirmExport = async () => {
+    if (!exportType) return;
     try {
-      const res = await betaTestersService.exportEmails(selectedStatus);
-      setExportedEmailsText(res.emails.join(', '));
-      setIsExportModalOpen(true);
+      setIsExporting(true);
+      if (exportType === 'CSV') {
+        const res = await betaTestersService.exportCsv({
+          platform: selectedPlatform,
+          status: selectedStatus,
+        });
+        const blob = new Blob([res.csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.setAttribute('href', url);
+        link.setAttribute('download', `kanto_beta_testers_${new Date().toISOString().slice(0, 10)}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        toast.success(`${res.count} testeur(s) exporté(s) en CSV (action journalisée).`);
+        setIsConfirmExportOpen(false);
+      } else if (exportType === 'EMAILS') {
+        const res = await betaTestersService.exportEmails(selectedStatus);
+        setExportedEmailsText(res.emails.join(', '));
+        setIsConfirmExportOpen(false);
+        setIsExportModalOpen(true);
+        toast.success(`${res.count} adresse(s) récupérée(s) (action journalisée).`);
+      }
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Erreur export emails.';
+      const msg = err instanceof Error ? err.message : 'Erreur export sécurisé.';
       toast.error(msg);
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -487,7 +536,7 @@ export default function BetaTestersPage() {
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={handleExportCsv}
+                onClick={handleRequestExportCsv}
                 className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-stone-700 dark:text-stone-300 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg hover:bg-stone-50 dark:hover:bg-stone-700 transition"
               >
                 <FileSpreadsheet className="w-3.5 h-3.5" />
@@ -495,7 +544,7 @@ export default function BetaTestersPage() {
               </button>
               <button
                 type="button"
-                onClick={handleOpenExportEmails}
+                onClick={handleRequestExportEmails}
                 className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-stone-700 dark:text-stone-300 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg hover:bg-stone-50 dark:hover:bg-stone-700 transition"
               >
                 <Download className="w-3.5 h-3.5" />
@@ -831,8 +880,29 @@ export default function BetaTestersPage() {
                             />
                           </td>
                           <td className="p-3">
-                            <div className="font-medium text-stone-900 dark:text-stone-100">
-                              {tester.email}
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-mono text-xs font-medium text-stone-900 dark:text-stone-100">
+                                {revealedEmails[tester.id] || tester.maskedEmail || tester.email}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => handleToggleRevealEmail(tester.id)}
+                                disabled={isRevealingEmail[tester.id]}
+                                className="p-1 text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 rounded transition"
+                                title={
+                                  revealedEmails[tester.id]
+                                    ? 'Masquer l’adresse e-mail'
+                                    : 'Révéler l’adresse e-mail complète (action tracée dans l’audit log)'
+                                }
+                              >
+                                {isRevealingEmail[tester.id] ? (
+                                  <span className="inline-block animate-spin text-[10px]">⌛</span>
+                                ) : revealedEmails[tester.id] ? (
+                                  <EyeOff className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                                ) : (
+                                  <Eye className="w-3.5 h-3.5" />
+                                )}
+                              </button>
                             </div>
                             {tester.fullName && (
                               <div className="text-[11px] text-stone-400">{tester.fullName}</div>
@@ -1473,9 +1543,33 @@ export default function BetaTestersPage() {
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
             <div className="w-full max-w-lg bg-white dark:bg-stone-800 rounded-2xl p-6 border border-stone-200 dark:border-stone-700 shadow-xl space-y-4">
               <div className="flex items-center justify-between pb-3 border-b border-stone-100 dark:border-stone-700">
-                <h3 className="font-bold text-sm text-stone-900 dark:text-stone-100">
-                  Fiche participant : {detailTester.email}
-                </h3>
+                <div className="flex items-center gap-2">
+                  <h3 className="font-bold text-sm text-stone-900 dark:text-stone-100 flex items-center gap-1.5">
+                    <span>Fiche participant :</span>
+                    <span className="font-mono text-xs font-semibold text-emerald-800 dark:text-emerald-400">
+                      {revealedEmails[detailTester.id] || detailTester.maskedEmail || detailTester.email}
+                    </span>
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={() => handleToggleRevealEmail(detailTester.id)}
+                    disabled={isRevealingEmail[detailTester.id]}
+                    className="p-1 text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 rounded transition"
+                    title={
+                      revealedEmails[detailTester.id]
+                        ? 'Masquer l’adresse e-mail'
+                        : 'Révéler l’adresse e-mail complète (action tracée dans l’audit log)'
+                    }
+                  >
+                    {isRevealingEmail[detailTester.id] ? (
+                      <span className="inline-block animate-spin text-[10px]">⌛</span>
+                    ) : revealedEmails[detailTester.id] ? (
+                      <EyeOff className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                    ) : (
+                      <Eye className="w-3.5 h-3.5" />
+                    )}
+                  </button>
+                </div>
                 <button
                   type="button"
                   onClick={() => setDetailTester(null)}
@@ -1531,14 +1625,90 @@ export default function BetaTestersPage() {
           </div>
         )}
 
+        {/* ─── MODALE CONFIRMATION DE SÉCURITÉ EXPORT (SECTION 15 RGPD) ─── */}
+        {isConfirmExportOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <div className="w-full max-w-md bg-white dark:bg-stone-800 rounded-2xl p-6 border border-stone-200 dark:border-stone-700 shadow-xl space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800">
+                  <ShieldAlert className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm text-stone-900 dark:text-stone-100">
+                    Contrôle de sécurité — Export de données
+                  </h3>
+                  <p className="text-xs text-stone-500 dark:text-stone-400">
+                    Réglementation RGPD et protection de la vie privée
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-3 bg-stone-50 dark:bg-stone-900/60 rounded-xl border border-stone-200/70 dark:border-stone-700/70 text-xs text-stone-600 dark:text-stone-300 space-y-2 leading-relaxed">
+                <p>
+                  Vous vous apprêtez à exporter{' '}
+                  <strong>
+                    {exportType === 'CSV' ? 'l’ensemble des données en CSV' : 'la liste des adresses e-mail'}
+                  </strong>{' '}
+                  des participants bêta (filtres actifs : plateforme <em>{selectedPlatform}</em>, statut <em>{selectedStatus}</em>).
+                </p>
+                <div className="flex items-start gap-2 pt-1 text-[11px] text-amber-700 dark:text-amber-400">
+                  <Lock className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                  <span>
+                    Cette action est strictement réservée aux administrateurs autorisés et sera automatiquement <strong>enregistrée de façon immuable</strong> dans le journal d’audit de sécurité.
+                  </span>
+                </div>
+                {exportType === 'CSV' && (
+                  <div className="flex items-start gap-2 pt-1 text-[11px] text-emerald-700 dark:text-emerald-400">
+                    <ShieldCheck className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                    <span>
+                      Protection active contre les injections de formules CSV (CWE-1236 avec neutralisation des préfixes dangereux).
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2 border-t border-stone-100 dark:border-stone-700">
+                <button
+                  type="button"
+                  disabled={isExporting}
+                  onClick={() => setIsConfirmExportOpen(false)}
+                  className="px-4 py-2 text-xs font-semibold text-stone-600 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-700 rounded-lg transition"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="button"
+                  disabled={isExporting}
+                  onClick={handleConfirmExport}
+                  className="px-4 py-2 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition flex items-center gap-1.5"
+                >
+                  {isExporting ? (
+                    <span>Traitement...</span>
+                  ) : (
+                    <>
+                      <ShieldCheck className="w-3.5 h-3.5" />
+                      <span>Confirmer l’export sécurisé</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* ─── MODALE COPIER EMAILS ─── */}
         {isExportModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
             <div className="w-full max-w-lg bg-white dark:bg-stone-800 rounded-2xl p-6 border border-stone-200 dark:border-stone-700 shadow-xl space-y-4">
               <div className="flex items-center justify-between pb-3 border-b border-stone-100 dark:border-stone-700">
-                <h3 className="font-bold text-sm text-stone-900 dark:text-stone-100">
-                  Export des adresses e-mail
-                </h3>
+                <div className="flex items-center gap-2">
+                  <h3 className="font-bold text-sm text-stone-900 dark:text-stone-100">
+                    Export des adresses e-mail
+                  </h3>
+                  <span className="px-2 py-0.5 text-[10px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 rounded">
+                    Journalisé
+                  </span>
+                </div>
                 <button
                   type="button"
                   onClick={() => setIsExportModalOpen(false)}
@@ -1546,6 +1716,11 @@ export default function BetaTestersPage() {
                 >
                   <X className="w-4 h-4" />
                 </button>
+              </div>
+
+              <div className="flex items-center gap-2 p-2.5 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/60 rounded-lg text-xs">
+                <ShieldCheck className="w-4 h-4 shrink-0" />
+                <span>Export journalisé dans l’audit log. Utilisation restreinte aux consoles de distribution d’applications (Google Play et App Store Connect).</span>
               </div>
 
               <textarea
