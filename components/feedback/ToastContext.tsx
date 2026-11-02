@@ -85,8 +85,13 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     },
   };
 
+  const contextValue = React.useMemo(
+    () => ({ toast: toastMethods, removeToast }),
+    [toastMethods, removeToast]
+  );
+
   return (
-    <ToastContext.Provider value={{ toast: toastMethods, removeToast }}>
+    <ToastContext.Provider value={contextValue}>
       {children}
 
       {/* Conteneur de Toasts flottant */}
