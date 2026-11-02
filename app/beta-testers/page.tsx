@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { AdminShell } from '@/components/layout/AdminShell';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { useToast } from '@/lib/hooks/useToast';
@@ -49,6 +49,11 @@ type ActiveTab =
 
 export default function BetaTestersPage() {
   const { toast } = useToast();
+  const toastRef = useRef(toast);
+  useEffect(() => {
+    toastRef.current = toast;
+  }, [toast]);
+
   const [activeTab, setActiveTab] = useState<ActiveTab>('participants');
   const [isLoading, setIsLoading] = useState(true);
 
@@ -101,6 +106,11 @@ export default function BetaTestersPage() {
   // ─── ÉTATS MODÈLES D'EMAILS ───
   const [templates, setTemplates] = useState<BetaEmailTemplate[]>([]);
   const [selectedTemplateCode, setSelectedTemplateCode] = useState<string>('CONFIRMATION');
+  const selectedTemplateCodeRef = useRef(selectedTemplateCode);
+  useEffect(() => {
+    selectedTemplateCodeRef.current = selectedTemplateCode;
+  }, [selectedTemplateCode]);
+
   const [templateFormSubject, setTemplateFormSubject] = useState('');
   const [templateFormTitle, setTemplateFormTitle] = useState('');
   const [templateFormContentHtml, setTemplateFormContentHtml] = useState('');
@@ -111,6 +121,11 @@ export default function BetaTestersPage() {
 
   // ─── ÉTATS AUTOMATISATIONS ───
   const [automationConfig, setAutomationConfig] = useState<BetaAutomationConfig | null>(null);
+  const [isAutomationLoading, setIsAutomationLoading] = useState(false);
+  const [isSavingAutomation, setIsSavingAutomation] = useState(false);
+  const [autoPlayStoreWebLink, setAutoPlayStoreWebLink] = useState('');
+  const [autoTestFlightPublicLink, setAutoTestFlightPublicLink] = useState('');
+  const [autoSupportEmail, setAutoSupportEmail] = useState('');
 
   // ─── MODALES PARTICIPANT & EXPORTS ───
   const [detailTester, setDetailTester] = useState<BetaTester | null>(null);
@@ -142,11 +157,11 @@ export default function BetaTestersPage() {
       if (res.stats) setStats(res.stats);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Erreur chargement testeurs.';
-      toast.error(msg);
+      toastRef.current.error(msg);
     } finally {
       setIsLoading(false);
     }
-  }, [selectedPlatform, selectedStatus, selectedGroupId, search, page, toast]);
+  }, [selectedPlatform, selectedStatus, selectedGroupId, search, page]);
 
   const loadGroups = useCallback(async () => {
     try {
@@ -154,9 +169,9 @@ export default function BetaTestersPage() {
       setGroups(data);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Erreur chargement cohortes.';
-      toast.error(msg);
+      toastRef.current.error(msg);
     }
-  }, [toast]);
+  }, []);
 
   const loadVersions = useCallback(async () => {
     try {
@@ -164,9 +179,9 @@ export default function BetaTestersPage() {
       setVersions(data);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Erreur chargement versions.';
-      toast.error(msg);
+      toastRef.current.error(msg);
     }
-  }, [toast]);
+  }, []);
 
   const loadFeedbacks = useCallback(async () => {
     try {
@@ -179,16 +194,17 @@ export default function BetaTestersPage() {
       setFeedbacks(res.data);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Erreur chargement feedbacks.';
-      toast.error(msg);
+      toastRef.current.error(msg);
     }
-  }, [feedbackCategoryFilter, feedbackStatusFilter, toast]);
+  }, [feedbackCategoryFilter, feedbackStatusFilter]);
 
   const loadTemplates = useCallback(async () => {
     try {
       const list = await betaTestersService.getTemplates();
       setTemplates(list);
       if (list.length > 0) {
-        const found = list.find((t) => t.code === selectedTemplateCode) || list[0];
+        const currentCode = selectedTemplateCodeRef.current;
+        const found = list.find((t) => t.code === currentCode) || list[0];
         setSelectedTemplateCode(found.code);
         setTemplateFormSubject(found.subject);
         setTemplateFormTitle(found.title);
@@ -198,19 +214,25 @@ export default function BetaTestersPage() {
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Erreur chargement modèles.';
-      toast.error(msg);
+      toastRef.current.error(msg);
     }
-  }, [selectedTemplateCode, toast]);
+  }, []);
 
   const loadAutomationConfig = useCallback(async () => {
     try {
+      setIsAutomationLoading(true);
       const config = await betaTestersService.getAutomationConfig();
       setAutomationConfig(config);
+      setAutoPlayStoreWebLink(config.playStoreWebLink || '');
+      setAutoTestFlightPublicLink(config.testFlightPublicLink || '');
+      setAutoSupportEmail(config.supportEmail || '');
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Erreur chargement automatisation.';
-      toast.error(msg);
+      toastRef.current.error(msg);
+    } finally {
+      setIsAutomationLoading(false);
     }
-  }, [toast]);
+  }, []);
 
   // Synchronisation au montage et selon l'onglet actif
   useEffect(() => {
@@ -500,14 +522,33 @@ export default function BetaTestersPage() {
 
   // ─── GESTIONNAIRES AUTOMATISATIONS ───
 
-  const handleUpdateAutomation = async (partial: Partial<BetaAutomationConfig>) => {
+  const handleToggleAutomation = async (partial: Partial<BetaAutomationConfig>) => {
     try {
       const updated = await betaTestersService.updateAutomationConfig(partial);
       setAutomationConfig(updated);
-      toast.success('Paramètres d’automatisation mis à jour.');
+      toastRef.current.success('Paramètres d’automatisation actualisés.');
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Erreur mise à jour configuration.';
-      toast.error(msg);
+      toastRef.current.error(msg);
+    }
+  };
+
+  const handleSaveAutomationLinks = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      setIsSavingAutomation(true);
+      const updated = await betaTestersService.updateAutomationConfig({
+        playStoreWebLink: autoPlayStoreWebLink.trim(),
+        testFlightPublicLink: autoTestFlightPublicLink.trim() || undefined,
+        supportEmail: autoSupportEmail.trim(),
+      });
+      setAutomationConfig(updated);
+      toastRef.current.success('Liens globaux et email support enregistrés.');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Erreur enregistrement liens.';
+      toastRef.current.error(msg);
+    } finally {
+      setIsSavingAutomation(false);
     }
   };
 
@@ -1438,104 +1479,146 @@ export default function BetaTestersPage() {
         )}
 
         {/* ─── ONGLET 6 : AUTOMATISATIONS ─── */}
-        {activeTab === 'automations' && automationConfig && (
-          <div className="max-w-2xl bg-white dark:bg-stone-800/80 border border-stone-200 dark:border-stone-700/60 rounded-xl p-5 space-y-5">
-            <h3 className="font-bold text-sm text-stone-900 dark:text-stone-100 pb-2 border-b border-stone-100 dark:border-stone-700/60">
-              Paramètres d’automatisation & Liens globaux
-            </h3>
-
-            <div className="space-y-4">
-              <label className="flex items-center justify-between cursor-pointer">
-                <div>
-                  <span className="text-xs font-semibold text-stone-900 dark:text-stone-100 block">
-                    Confirmation automatique d&apos;inscription
-                  </span>
-                  <span className="text-[11px] text-stone-400">
-                    Envoie un e-mail de confirmation dès la soumission du formulaire bêta.
-                  </span>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={automationConfig.autoConfirmRegistration}
-                  onChange={(e) => handleUpdateAutomation({ autoConfirmRegistration: e.target.checked })}
-                  className="rounded text-emerald-600 focus:ring-emerald-500 w-4 h-4"
-                />
-              </label>
-
-              <label className="flex items-center justify-between cursor-pointer">
-                <div>
-                  <span className="text-xs font-semibold text-stone-900 dark:text-stone-100 block">
-                    Invitation automatique dès approbation
-                  </span>
-                  <span className="text-[11px] text-stone-400">
-                    Expédie immédiatement le lien Google Play / TestFlight lorsque le statut passe à &quot;Approuvé&quot;.
-                  </span>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={automationConfig.autoInviteOnApproval}
-                  onChange={(e) => handleUpdateAutomation({ autoInviteOnApproval: e.target.checked })}
-                  className="rounded text-emerald-600 focus:ring-emerald-500 w-4 h-4"
-                />
-              </label>
-
-              <label className="flex items-center justify-between cursor-pointer">
-                <div>
-                  <span className="text-xs font-semibold text-stone-900 dark:text-stone-100 block">
-                    Notification automatique des nouvelles versions
-                  </span>
-                  <span className="text-[11px] text-stone-400">
-                    Alerte par email tous les testeurs lors de la publication d&apos;un nouveau build compatible.
-                  </span>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={automationConfig.autoNotifyNewVersions}
-                  onChange={(e) => handleUpdateAutomation({ autoNotifyNewVersions: e.target.checked })}
-                  className="rounded text-emerald-600 focus:ring-emerald-500 w-4 h-4"
-                />
-              </label>
+        {activeTab === 'automations' && (
+          isAutomationLoading ? (
+            <div className="max-w-2xl bg-white dark:bg-stone-800/80 border border-stone-200 dark:border-stone-700/60 rounded-xl p-8 flex flex-col items-center justify-center gap-3">
+              <span className="inline-block animate-spin text-xl">⏳</span>
+              <p className="text-xs text-stone-500 dark:text-stone-400">
+                Chargement des paramètres d’automatisation...
+              </p>
             </div>
-
-            <div className="pt-4 border-t border-stone-100 dark:border-stone-700/60 space-y-3">
-              <div>
-                <label className="block text-xs font-medium text-stone-700 dark:text-stone-300 mb-1">
-                  Lien Web Closed Testing Google Play
-                </label>
-                <input
-                  type="text"
-                  value={automationConfig.playStoreWebLink}
-                  onChange={(e) => handleUpdateAutomation({ playStoreWebLink: e.target.value })}
-                  className="w-full px-3 py-1.5 text-xs bg-stone-50 dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-lg focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-stone-700 dark:text-stone-300 mb-1">
-                  Lien Public TestFlight Apple iOS
-                </label>
-                <input
-                  type="text"
-                  value={automationConfig.testFlightPublicLink || ''}
-                  placeholder="https://testflight.apple.com/join/..."
-                  onChange={(e) => handleUpdateAutomation({ testFlightPublicLink: e.target.value })}
-                  className="w-full px-3 py-1.5 text-xs bg-stone-50 dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-lg focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-stone-700 dark:text-stone-300 mb-1">
-                  Adresse e-mail support bêta
-                </label>
-                <input
-                  type="email"
-                  value={automationConfig.supportEmail}
-                  onChange={(e) => handleUpdateAutomation({ supportEmail: e.target.value })}
-                  className="w-full px-3 py-1.5 text-xs bg-stone-50 dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-lg focus:outline-none"
-                />
-              </div>
+          ) : !automationConfig ? (
+            <div className="max-w-2xl bg-white dark:bg-stone-800/80 border border-stone-200 dark:border-stone-700/60 rounded-xl p-8 text-center space-y-3">
+              <p className="text-xs text-amber-600 dark:text-amber-400 font-medium">
+                Impossible de charger les paramètres d’automatisation.
+              </p>
+              <button
+                type="button"
+                onClick={loadAutomationConfig}
+                className="px-3.5 py-1.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition"
+              >
+                Réessayer
+              </button>
             </div>
-          </div>
+          ) : (
+            <div className="max-w-2xl bg-white dark:bg-stone-800/80 border border-stone-200 dark:border-stone-700/60 rounded-xl p-5 space-y-5">
+              <div className="flex items-center justify-between pb-2 border-b border-stone-100 dark:border-stone-700/60">
+                <h3 className="font-bold text-sm text-stone-900 dark:text-stone-100">
+                  Paramètres d’automatisation &amp; Liens globaux
+                </h3>
+                <span className="px-2 py-0.5 text-[10px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 rounded">
+                  Actif
+                </span>
+              </div>
+
+              {/* Interrupteurs automatisés */}
+              <div className="space-y-4">
+                <label className="flex items-center justify-between cursor-pointer">
+                  <div>
+                    <span className="text-xs font-semibold text-stone-900 dark:text-stone-100 block">
+                      Confirmation automatique d&apos;inscription
+                    </span>
+                    <span className="text-[11px] text-stone-400">
+                      Envoie un e-mail de confirmation dès la soumission du formulaire bêta.
+                    </span>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={automationConfig.autoConfirmRegistration}
+                    onChange={(e) => handleToggleAutomation({ autoConfirmRegistration: e.target.checked })}
+                    className="rounded text-emerald-600 focus:ring-emerald-500 w-4 h-4 cursor-pointer"
+                  />
+                </label>
+
+                <label className="flex items-center justify-between cursor-pointer">
+                  <div>
+                    <span className="text-xs font-semibold text-stone-900 dark:text-stone-100 block">
+                      Invitation automatique dès approbation
+                    </span>
+                    <span className="text-[11px] text-stone-400">
+                      Expédie immédiatement le lien Google Play / TestFlight lorsque le statut passe à &quot;Approuvé&quot;.
+                    </span>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={automationConfig.autoInviteOnApproval}
+                    onChange={(e) => handleToggleAutomation({ autoInviteOnApproval: e.target.checked })}
+                    className="rounded text-emerald-600 focus:ring-emerald-500 w-4 h-4 cursor-pointer"
+                  />
+                </label>
+
+                <label className="flex items-center justify-between cursor-pointer">
+                  <div>
+                    <span className="text-xs font-semibold text-stone-900 dark:text-stone-100 block">
+                      Notification automatique des nouvelles versions
+                    </span>
+                    <span className="text-[11px] text-stone-400">
+                      Alerte par email tous les testeurs lors de la publication d&apos;un nouveau build compatible.
+                    </span>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={automationConfig.autoNotifyNewVersions}
+                    onChange={(e) => handleToggleAutomation({ autoNotifyNewVersions: e.target.checked })}
+                    className="rounded text-emerald-600 focus:ring-emerald-500 w-4 h-4 cursor-pointer"
+                  />
+                </label>
+              </div>
+
+              {/* Formulaire des liens et contacts de distribution */}
+              <form onSubmit={handleSaveAutomationLinks} className="pt-4 border-t border-stone-100 dark:border-stone-700/60 space-y-3">
+                <div>
+                  <label className="block text-xs font-medium text-stone-700 dark:text-stone-300 mb-1">
+                    Lien Web Closed Testing Google Play
+                  </label>
+                  <input
+                    type="text"
+                    value={autoPlayStoreWebLink}
+                    onChange={(e) => setAutoPlayStoreWebLink(e.target.value)}
+                    placeholder="https://play.google.com/apps/testing/com.devengalere.kantomg"
+                    className="w-full px-3 py-1.5 text-xs bg-stone-50 dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-stone-700 dark:text-stone-300 mb-1">
+                    Lien Public TestFlight Apple iOS
+                  </label>
+                  <input
+                    type="text"
+                    value={autoTestFlightPublicLink}
+                    placeholder="https://testflight.apple.com/join/..."
+                    onChange={(e) => setAutoTestFlightPublicLink(e.target.value)}
+                    className="w-full px-3 py-1.5 text-xs bg-stone-50 dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-stone-700 dark:text-stone-300 mb-1">
+                    Adresse e-mail support bêta
+                  </label>
+                  <input
+                    type="email"
+                    value={autoSupportEmail}
+                    onChange={(e) => setAutoSupportEmail(e.target.value)}
+                    placeholder="contact@kanto.mg"
+                    className="w-full px-3 py-1.5 text-xs bg-stone-50 dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                  />
+                </div>
+
+                <div className="pt-2 flex justify-end">
+                  <button
+                    type="submit"
+                    disabled={isSavingAutomation}
+                    className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition disabled:opacity-50"
+                  >
+                    <Save className="w-3.5 h-3.5" />
+                    <span>{isSavingAutomation ? 'Enregistrement...' : 'Enregistrer les liens'}</span>
+                  </button>
+                </div>
+              </form>
+            </div>
+          )
         )}
 
         {/* ─── MODALE DÉTAILS TESTEUR ─── */}
