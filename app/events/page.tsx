@@ -14,6 +14,9 @@ import {
   EventRewardType,
   AdminEventParticipantItem,
   CreateEventInput,
+  EventLanguageMode,
+  EventSectionsConfig,
+  EventContentConfig,
 } from '@/services/events.service';
 import {
   Calendar,
@@ -38,6 +41,14 @@ import {
   ChevronLeft,
   ChevronRight,
   Flame,
+  Globe,
+  Info,
+  MapPin,
+  ExternalLink,
+  Gamepad2,
+  FileText,
+  Sliders,
+  Check,
 } from 'lucide-react';
 
 function EventsAdminPageContent() {
@@ -80,7 +91,26 @@ function EventsAdminPageContent() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingEvent, setEditingEvent] = useState<EventAdminItem | null>(null);
 
-  // Champs de formulaire
+  // Configuration flexible des langues et sections
+  const [formLanguageMode, setFormLanguageMode] = useState<EventLanguageMode>('both');
+  const [activeLanguageTab, setActiveLanguageTab] = useState<'both' | 'mg' | 'fr'>('both');
+  const [enabledSections, setEnabledSections] = useState<EventSectionsConfig>({
+    shortDescription: true,
+    rules: false,
+    participationConditions: true,
+    practicalInfo: true,
+    rewards: true,
+    gameModule: false,
+  });
+
+  const toggleSection = (key: keyof EventSectionsConfig) => {
+    setEnabledSections((prev) => ({
+      ...prev,
+      [key]: !prev[key],
+    }));
+  };
+
+  // Champs de formulaire (conservés en mémoire même si section/langue temporairement désactivée)
   const [formSlug, setFormSlug] = useState('');
   const [formTitleFr, setFormTitleFr] = useState('');
   const [formTitleMg, setFormTitleMg] = useState('');
@@ -205,6 +235,17 @@ function EventsAdminPageContent() {
 
   const openCreateModal = () => {
     setEditingEvent(null);
+    setFormLanguageMode('both');
+    setActiveLanguageTab('both');
+    setEnabledSections({
+      shortDescription: true,
+      rules: false,
+      participationConditions: true,
+      practicalInfo: true,
+      rewards: true,
+      gameModule: false,
+    });
+
     setFormSlug('');
     setFormTitleFr('');
     setFormTitleMg('');
@@ -255,6 +296,37 @@ function EventsAdminPageContent() {
 
   const openEditModal = (event: EventAdminItem) => {
     setEditingEvent(event);
+
+    // Restauration ou inférence intelligente des langues et sections
+    const contentConfig = (event.metadata as any)?.contentConfig as EventContentConfig | undefined;
+    if (contentConfig) {
+      setFormLanguageMode(contentConfig.languageMode || 'both');
+      setActiveLanguageTab('both');
+      setEnabledSections({
+        shortDescription: contentConfig.sections?.shortDescription ?? Boolean(event.shortDescFr || event.shortDescMg),
+        rules: contentConfig.sections?.rules ?? Boolean(event.rulesFr || event.rulesMg),
+        participationConditions: contentConfig.sections?.participationConditions ?? Boolean(event.participationType !== 'OPEN' || event.maxParticipants || event.registrationDeadline),
+        practicalInfo: contentConfig.sections?.practicalInfo ?? Boolean(event.location || event.externalUrl),
+        rewards: contentConfig.sections?.rewards ?? Boolean(event.rewards && event.rewards.length > 0),
+        gameModule: contentConfig.sections?.gameModule ?? Boolean((event.metadata as any)?.gameModuleId),
+      });
+    } else {
+      // Détection rétrocompatible pour anciens événements
+      const hasFr = Boolean(event.titleFr?.trim());
+      const hasMg = Boolean(event.titleMg?.trim());
+      const isBoth = hasFr && hasMg && event.titleFr !== event.titleMg;
+      setFormLanguageMode(isBoth ? 'both' : (hasMg ? 'mg' : 'fr'));
+      setActiveLanguageTab('both');
+      setEnabledSections({
+        shortDescription: Boolean(event.shortDescFr || event.shortDescMg),
+        rules: Boolean(event.rulesFr || event.rulesMg),
+        participationConditions: Boolean(event.participationType !== 'OPEN' || event.maxParticipants || event.registrationDeadline),
+        practicalInfo: Boolean(event.location || event.externalUrl),
+        rewards: Boolean(event.rewards && event.rewards.length > 0),
+        gameModule: Boolean((event.metadata as any)?.gameModuleId),
+      });
+    }
+
     setFormSlug(event.slug);
     setFormTitleFr(event.titleFr);
     setFormTitleMg(event.titleMg);
@@ -279,8 +351,8 @@ function EventsAdminPageContent() {
     setFormRulesFr(event.rulesFr || '');
     setFormRulesMg(event.rulesMg || '');
     const moduleMetadata =
-      typeof event.metadata?.gameModuleId === 'string'
-        ? event.metadata.gameModuleId
+      typeof (event.metadata as any)?.gameModuleId === 'string'
+        ? (event.metadata as any).gameModuleId
         : '';
     setFormGameModuleId(moduleMetadata);
     setFormRewards(
@@ -301,12 +373,23 @@ function EventsAdminPageContent() {
   const handleSaveEvent = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formTitleFr.trim() || !formTitleMg.trim()) {
-      toast.error('Le titre en français et en malgache est obligatoire.');
+    const isFr = formLanguageMode === 'fr' || formLanguageMode === 'both';
+    const isMg = formLanguageMode === 'mg' || formLanguageMode === 'both';
+
+    if (isFr && !formTitleFr.trim()) {
+      toast.error('Le titre en français est obligatoire.');
       return;
     }
-    if (!formDescriptionFr.trim() || !formDescriptionMg.trim()) {
-      toast.error('La description en français et en malgache est obligatoire.');
+    if (isFr && !formDescriptionFr.trim()) {
+      toast.error('La description en français est obligatoire.');
+      return;
+    }
+    if (isMg && !formTitleMg.trim()) {
+      toast.error('Ny lohatenin\'ny hetsika amin\'ny teny malagasy dia tsy maintsy fenoina (Titre en malgache obligatoire).');
+      return;
+    }
+    if (isMg && !formDescriptionMg.trim()) {
+      toast.error('Ny famaritana amin\'ny teny malagasy dia tsy maintsy fenoina (Description en malgache obligatoire).');
       return;
     }
     if (!formStartDate || !formEndDate) {
@@ -316,38 +399,66 @@ function EventsAdminPageContent() {
 
     try {
       setIsSubmitting(true);
+
+      const titleFrPayload = isFr ? formTitleFr.trim() : (formTitleMg.trim() || undefined);
+      const titleMgPayload = isMg ? formTitleMg.trim() : (formTitleFr.trim() || undefined);
+      const descFrPayload = isFr ? formDescriptionFr.trim() : (formDescriptionMg.trim() || undefined);
+      const descMgPayload = isMg ? formDescriptionMg.trim() : (formDescriptionFr.trim() || undefined);
+
       const payload: CreateEventInput = {
-        titleFr: formTitleFr.trim(),
-        titleMg: formTitleMg.trim(),
-        shortDescFr: formShortDescFr.trim() || undefined,
-        shortDescMg: formShortDescMg.trim() || undefined,
-        descriptionFr: formDescriptionFr.trim(),
-        descriptionMg: formDescriptionMg.trim(),
+        titleFr: titleFrPayload,
+        titleMg: titleMgPayload,
+        shortDescFr: (enabledSections.shortDescription && isFr) ? (formShortDescFr.trim() || undefined) : undefined,
+        shortDescMg: (enabledSections.shortDescription && isMg) ? (formShortDescMg.trim() || undefined) : undefined,
+        descriptionFr: descFrPayload,
+        descriptionMg: descMgPayload,
         category: formCategory,
-        participationType: formParticipationType,
-        minTier: formMinTier,
-        location: formLocation.trim() || undefined,
-        externalUrl: formExternalUrl.trim() || undefined,
+        participationType: enabledSections.participationConditions ? formParticipationType : 'OPEN',
+        minTier: enabledSections.participationConditions ? formMinTier : 'FREE',
+        location: enabledSections.practicalInfo ? (formLocation.trim() || undefined) : undefined,
+        externalUrl: enabledSections.practicalInfo ? (formExternalUrl.trim() || undefined) : undefined,
         startDate: new Date(formStartDate).toISOString(),
         endDate: new Date(formEndDate).toISOString(),
-        registrationDeadline: formRegistrationDeadline
+        registrationDeadline: (enabledSections.participationConditions && formRegistrationDeadline)
           ? new Date(formRegistrationDeadline).toISOString()
           : undefined,
-        maxParticipants: formMaxParticipants ? parseInt(formMaxParticipants, 10) : undefined,
+        maxParticipants: (enabledSections.participationConditions && formMaxParticipants)
+          ? parseInt(formMaxParticipants, 10)
+          : undefined,
         isFeatured: formIsFeatured,
-        rulesFr: formRulesFr.trim() || undefined,
-        rulesMg: formRulesMg.trim() || undefined,
-        metadata: formGameModuleId ? { gameModuleId: formGameModuleId } : undefined,
+        rulesFr: (enabledSections.rules && isFr) ? (formRulesFr.trim() || undefined) : undefined,
+        rulesMg: (enabledSections.rules && isMg) ? (formRulesMg.trim() || undefined) : undefined,
+        metadata: {
+          contentConfig: {
+            languageMode: formLanguageMode,
+            languages: formLanguageMode === 'both' ? ['mg', 'fr'] : [formLanguageMode],
+            sections: enabledSections,
+          },
+          ...(enabledSections.gameModule && formGameModuleId ? { gameModuleId: formGameModuleId } : {}),
+        },
       };
+
+      if (enabledSections.rewards && formRewards.length > 0) {
+        payload.rewards = formRewards.map((r) => ({
+          rewardType: r.rewardType,
+          titleFr: isFr ? (r.titleFr.trim() || r.titleMg.trim() || 'Récompense') : (r.titleMg.trim() || 'Loka'),
+          titleMg: isMg ? (r.titleMg.trim() || r.titleFr.trim() || 'Loka') : (r.titleFr.trim() || 'Récompense'),
+          amount: r.amount,
+          badgeId: r.badgeId,
+          lotDescription: r.lotDescription,
+          criteria: r.criteria || 'completion',
+        }));
+      }
+
+      const eventDisplayName = titleFrPayload || titleMgPayload || 'Événement';
 
       if (editingEvent) {
         await eventsAdminService.updateEvent(editingEvent.id, payload);
-        toast.success(`Événement "${payload.titleFr}" mis à jour avec succès.`);
+        toast.success(`Événement "${eventDisplayName}" mis à jour avec succès.`);
       } else {
         payload.slug = formSlug.trim() || undefined;
-        payload.rewards = formRewards;
         await eventsAdminService.createEvent(payload);
-        toast.success(`Événement "${payload.titleFr}" créé avec succès (Brouillon).`);
+        toast.success(`Événement "${eventDisplayName}" créé avec succès (Brouillon).`);
       }
 
       setIsFormModalOpen(false);
@@ -1033,262 +1144,885 @@ function EventsAdminPageContent() {
           </div>
         )}
 
-        {/* ─── MODAL : CRÉATION & ÉDITION D'ÉVÉNEMENT ─────────────────────────── */}
+        {/* ─── MODAL : CRÉATION & ÉDITION D'ÉVÉNEMENT (GESTION FLEXIBLE LANGUES ET SECTIONS) ─── */}
         {isFormModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-            <div className="w-full max-w-4xl rounded-xl border border-[var(--border)] bg-[var(--card)] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-              <div className="px-6 py-4 border-b border-[var(--border)] flex items-center justify-between">
+            <div className="w-full max-w-4xl rounded-xl border border-[var(--border)] bg-[var(--card)] shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
+              {/* En-tête du modal */}
+              <div className="px-6 py-4 border-b border-[var(--border)] flex items-center justify-between bg-[var(--card)]">
                 <div>
                   <h2 className="text-lg font-bold text-[var(--foreground)]">
-                    {editingEvent ? `Modifier : ${editingEvent.titleFr}` : 'Créer un nouvel événement'}
+                    {editingEvent ? `Modifier : ${editingEvent.titleFr || editingEvent.titleMg}` : 'Créer un nouvel événement'}
                   </h2>
                   <p className="text-xs text-[var(--text-muted)] mt-0.5">
-                    Remplissez les détails bilingues et configurez les règles réelles de l’événement.
+                    Personnalisez librement les langues et les sections de contenu à communiquer.
                   </p>
                 </div>
                 <button
+                  type="button"
                   onClick={() => setIsFormModalOpen(false)}
-                  className="p-1 rounded-lg text-[var(--text-muted)] hover:bg-[var(--card-hover)]"
+                  className="p-1 rounded-lg text-[var(--text-muted)] hover:bg-[var(--card-hover)] transition-colors"
                 >
                   <X size={18} />
                 </button>
               </div>
 
-              <form onSubmit={handleSaveEvent} className="p-6 space-y-5 overflow-y-auto flex-1">
-                {/* Ligne Titre Français & Malgache */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-[var(--foreground)] mb-1">
-                      Titre de l&apos;événement (Français) *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={formTitleFr}
-                      onChange={(e) => setFormTitleFr(e.target.value)}
-                      placeholder="Ex: Semaine de la Langue Malgache"
-                      className="w-full px-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] focus:outline-hidden focus:border-[var(--accent)]"
-                    />
+              <form onSubmit={handleSaveEvent} className="p-6 space-y-6 overflow-y-auto flex-1">
+                {/* ───────────────────────────────────────────────────────────── */}
+                {/* 1. CHOIX LIBRE DES LANGUES (MG seul, FR seul, Bilingue)       */}
+                {/* ───────────────────────────────────────────────────────────── */}
+                <div className="p-4 rounded-xl border border-[var(--border)] bg-[var(--background)] space-y-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                    <span className="text-xs font-bold text-[var(--foreground)] uppercase tracking-wider flex items-center gap-1.5">
+                      <Globe size={14} className="text-[var(--accent)]" />
+                      Langue(s) de l&apos;événement
+                    </span>
+                    <span className="text-[11px] text-[var(--text-muted)]">
+                      L&apos;organisateur choisit librement la ou les langues à renseigner
+                    </span>
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-semibold text-[var(--foreground)] mb-1">
-                      Lohatenin&apos;ny hetsika (Malagasy) *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={formTitleMg}
-                      onChange={(e) => setFormTitleMg(e.target.value)}
-                      placeholder="Ex: Herinandron'ny Teny Malagasy"
-                      className="w-full px-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] focus:outline-hidden focus:border-[var(--accent)]"
-                    />
-                  </div>
-                </div>
-
-                {/* Description courte (pour cartes d'aperçu) */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-[var(--foreground)] mb-1">
-                      Description courte (Français)
-                    </label>
-                    <input
-                      type="text"
-                      value={formShortDescFr}
-                      onChange={(e) => setFormShortDescFr(e.target.value)}
-                      placeholder="Accroche en une phrase pour la carte mobile"
-                      className="w-full px-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] focus:outline-hidden focus:border-[var(--accent)]"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-[var(--foreground)] mb-1">
-                      Famaritana fohy (Malagasy)
-                    </label>
-                    <input
-                      type="text"
-                      value={formShortDescMg}
-                      onChange={(e) => setFormShortDescMg(e.target.value)}
-                      placeholder="Famaritana fohy ho an'ny karatra finday"
-                      className="w-full px-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] focus:outline-hidden focus:border-[var(--accent)]"
-                    />
-                  </div>
-                </div>
-
-                {/* Description complète bilingue */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-[var(--foreground)] mb-1">
-                      Description complète (Français) *
-                    </label>
-                    <textarea
-                      required
-                      rows={4}
-                      value={formDescriptionFr}
-                      onChange={(e) => setFormDescriptionFr(e.target.value)}
-                      placeholder="Contexte, présentation et déroulement détaillé..."
-                      className="w-full px-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] focus:outline-hidden focus:border-[var(--accent)]"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-[var(--foreground)] mb-1">
-                      Famaritana feno (Malagasy) *
-                    </label>
-                    <textarea
-                      required
-                      rows={4}
-                      value={formDescriptionMg}
-                      onChange={(e) => setFormDescriptionMg(e.target.value)}
-                      placeholder="Fanazavana feno momba ny hetsika..."
-                      className="w-full px-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] focus:outline-hidden focus:border-[var(--accent)]"
-                    />
-                  </div>
-                </div>
-
-                {/* Catégorie, Type & Tier */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-[var(--foreground)] mb-1">
-                      Catégorie *
-                    </label>
-                    <select
-                      value={formCategory}
-                      onChange={(e) => setFormCategory(e.target.value as EventCategory)}
-                      className="w-full px-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] focus:outline-hidden"
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setFormLanguageMode('both')}
+                      className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg border text-xs font-bold transition-all ${
+                        formLanguageMode === 'both'
+                          ? 'border-[var(--accent)] bg-[var(--accent)]/15 text-[var(--foreground)] shadow-xs ring-1 ring-[var(--accent)]/30'
+                          : 'border-[var(--border)] bg-[var(--card)] text-[var(--text-muted)] hover:bg-[var(--card-hover)]'
+                      }`}
                     >
-                      <option value="CULTURE">Culture & Patrimoine</option>
-                      <option value="CHALLENGE">Défis & Compétitions</option>
-                      <option value="REWARD">Récompenses & Lots</option>
-                      <option value="COMMUNITY">Communauté & Fihavanana</option>
-                      <option value="SEASONAL">Saisonnier & Fêtes</option>
-                      <option value="SPECIAL">Spécial Kanto MG</option>
-                    </select>
-                  </div>
+                      <span className="text-sm">🌍</span>
+                      <span>Bilingue (MG + FR)</span>
+                    </button>
 
-                  <div>
-                    <label className="block text-xs font-semibold text-[var(--foreground)] mb-1">
-                      Type de participation *
-                    </label>
-                    <select
-                      value={formParticipationType}
-                      onChange={(e) =>
-                        setFormParticipationType(e.target.value as EventParticipationType)
-                      }
-                      className="w-full px-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] focus:outline-hidden"
+                    <button
+                      type="button"
+                      onClick={() => setFormLanguageMode('mg')}
+                      className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg border text-xs font-bold transition-all ${
+                        formLanguageMode === 'mg'
+                          ? 'border-emerald-500 bg-emerald-500/15 text-[var(--foreground)] shadow-xs ring-1 ring-emerald-500/30'
+                          : 'border-[var(--border)] bg-[var(--card)] text-[var(--text-muted)] hover:bg-[var(--card-hover)]'
+                      }`}
                     >
-                      <option value="OPEN">Ouvert à tous (Sans inscription préalable)</option>
-                      <option value="REGISTRATION_REQUIRED">Inscription préalable obligatoire</option>
-                      <option value="EXCLUSIVE_TIER">Réservé aux membres VIP / Premium</option>
-                    </select>
-                  </div>
+                      <span className="text-sm">🇲🇬</span>
+                      <span>Malgache uniquement</span>
+                    </button>
 
-                  <div>
-                    <label className="block text-xs font-semibold text-[var(--foreground)] mb-1">
-                      Niveau / Tier requis
-                    </label>
-                    <select
-                      value={formMinTier}
-                      onChange={(e) => setFormMinTier(e.target.value)}
-                      className="w-full px-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] focus:outline-hidden"
+                    <button
+                      type="button"
+                      onClick={() => setFormLanguageMode('fr')}
+                      className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg border text-xs font-bold transition-all ${
+                        formLanguageMode === 'fr'
+                          ? 'border-blue-500 bg-blue-500/15 text-[var(--foreground)] shadow-xs ring-1 ring-blue-500/30'
+                          : 'border-[var(--border)] bg-[var(--card)] text-[var(--text-muted)] hover:bg-[var(--card-hover)]'
+                      }`}
                     >
-                      <option value="FREE">Tous (Gratuit)</option>
-                      <option value="PREMIUM">Premium uniquement</option>
-                      <option value="VIP">VIP uniquement</option>
-                    </select>
+                      <span className="text-sm">🇫🇷</span>
+                      <span>Français uniquement</span>
+                    </button>
                   </div>
+
+                  {/* Sous-onglets de vue pour le mode bilingue */}
+                  {formLanguageMode === 'both' && (
+                    <div className="flex items-center justify-between pt-2 border-t border-[var(--border)] text-xs">
+                      <span className="text-[11px] text-[var(--text-muted)]">
+                        Vue de saisie bilingue :
+                      </span>
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => setActiveLanguageTab('both')}
+                          className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition-colors ${
+                            activeLanguageTab === 'both'
+                              ? 'bg-[var(--accent)] text-white'
+                              : 'text-[var(--text-muted)] hover:bg-[var(--card)]'
+                          }`}
+                        >
+                          Côte à côte
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setActiveLanguageTab('mg')}
+                          className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition-colors ${
+                            activeLanguageTab === 'mg'
+                              ? 'bg-emerald-600 text-white'
+                              : 'text-[var(--text-muted)] hover:bg-[var(--card)]'
+                          }`}
+                        >
+                          🇲🇬 Malagasy
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setActiveLanguageTab('fr')}
+                          className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition-colors ${
+                            activeLanguageTab === 'fr'
+                              ? 'bg-blue-600 text-white'
+                              : 'text-[var(--text-muted)] hover:bg-[var(--card)]'
+                          }`}
+                        >
+                          🇫🇷 Français
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
-                {/* Dates & Limites */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-[var(--foreground)] mb-1">
-                      Date & Heure de début *
-                    </label>
-                    <input
-                      type="datetime-local"
-                      required
-                      value={formStartDate}
-                      onChange={(e) => setFormStartDate(e.target.value)}
-                      className="w-full px-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] focus:outline-hidden"
-                    />
+                {/* ───────────────────────────────────────────────────────────── */}
+                {/* 2. ACTIVATION ET DÉSACTIVATION DES SECTIONS INDIVIDUELLES      */}
+                {/* ───────────────────────────────────────────────────────────── */}
+                <div className="p-4 rounded-xl border border-[var(--border)] bg-[var(--card)] space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-[var(--foreground)] uppercase tracking-wider flex items-center gap-1.5">
+                      <Sliders size={14} className="text-[var(--accent)]" />
+                      Sections de contenu à renseigner
+                    </span>
+                    <span className="text-[11px] text-[var(--text-muted)]">
+                      Activez ou désactivez selon les besoins de votre événement
+                    </span>
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-semibold text-[var(--foreground)] mb-1">
-                      Date & Heure de fin *
-                    </label>
-                    <input
-                      type="datetime-local"
-                      required
-                      value={formEndDate}
-                      onChange={(e) => setFormEndDate(e.target.value)}
-                      className="w-full px-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] focus:outline-hidden"
-                    />
-                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
+                    {/* Section 1 : Titre & Description (fixe, obligatoire) */}
+                    <div className="flex items-center justify-between p-2 rounded-lg border border-emerald-500/40 bg-emerald-500/10 text-[var(--foreground)]">
+                      <span className="font-semibold text-xs flex items-center gap-1.5">
+                        <FileText size={13} className="text-emerald-600" />
+                        Titre & Description
+                      </span>
+                      <span className="text-[10px] font-bold uppercase text-emerald-700 bg-emerald-100 dark:bg-emerald-950 px-1.5 py-0.5 rounded">
+                        Requis
+                      </span>
+                    </div>
 
-                  <div>
-                    <label className="block text-xs font-semibold text-[var(--foreground)] mb-1">
-                      Limite de participants (optionnel)
-                    </label>
-                    <input
-                      type="number"
-                      min={1}
-                      value={formMaxParticipants}
-                      onChange={(e) => setFormMaxParticipants(e.target.value)}
-                      placeholder="Illimité si vide"
-                      className="w-full px-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] focus:outline-hidden"
-                    />
-                  </div>
-                </div>
-
-                {/* Lieu & Options */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-[var(--foreground)] mb-1">
-                      Lieu / Format
-                    </label>
-                    <input
-                      type="text"
-                      value={formLocation}
-                      onChange={(e) => setFormLocation(e.target.value)}
-                      placeholder="Ex: Fampiharana Kanto MG ou Palais de la Reine"
-                      className="w-full px-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] focus:outline-hidden"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-[var(--foreground)] mb-1">
-                      Module de jeu associé (pour Défis)
-                    </label>
-                    <select
-                      value={formGameModuleId}
-                      onChange={(e) => setFormGameModuleId(e.target.value)}
-                      className="w-full px-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] focus:outline-hidden"
+                    {/* Section 2 : Accroche / Description courte */}
+                    <button
+                      type="button"
+                      onClick={() => toggleSection('shortDescription')}
+                      className={`flex items-center justify-between p-2 rounded-lg border transition-all text-left ${
+                        enabledSections.shortDescription
+                          ? 'border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--foreground)]'
+                          : 'border-[var(--border)] bg-[var(--background)] text-[var(--text-muted)] hover:bg-[var(--card-hover)]'
+                      }`}
                     >
-                      <option value="">Aucun jeu associé (Événement culturel)</option>
-                      <option value="quizGame">Kanto Quiz Culturel</option>
-                      <option value="trueFalseGame">Vrai ou Faux (Marina sa Diso)</option>
-                      <option value="riddleGame">Devinettes (Ankamantatra)</option>
-                    </select>
+                      <span className="font-medium text-xs">Infos complémentaires</span>
+                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                        enabledSections.shortDescription ? 'bg-[var(--accent)] text-white' : 'bg-[var(--border)] text-[var(--text-muted)]'
+                      }`}>
+                        {enabledSections.shortDescription ? 'Actif' : 'Masqué'}
+                      </span>
+                    </button>
+
+                    {/* Section 3 : Conditions d'accès */}
+                    <button
+                      type="button"
+                      onClick={() => toggleSection('participationConditions')}
+                      className={`flex items-center justify-between p-2 rounded-lg border transition-all text-left ${
+                        enabledSections.participationConditions
+                          ? 'border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--foreground)]'
+                          : 'border-[var(--border)] bg-[var(--background)] text-[var(--text-muted)] hover:bg-[var(--card-hover)]'
+                      }`}
+                    >
+                      <span className="font-medium text-xs">Conditions d&apos;accès</span>
+                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                        enabledSections.participationConditions ? 'bg-[var(--accent)] text-white' : 'bg-[var(--border)] text-[var(--text-muted)]'
+                      }`}>
+                        {enabledSections.participationConditions ? 'Actif' : 'Masqué'}
+                      </span>
+                    </button>
+
+                    {/* Section 4 : Infos pratiques */}
+                    <button
+                      type="button"
+                      onClick={() => toggleSection('practicalInfo')}
+                      className={`flex items-center justify-between p-2 rounded-lg border transition-all text-left ${
+                        enabledSections.practicalInfo
+                          ? 'border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--foreground)]'
+                          : 'border-[var(--border)] bg-[var(--background)] text-[var(--text-muted)] hover:bg-[var(--card-hover)]'
+                      }`}
+                    >
+                      <span className="font-medium text-xs">Infos pratiques & Liens</span>
+                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                        enabledSections.practicalInfo ? 'bg-[var(--accent)] text-white' : 'bg-[var(--border)] text-[var(--text-muted)]'
+                      }`}>
+                        {enabledSections.practicalInfo ? 'Actif' : 'Masqué'}
+                      </span>
+                    </button>
+
+                    {/* Section 5 : Programme & Règles */}
+                    <button
+                      type="button"
+                      onClick={() => toggleSection('rules')}
+                      className={`flex items-center justify-between p-2 rounded-lg border transition-all text-left ${
+                        enabledSections.rules
+                          ? 'border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--foreground)]'
+                          : 'border-[var(--border)] bg-[var(--background)] text-[var(--text-muted)] hover:bg-[var(--card-hover)]'
+                      }`}
+                    >
+                      <span className="font-medium text-xs">Programme & Règles</span>
+                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                        enabledSections.rules ? 'bg-[var(--accent)] text-white' : 'bg-[var(--border)] text-[var(--text-muted)]'
+                      }`}>
+                        {enabledSections.rules ? 'Actif' : 'Masqué'}
+                      </span>
+                    </button>
+
+                    {/* Section 6 : Récompenses & Lots */}
+                    <button
+                      type="button"
+                      onClick={() => toggleSection('rewards')}
+                      className={`flex items-center justify-between p-2 rounded-lg border transition-all text-left ${
+                        enabledSections.rewards
+                          ? 'border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--foreground)]'
+                          : 'border-[var(--border)] bg-[var(--background)] text-[var(--text-muted)] hover:bg-[var(--card-hover)]'
+                      }`}
+                    >
+                      <span className="font-medium text-xs">Récompenses & Lots</span>
+                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                        enabledSections.rewards ? 'bg-[var(--accent)] text-white' : 'bg-[var(--border)] text-[var(--text-muted)]'
+                      }`}>
+                        {enabledSections.rewards ? 'Actif' : 'Masqué'}
+                      </span>
+                    </button>
+
+                    {/* Section 7 : Défi interactif */}
+                    <button
+                      type="button"
+                      onClick={() => toggleSection('gameModule')}
+                      className={`flex items-center justify-between p-2 rounded-lg border transition-all text-left col-span-2 sm:col-span-1 ${
+                        enabledSections.gameModule
+                          ? 'border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--foreground)]'
+                          : 'border-[var(--border)] bg-[var(--background)] text-[var(--text-muted)] hover:bg-[var(--card-hover)]'
+                      }`}
+                    >
+                      <span className="font-medium text-xs">Défi interactif Kanto</span>
+                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                        enabledSections.gameModule ? 'bg-[var(--accent)] text-white' : 'bg-[var(--border)] text-[var(--text-muted)]'
+                      }`}>
+                        {enabledSections.gameModule ? 'Actif' : 'Masqué'}
+                      </span>
+                    </button>
                   </div>
                 </div>
 
-                {/* Option Vedette */}
-                <div className="flex items-center gap-2 p-3 rounded-lg border border-[var(--border)] bg-[var(--background)]">
-                  <input
-                    type="checkbox"
-                    id="isFeatured"
-                    checked={formIsFeatured}
-                    onChange={(e) => setFormIsFeatured(e.target.checked)}
-                    className="w-4 h-4 rounded text-[var(--accent)]"
-                  />
-                  <label htmlFor="isFeatured" className="text-xs font-semibold text-[var(--foreground)] cursor-pointer">
-                    Mettre en avant comme événement « À la une » (affiché en tête du carrousel d&apos;accueil mobile)
-                  </label>
+                {/* ───────────────────────────────────────────────────────────── */}
+                {/* 3. SECTION PRINCIPALE : TITRE & DESCRIPTION COMPLÈTE          */}
+                {/* ───────────────────────────────────────────────────────────── */}
+                <div className="space-y-4 pt-1">
+                  <div className="flex items-center gap-2 pb-1 border-b border-[var(--border)]">
+                    <FileText size={16} className="text-[var(--accent)]" />
+                    <h3 className="text-sm font-bold text-[var(--foreground)]">
+                      Titre & Description principale *
+                    </h3>
+                  </div>
+
+                  {/* Ligne des Titres */}
+                  <div className={`grid gap-4 ${
+                    formLanguageMode === 'both' && activeLanguageTab === 'both'
+                      ? 'grid-cols-1 md:grid-cols-2'
+                      : 'grid-cols-1'
+                  }`}>
+                    {(formLanguageMode === 'fr' || (formLanguageMode === 'both' && (activeLanguageTab === 'both' || activeLanguageTab === 'fr'))) && (
+                      <div>
+                        <label className="block text-xs font-semibold text-[var(--foreground)] mb-1">
+                          🇫🇷 Titre de l&apos;événement (Français) *
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          value={formTitleFr}
+                          onChange={(e) => setFormTitleFr(e.target.value)}
+                          placeholder="Ex: Semaine de la Langue Malgache"
+                          className="w-full px-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] focus:outline-hidden focus:border-[var(--accent)]"
+                        />
+                      </div>
+                    )}
+
+                    {(formLanguageMode === 'mg' || (formLanguageMode === 'both' && (activeLanguageTab === 'both' || activeLanguageTab === 'mg'))) && (
+                      <div>
+                        <label className="block text-xs font-semibold text-[var(--foreground)] mb-1">
+                          🇲🇬 Lohatenin&apos;ny hetsika (Malagasy) *
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          value={formTitleMg}
+                          onChange={(e) => setFormTitleMg(e.target.value)}
+                          placeholder="Ex: Herinandron'ny Teny Malagasy"
+                          className="w-full px-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] focus:outline-hidden focus:border-[var(--accent)]"
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Ligne des Descriptions Complètes */}
+                  <div className={`grid gap-4 ${
+                    formLanguageMode === 'both' && activeLanguageTab === 'both'
+                      ? 'grid-cols-1 md:grid-cols-2'
+                      : 'grid-cols-1'
+                  }`}>
+                    {(formLanguageMode === 'fr' || (formLanguageMode === 'both' && (activeLanguageTab === 'both' || activeLanguageTab === 'fr'))) && (
+                      <div>
+                        <label className="block text-xs font-semibold text-[var(--foreground)] mb-1">
+                          🇫🇷 Description complète (Français) *
+                        </label>
+                        <textarea
+                          required
+                          rows={4}
+                          value={formDescriptionFr}
+                          onChange={(e) => setFormDescriptionFr(e.target.value)}
+                          placeholder="Contexte, présentation et déroulement détaillé..."
+                          className="w-full px-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] focus:outline-hidden focus:border-[var(--accent)]"
+                        />
+                      </div>
+                    )}
+
+                    {(formLanguageMode === 'mg' || (formLanguageMode === 'both' && (activeLanguageTab === 'both' || activeLanguageTab === 'mg'))) && (
+                      <div>
+                        <label className="block text-xs font-semibold text-[var(--foreground)] mb-1">
+                          🇲🇬 Famaritana feno (Malagasy) *
+                        </label>
+                        <textarea
+                          required
+                          rows={4}
+                          value={formDescriptionMg}
+                          onChange={(e) => setFormDescriptionMg(e.target.value)}
+                          placeholder="Fanazavana feno momba ny hetsika sy ny lanjany..."
+                          className="w-full px-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] focus:outline-hidden focus:border-[var(--accent)]"
+                        />
+                      </div>
+                    )}
+                  </div>
                 </div>
 
-                {/* Boutons d'action du formulaire */}
+                {/* ───────────────────────────────────────────────────────────── */}
+                {/* 4. SECTION OPTIONNELLE : INFOS COMPLÉMENTAIRES (ACCROCHE)     */}
+                {/* ───────────────────────────────────────────────────────────── */}
+                {enabledSections.shortDescription && (
+                  <div className="p-4 rounded-xl border border-[var(--border)] bg-[var(--card)] space-y-3">
+                    <div className="flex items-center justify-between pb-1 border-b border-[var(--border)]">
+                      <h4 className="text-xs font-bold text-[var(--foreground)] uppercase tracking-wider flex items-center gap-1.5">
+                        <Info size={14} className="text-[var(--accent)]" />
+                        Informations complémentaires (Description courte pour aperçus mobiles)
+                      </h4>
+                      <button
+                        type="button"
+                        onClick={() => toggleSection('shortDescription')}
+                        className="text-[11px] text-[var(--text-muted)] hover:text-red-600 transition-colors"
+                      >
+                        Désactiver la section
+                      </button>
+                    </div>
+
+                    <div className={`grid gap-4 ${
+                      formLanguageMode === 'both' && activeLanguageTab === 'both'
+                        ? 'grid-cols-1 md:grid-cols-2'
+                        : 'grid-cols-1'
+                    }`}>
+                      {(formLanguageMode === 'fr' || (formLanguageMode === 'both' && (activeLanguageTab === 'both' || activeLanguageTab === 'fr'))) && (
+                        <div>
+                          <label className="block text-xs font-semibold text-[var(--foreground)] mb-1">
+                            🇫🇷 Description courte (Français)
+                          </label>
+                          <input
+                            type="text"
+                            value={formShortDescFr}
+                            onChange={(e) => setFormShortDescFr(e.target.value)}
+                            placeholder="Accroche en une phrase pour les cartes mobiles"
+                            className="w-full px-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] focus:outline-hidden focus:border-[var(--accent)]"
+                          />
+                        </div>
+                      )}
+
+                      {(formLanguageMode === 'mg' || (formLanguageMode === 'both' && (activeLanguageTab === 'both' || activeLanguageTab === 'mg'))) && (
+                        <div>
+                          <label className="block text-xs font-semibold text-[var(--foreground)] mb-1">
+                            🇲🇬 Famaritana fohy (Malagasy)
+                          </label>
+                          <input
+                            type="text"
+                            value={formShortDescMg}
+                            onChange={(e) => setFormShortDescMg(e.target.value)}
+                            placeholder="Famaritana fohy ho an'ny karatra finday"
+                            className="w-full px-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] focus:outline-hidden focus:border-[var(--accent)]"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* ───────────────────────────────────────────────────────────── */}
+                {/* 5. DATES & PÉRIODE (FONDAMENTAL)                               */}
+                {/* ───────────────────────────────────────────────────────────── */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 pb-1 border-b border-[var(--border)]">
+                    <Calendar size={16} className="text-[var(--accent)]" />
+                    <h3 className="text-sm font-bold text-[var(--foreground)]">
+                      Période & Dates de l&apos;événement *
+                    </h3>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-[var(--foreground)] mb-1">
+                        Date & Heure de début *
+                      </label>
+                      <input
+                        type="datetime-local"
+                        required
+                        value={formStartDate}
+                        onChange={(e) => setFormStartDate(e.target.value)}
+                        className="w-full px-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] focus:outline-hidden focus:border-[var(--accent)]"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-[var(--foreground)] mb-1">
+                        Date & Heure de fin *
+                      </label>
+                      <input
+                        type="datetime-local"
+                        required
+                        value={formEndDate}
+                        onChange={(e) => setFormEndDate(e.target.value)}
+                        className="w-full px-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] focus:outline-hidden focus:border-[var(--accent)]"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-[var(--foreground)] mb-1">
+                        Catégorie *
+                      </label>
+                      <select
+                        value={formCategory}
+                        onChange={(e) => setFormCategory(e.target.value as EventCategory)}
+                        className="w-full px-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] focus:outline-hidden focus:border-[var(--accent)]"
+                      >
+                        <option value="CULTURE">Culture & Patrimoine</option>
+                        <option value="CHALLENGE">Défis & Compétitions</option>
+                        <option value="REWARD">Récompenses & Lots</option>
+                        <option value="COMMUNITY">Communauté & Fihavanana</option>
+                        <option value="SEASONAL">Saisonnier & Fêtes</option>
+                        <option value="SPECIAL">Spécial Kanto MG</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* ───────────────────────────────────────────────────────────── */}
+                {/* 6. CONDITIONS DE PARTICIPATION & ACCÈS                        */}
+                {/* ───────────────────────────────────────────────────────────── */}
+                {enabledSections.participationConditions && (
+                  <div className="p-4 rounded-xl border border-[var(--border)] bg-[var(--card)] space-y-3">
+                    <div className="flex items-center justify-between pb-1 border-b border-[var(--border)]">
+                      <h4 className="text-xs font-bold text-[var(--foreground)] uppercase tracking-wider flex items-center gap-1.5">
+                        <Users size={14} className="text-[var(--accent)]" />
+                        Conditions de participation & Accès
+                      </h4>
+                      <button
+                        type="button"
+                        onClick={() => toggleSection('participationConditions')}
+                        className="text-[11px] text-[var(--text-muted)] hover:text-red-600 transition-colors"
+                      >
+                        Désactiver la section
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                      <div>
+                        <label className="block text-xs font-semibold text-[var(--foreground)] mb-1">
+                          Type de participation
+                        </label>
+                        <select
+                          value={formParticipationType}
+                          onChange={(e) =>
+                            setFormParticipationType(e.target.value as EventParticipationType)
+                          }
+                          className="w-full px-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] focus:outline-hidden"
+                        >
+                          <option value="OPEN">Ouvert à tous (Sans inscription)</option>
+                          <option value="REGISTRATION_REQUIRED">Inscription obligatoire</option>
+                          <option value="EXCLUSIVE_TIER">Réservé VIP / Premium</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-[var(--foreground)] mb-1">
+                          Niveau / Tier requis
+                        </label>
+                        <select
+                          value={formMinTier}
+                          onChange={(e) => setFormMinTier(e.target.value)}
+                          className="w-full px-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] focus:outline-hidden"
+                        >
+                          <option value="FREE">Tous les membres (Gratuit)</option>
+                          <option value="PREMIUM">Membres Premium</option>
+                          <option value="VIP">Membres VIP uniquement</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-[var(--foreground)] mb-1">
+                          Date limite d&apos;inscription
+                        </label>
+                        <input
+                          type="datetime-local"
+                          value={formRegistrationDeadline}
+                          onChange={(e) => setFormRegistrationDeadline(e.target.value)}
+                          className="w-full px-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] focus:outline-hidden"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-[var(--foreground)] mb-1">
+                          Capacité max. de participants
+                        </label>
+                        <input
+                          type="number"
+                          min={1}
+                          value={formMaxParticipants}
+                          onChange={(e) => setFormMaxParticipants(e.target.value)}
+                          placeholder="Illimité si vide"
+                          className="w-full px-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] focus:outline-hidden"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* ───────────────────────────────────────────────────────────── */}
+                {/* 7. INFORMATIONS PRATIQUES & LIENS                             */}
+                {/* ───────────────────────────────────────────────────────────── */}
+                {enabledSections.practicalInfo && (
+                  <div className="p-4 rounded-xl border border-[var(--border)] bg-[var(--card)] space-y-3">
+                    <div className="flex items-center justify-between pb-1 border-b border-[var(--border)]">
+                      <h4 className="text-xs font-bold text-[var(--foreground)] uppercase tracking-wider flex items-center gap-1.5">
+                        <MapPin size={14} className="text-[var(--accent)]" />
+                        Informations pratiques & Liens
+                      </h4>
+                      <button
+                        type="button"
+                        onClick={() => toggleSection('practicalInfo')}
+                        className="text-[11px] text-[var(--text-muted)] hover:text-red-600 transition-colors"
+                      >
+                        Désactiver la section
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-semibold text-[var(--foreground)] mb-1">
+                          Lieu / Format de l&apos;événement
+                        </label>
+                        <input
+                          type="text"
+                          value={formLocation}
+                          onChange={(e) => setFormLocation(e.target.value)}
+                          placeholder="Ex: Fampiharana Kanto MG, En ligne ou Palais d'Andafiavaratra"
+                          className="w-full px-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] focus:outline-hidden"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-[var(--foreground)] mb-1">
+                          Lien externe billetterie ou ressources (URL)
+                        </label>
+                        <input
+                          type="url"
+                          value={formExternalUrl}
+                          onChange={(e) => setFormExternalUrl(e.target.value)}
+                          placeholder="https://..."
+                          className="w-full px-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] focus:outline-hidden"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* ───────────────────────────────────────────────────────────── */}
+                {/* 8. PROGRAMME & RÈGLEMENT                                      */}
+                {/* ───────────────────────────────────────────────────────────── */}
+                {enabledSections.rules && (
+                  <div className="p-4 rounded-xl border border-[var(--border)] bg-[var(--card)] space-y-3">
+                    <div className="flex items-center justify-between pb-1 border-b border-[var(--border)]">
+                      <h4 className="text-xs font-bold text-[var(--foreground)] uppercase tracking-wider flex items-center gap-1.5">
+                        <FileText size={14} className="text-[var(--accent)]" />
+                        Programme, Règlement & Déroulement
+                      </h4>
+                      <button
+                        type="button"
+                        onClick={() => toggleSection('rules')}
+                        className="text-[11px] text-[var(--text-muted)] hover:text-red-600 transition-colors"
+                      >
+                        Désactiver la section
+                      </button>
+                    </div>
+
+                    <div className={`grid gap-4 ${
+                      formLanguageMode === 'both' && activeLanguageTab === 'both'
+                        ? 'grid-cols-1 md:grid-cols-2'
+                        : 'grid-cols-1'
+                    }`}>
+                      {(formLanguageMode === 'fr' || (formLanguageMode === 'both' && (activeLanguageTab === 'both' || activeLanguageTab === 'fr'))) && (
+                        <div>
+                          <label className="block text-xs font-semibold text-[var(--foreground)] mb-1">
+                            🇫🇷 Programme & Règlement (Français)
+                          </label>
+                          <textarea
+                            rows={3}
+                            value={formRulesFr}
+                            onChange={(e) => setFormRulesFr(e.target.value)}
+                            placeholder="Étapes clés, barème de points, critères de validation..."
+                            className="w-full px-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] focus:outline-hidden"
+                          />
+                        </div>
+                      )}
+
+                      {(formLanguageMode === 'mg' || (formLanguageMode === 'both' && (activeLanguageTab === 'both' || activeLanguageTab === 'mg'))) && (
+                        <div>
+                          <label className="block text-xs font-semibold text-[var(--foreground)] mb-1">
+                            🇲🇬 Fitsipika sy fandaharam-potoana (Malagasy)
+                          </label>
+                          <textarea
+                            rows={3}
+                            value={formRulesMg}
+                            onChange={(e) => setFormRulesMg(e.target.value)}
+                            placeholder="Dingana arahina, fitsipika sy fepetra..."
+                            className="w-full px-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] focus:outline-hidden"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* ───────────────────────────────────────────────────────────── */}
+                {/* 9. DÉFI INTERACTIF KANTO                                      */}
+                {/* ───────────────────────────────────────────────────────────── */}
+                {enabledSections.gameModule && (
+                  <div className="p-4 rounded-xl border border-[var(--border)] bg-[var(--card)] space-y-3">
+                    <div className="flex items-center justify-between pb-1 border-b border-[var(--border)]">
+                      <h4 className="text-xs font-bold text-[var(--foreground)] uppercase tracking-wider flex items-center gap-1.5">
+                        <Gamepad2 size={14} className="text-[var(--accent)]" />
+                        Défi interactif & Jeu associé
+                      </h4>
+                      <button
+                        type="button"
+                        onClick={() => toggleSection('gameModule')}
+                        className="text-[11px] text-[var(--text-muted)] hover:text-red-600 transition-colors"
+                      >
+                        Désactiver la section
+                      </button>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-[var(--foreground)] mb-1">
+                        Module de jeu connecté pour la compétition
+                      </label>
+                      <select
+                        value={formGameModuleId}
+                        onChange={(e) => setFormGameModuleId(e.target.value)}
+                        className="w-full px-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] focus:outline-hidden"
+                      >
+                        <option value="">Sélectionner un jeu Kanto...</option>
+                        <option value="quizGame">Kanto Quiz Culturel (Questions interactives)</option>
+                        <option value="trueFalseGame">Vrai ou Faux (Marina sa Diso)</option>
+                        <option value="riddleGame">Devinettes & Énigmes (Ankamantatra)</option>
+                      </select>
+                    </div>
+                  </div>
+                )}
+
+                {/* ───────────────────────────────────────────────────────────── */}
+                {/* 10. RÉCOMPENSES & LOTS À REMPORTER                            */}
+                {/* ───────────────────────────────────────────────────────────── */}
+                {enabledSections.rewards && (
+                  <div className="p-4 rounded-xl border border-[var(--border)] bg-[var(--card)] space-y-3">
+                    <div className="flex items-center justify-between pb-1 border-b border-[var(--border)]">
+                      <h4 className="text-xs font-bold text-[var(--foreground)] uppercase tracking-wider flex items-center gap-1.5">
+                        <Gift size={14} className="text-[var(--accent)]" />
+                        Récompenses & Lots à remporter
+                      </h4>
+                      <button
+                        type="button"
+                        onClick={() => toggleSection('rewards')}
+                        className="text-[11px] text-[var(--text-muted)] hover:text-red-600 transition-colors"
+                      >
+                        Désactiver la section
+                      </button>
+                    </div>
+
+                    <div className="space-y-3">
+                      {formRewards.map((reward, idx) => (
+                        <div
+                          key={idx}
+                          className="p-3 rounded-lg border border-[var(--border)] bg-[var(--background)] space-y-2 relative"
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-[var(--foreground)]">
+                              Récompense #{idx + 1}
+                            </span>
+                            {formRewards.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setFormRewards((prev) => prev.filter((_, i) => i !== idx))
+                                }
+                                className="text-[11px] text-red-600 hover:underline"
+                              >
+                                Supprimer
+                              </button>
+                            )}
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                            <div>
+                              <label className="block text-[11px] font-semibold text-[var(--text-muted)] mb-0.5">
+                                Type de récompense
+                              </label>
+                              <select
+                                value={reward.rewardType}
+                                onChange={(e) => {
+                                  const val = e.target.value as EventRewardType;
+                                  setFormRewards((prev) =>
+                                    prev.map((r, i) => (i === idx ? { ...r, rewardType: val } : r))
+                                  );
+                                }}
+                                className="w-full px-2 py-1.5 text-xs rounded border border-[var(--border)] bg-[var(--card)]"
+                              >
+                                <option value="XP">Points d’expérience (XP)</option>
+                                <option value="COINS">Pièces Kanto (Vola)</option>
+                                <option value="BADGE">Badge culturel officiel</option>
+                                <option value="PHYSICAL_LOT">Lot physique / Avantage</option>
+                              </select>
+                            </div>
+
+                            {(formLanguageMode === 'fr' || formLanguageMode === 'both') && (
+                              <div>
+                                <label className="block text-[11px] font-semibold text-[var(--text-muted)] mb-0.5">
+                                  🇫🇷 Titre (FR)
+                                </label>
+                                <input
+                                  type="text"
+                                  value={reward.titleFr}
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    setFormRewards((prev) =>
+                                      prev.map((r, i) => (i === idx ? { ...r, titleFr: val } : r))
+                                    );
+                                  }}
+                                  placeholder="Ex: +150 XP"
+                                  className="w-full px-2 py-1.5 text-xs rounded border border-[var(--border)] bg-[var(--card)]"
+                                />
+                              </div>
+                            )}
+
+                            {(formLanguageMode === 'mg' || formLanguageMode === 'both') && (
+                              <div>
+                                <label className="block text-[11px] font-semibold text-[var(--text-muted)] mb-0.5">
+                                  🇲🇬 Lohateny (MG)
+                                </label>
+                                <input
+                                  type="text"
+                                  value={reward.titleMg}
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    setFormRewards((prev) =>
+                                      prev.map((r, i) => (i === idx ? { ...r, titleMg: val } : r))
+                                    );
+                                  }}
+                                  placeholder="Ex: +150 XP"
+                                  className="w-full px-2 py-1.5 text-xs rounded border border-[var(--border)] bg-[var(--card)]"
+                                />
+                              </div>
+                            )}
+
+                            {(reward.rewardType === 'XP' || reward.rewardType === 'COINS') && (
+                              <div>
+                                <label className="block text-[11px] font-semibold text-[var(--text-muted)] mb-0.5">
+                                  Montant numérique
+                                </label>
+                                <input
+                                  type="number"
+                                  min={1}
+                                  value={reward.amount || ''}
+                                  onChange={(e) => {
+                                    const val = parseInt(e.target.value, 10) || 0;
+                                    setFormRewards((prev) =>
+                                      prev.map((r, i) => (i === idx ? { ...r, amount: val } : r))
+                                    );
+                                  }}
+                                  className="w-full px-2 py-1.5 text-xs rounded border border-[var(--border)] bg-[var(--card)]"
+                                />
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setFormRewards((prev) => [
+                            ...prev,
+                            {
+                              rewardType: 'COINS',
+                              titleFr: 'Pièces Kanto +50',
+                              titleMg: 'Vola Kanto +50',
+                              amount: 50,
+                              criteria: 'completion',
+                            },
+                          ])
+                        }
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-dashed border-[var(--border)] text-xs font-semibold text-[var(--accent)] hover:bg-[var(--card-hover)] transition-colors"
+                      >
+                        <Plus size={14} />
+                        <span>Ajouter une autre récompense</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* ───────────────────────────────────────────────────────────── */}
+                {/* 11. VISIBILITÉ, SLUG & MISE EN AVANT                          */}
+                {/* ───────────────────────────────────────────────────────────── */}
+                <div className="p-4 rounded-xl border border-[var(--border)] bg-[var(--background)] space-y-3">
+                  {!editingEvent && (
+                    <div>
+                      <label className="block text-xs font-semibold text-[var(--foreground)] mb-1">
+                        Identifiant URL / Slug personnalisé (optionnel)
+                      </label>
+                      <input
+                        type="text"
+                        value={formSlug}
+                        onChange={(e) => setFormSlug(e.target.value)}
+                        placeholder="Laissez vide pour générer automatiquement depuis le titre"
+                        className="w-full px-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--card)] text-[var(--foreground)] focus:outline-hidden"
+                      />
+                    </div>
+                  )}
+
+                  <div className="flex items-center gap-2 p-3 rounded-lg border border-[var(--border)] bg-[var(--card)]">
+                    <input
+                      type="checkbox"
+                      id="isFeatured"
+                      checked={formIsFeatured}
+                      onChange={(e) => setFormIsFeatured(e.target.checked)}
+                      className="w-4 h-4 rounded text-[var(--accent)]"
+                    />
+                    <label
+                      htmlFor="isFeatured"
+                      className="text-xs font-semibold text-[var(--foreground)] cursor-pointer flex items-center gap-1.5"
+                    >
+                      <Flame size={14} className="text-amber-500" />
+                      Mettre en avant comme événement « À la une » (mis en vedette sur l&apos;application mobile)
+                    </label>
+                  </div>
+                </div>
+
+                {/* ───────────────────────────────────────────────────────────── */}
+                {/* BOUTONS D'ACTION DU FORMULAIRE                                */}
+                {/* ───────────────────────────────────────────────────────────── */}
                 <div className="flex items-center justify-end gap-3 pt-4 border-t border-[var(--border)]">
                   <button
                     type="button"
@@ -1301,10 +2035,10 @@ function EventsAdminPageContent() {
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="inline-flex items-center gap-2 px-5 py-2 text-xs font-bold rounded-lg bg-[var(--accent)] hover:opacity-90 text-white disabled:opacity-50 transition-opacity"
+                    className="inline-flex items-center gap-2 px-6 py-2 text-xs font-bold rounded-lg bg-[var(--accent)] hover:opacity-90 text-white disabled:opacity-50 transition-opacity shadow-sm"
                   >
                     {isSubmitting && <Loader2 size={14} className="animate-spin" />}
-                    <span>{editingEvent ? 'Mettre à jour' : 'Créer l’événement'}</span>
+                    <span>{editingEvent ? 'Mettre à jour l’événement' : 'Créer l’événement'}</span>
                   </button>
                 </div>
               </form>
