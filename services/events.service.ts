@@ -42,6 +42,12 @@ export interface EventRewardItem {
   claimsCount?: number;
 }
 
+export interface EventMetadataPayload {
+  contentConfig?: EventContentConfig;
+  gameModuleId?: string;
+  [key: string]: unknown;
+}
+
 export interface EventAdminItem {
   id: string;
   slug: string;
@@ -69,7 +75,7 @@ export interface EventAdminItem {
   isFeatured: boolean;
   rulesMg?: string | null;
   rulesFr?: string | null;
-  metadata?: Record<string, unknown> | null;
+  metadata?: EventMetadataPayload | null;
   cancelledReason?: string | null;
   createdAt: string;
   updatedAt: string;
@@ -146,14 +152,31 @@ export interface AdminEventsListResponse {
   };
 }
 
+export type EventLanguageMode = 'mg' | 'fr' | 'both';
+
+export interface EventSectionsConfig {
+  shortDescription: boolean;
+  rules: boolean;
+  participationConditions: boolean;
+  practicalInfo: boolean;
+  rewards: boolean;
+  gameModule: boolean;
+}
+
+export interface EventContentConfig {
+  languageMode: EventLanguageMode;
+  languages: ('mg' | 'fr')[];
+  sections: EventSectionsConfig;
+}
+
 export interface CreateEventInput {
   slug?: string;
-  titleMg: string;
-  titleFr: string;
+  titleMg?: string;
+  titleFr?: string;
   shortDescMg?: string;
   shortDescFr?: string;
-  descriptionMg: string;
-  descriptionFr: string;
+  descriptionMg?: string;
+  descriptionFr?: string;
   category: EventCategory;
   participationType?: EventParticipationType;
   minTier?: string;
@@ -168,11 +191,14 @@ export interface CreateEventInput {
   isFeatured?: boolean;
   rulesMg?: string;
   rulesFr?: string;
-  metadata?: Record<string, unknown>;
+  metadata?: Record<string, unknown> & {
+    contentConfig?: EventContentConfig;
+    gameModuleId?: string;
+  };
   rewards?: {
     rewardType: EventRewardType;
-    titleMg: string;
-    titleFr: string;
+    titleMg?: string;
+    titleFr?: string;
     amount?: number;
     badgeId?: string;
     lotDescription?: string;

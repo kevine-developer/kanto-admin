@@ -76,12 +76,6 @@ export default function AdminContributionsPage() {
   const [moderationFilter, setModerationFilter] = useState<'ALL' | 'FLAGGED' | 'CLEAN'>('ALL');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'PENDING_REVIEW' | 'CHANGES_REQUESTED'>('ALL');
 
-  // Modal de comparaison visuelle côte-à-côte (Diff doublons)
-  const [duplicateCompareModal, setDuplicateCompareModal] = useState<{
-    isOpen: boolean;
-    item: ContributionItem;
-  } | null>(null);
-
   // Modal de décision administrative (Rejet ou Demande de modifications avec motif)
   const [actionModal, setActionModal] = useState<{
     isOpen: boolean;
