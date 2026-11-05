@@ -1,4 +1,5 @@
 'use client';
+/* eslint-disable @next/next/no-img-element */
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { AdminShell } from '@/components/layout/AdminShell';

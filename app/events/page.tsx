@@ -16,7 +16,6 @@ import {
   CreateEventInput,
   EventLanguageMode,
   EventSectionsConfig,
-  EventContentConfig,
 } from '@/services/events.service';
 import {
   Calendar,
@@ -44,11 +43,9 @@ import {
   Globe,
   Info,
   MapPin,
-  ExternalLink,
   Gamepad2,
   FileText,
   Sliders,
-  Check,
 } from 'lucide-react';
 
 function EventsAdminPageContent() {
@@ -298,7 +295,8 @@ function EventsAdminPageContent() {
     setEditingEvent(event);
 
     // Restauration ou inférence intelligente des langues et sections
-    const contentConfig = (event.metadata as any)?.contentConfig as EventContentConfig | undefined;
+    const metadata = event.metadata;
+    const contentConfig = metadata?.contentConfig;
     if (contentConfig) {
       setFormLanguageMode(contentConfig.languageMode || 'both');
       setActiveLanguageTab('both');
@@ -308,7 +306,7 @@ function EventsAdminPageContent() {
         participationConditions: contentConfig.sections?.participationConditions ?? Boolean(event.participationType !== 'OPEN' || event.maxParticipants || event.registrationDeadline),
         practicalInfo: contentConfig.sections?.practicalInfo ?? Boolean(event.location || event.externalUrl),
         rewards: contentConfig.sections?.rewards ?? Boolean(event.rewards && event.rewards.length > 0),
-        gameModule: contentConfig.sections?.gameModule ?? Boolean((event.metadata as any)?.gameModuleId),
+        gameModule: contentConfig.sections?.gameModule ?? Boolean(metadata?.gameModuleId),
       });
     } else {
       // Détection rétrocompatible pour anciens événements
@@ -323,7 +321,7 @@ function EventsAdminPageContent() {
         participationConditions: Boolean(event.participationType !== 'OPEN' || event.maxParticipants || event.registrationDeadline),
         practicalInfo: Boolean(event.location || event.externalUrl),
         rewards: Boolean(event.rewards && event.rewards.length > 0),
-        gameModule: Boolean((event.metadata as any)?.gameModuleId),
+        gameModule: Boolean(metadata?.gameModuleId),
       });
     }
 
@@ -351,8 +349,8 @@ function EventsAdminPageContent() {
     setFormRulesFr(event.rulesFr || '');
     setFormRulesMg(event.rulesMg || '');
     const moduleMetadata =
-      typeof (event.metadata as any)?.gameModuleId === 'string'
-        ? (event.metadata as any).gameModuleId
+      typeof metadata?.gameModuleId === 'string'
+        ? metadata.gameModuleId
         : '';
     setFormGameModuleId(moduleMetadata);
     setFormRewards(

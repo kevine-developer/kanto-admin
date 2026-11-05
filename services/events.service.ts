@@ -42,6 +42,12 @@ export interface EventRewardItem {
   claimsCount?: number;
 }
 
+export interface EventMetadataPayload {
+  contentConfig?: EventContentConfig;
+  gameModuleId?: string;
+  [key: string]: unknown;
+}
+
 export interface EventAdminItem {
   id: string;
   slug: string;
@@ -69,7 +75,7 @@ export interface EventAdminItem {
   isFeatured: boolean;
   rulesMg?: string | null;
   rulesFr?: string | null;
-  metadata?: Record<string, unknown> | null;
+  metadata?: EventMetadataPayload | null;
   cancelledReason?: string | null;
   createdAt: string;
   updatedAt: string;
