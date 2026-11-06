@@ -4,18 +4,14 @@ import React, { useState, useEffect, useCallback, useRef, Suspense } from 'react
 import { useSearchParams } from 'next/navigation';
 import { AdminShell } from '@/components/layout/AdminShell';
 import { useToast } from '@/lib/hooks/useToast';
+import { EventWizardModal } from '@/components/events/EventWizardModal';
+import { EventParticipantsModal } from '@/components/events/EventParticipantsModal';
 import {
   eventsAdminService,
   EventAdminItem,
   EventAdminOverview,
   EventCategory,
   EventStatus,
-  EventParticipationType,
-  EventRewardType,
-  AdminEventParticipantItem,
-  CreateEventInput,
-  EventLanguageMode,
-  EventSectionsConfig,
 } from '@/services/events.service';
 import {
   Calendar,
@@ -33,25 +29,18 @@ import {
   Edit,
   RefreshCw,
   Loader2,
-  X,
   Play,
   Pause,
   Ban,
   ChevronLeft,
   ChevronRight,
   Flame,
-  Globe,
-  Info,
-  MapPin,
-  Gamepad2,
-  FileText,
-  Sliders,
 } from 'lucide-react';
 
 function EventsAdminPageContent() {
   const { toast } = useToast();
 
-  // États principaux
+  // Ãƒâ€°tats principaux
   const [overview, setOverview] = useState<EventAdminOverview | null>(null);
   const [events, setEvents] = useState<EventAdminItem[]>([]);
   const [pagination, setPagination] = useState({
@@ -75,7 +64,7 @@ function EventsAdminPageContent() {
   }, [toast]);
 
 
-  // Debounce de recherche pour éviter de saturer l'API
+  // Debounce de recherche pour ÃƒÂ©viter de saturer l'API
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(search);
@@ -83,75 +72,13 @@ function EventsAdminPageContent() {
     return () => clearTimeout(timer);
   }, [search]);
 
-  // Modal Création / Édition
+  // Modales d'administration
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingEvent, setEditingEvent] = useState<EventAdminItem | null>(null);
-
-  // Configuration flexible des langues et sections
-  const [formLanguageMode, setFormLanguageMode] = useState<EventLanguageMode>('both');
-  const [activeLanguageTab, setActiveLanguageTab] = useState<'both' | 'mg' | 'fr'>('both');
-  const [enabledSections, setEnabledSections] = useState<EventSectionsConfig>({
-    shortDescription: true,
-    rules: false,
-    participationConditions: true,
-    practicalInfo: true,
-    rewards: true,
-    gameModule: false,
-  });
-
-  const toggleSection = (key: keyof EventSectionsConfig) => {
-    setEnabledSections((prev) => ({
-      ...prev,
-      [key]: !prev[key],
-    }));
-  };
-
-  // Champs de formulaire (conservés en mémoire même si section/langue temporairement désactivée)
-  const [formSlug, setFormSlug] = useState('');
-  const [formTitleFr, setFormTitleFr] = useState('');
-  const [formTitleMg, setFormTitleMg] = useState('');
-  const [formShortDescFr, setFormShortDescFr] = useState('');
-  const [formShortDescMg, setFormShortDescMg] = useState('');
-  const [formDescriptionFr, setFormDescriptionFr] = useState('');
-  const [formDescriptionMg, setFormDescriptionMg] = useState('');
-  const [formCategory, setFormCategory] = useState<EventCategory>('CULTURE');
-  const [formParticipationType, setFormParticipationType] = useState<EventParticipationType>('OPEN');
-  const [formMinTier, setFormMinTier] = useState('FREE');
-  const [formLocation, setFormLocation] = useState('');
-  const [formExternalUrl, setFormExternalUrl] = useState('');
-  const [formStartDate, setFormStartDate] = useState('');
-  const [formEndDate, setFormEndDate] = useState('');
-  const [formRegistrationDeadline, setFormRegistrationDeadline] = useState('');
-  const [formMaxParticipants, setFormMaxParticipants] = useState<string>('');
-  const [formIsFeatured, setFormIsFeatured] = useState(false);
-  const [formRulesFr, setFormRulesFr] = useState('');
-  const [formRulesMg, setFormRulesMg] = useState('');
-  const [formGameModuleId, setFormGameModuleId] = useState('');
-
-  // Récompenses en formulaire
-  const [formRewards, setFormRewards] = useState<
-    {
-      rewardType: EventRewardType;
-      titleFr: string;
-      titleMg: string;
-      amount?: number;
-      badgeId?: string;
-      lotDescription?: string;
-      criteria?: string;
-    }[]
-  >([]);
-
-  // Modal Participants
   const [isParticipantsModalOpen, setIsParticipantsModalOpen] = useState(false);
   const [selectedEventForParticipants, setSelectedEventForParticipants] = useState<EventAdminItem | null>(null);
-  const [participants, setParticipants] = useState<AdminEventParticipantItem[]>([]);
-  const [isParticipantsLoading, setIsParticipantsLoading] = useState(false);
-  const [participantsPage, setParticipantsPage] = useState(1);
-  const [participantsTotalPages, setParticipantsTotalPages] = useState(1);
-  const [participantsTotal, setParticipantsTotal] = useState(0);
 
-  // Modal Statut / Annulation
+  // Modal Statut / Annulation globale
   const [statusModalEvent, setStatusModalEvent] = useState<EventAdminItem | null>(null);
   const [targetStatus, setTargetStatus] = useState<EventStatus | null>(null);
   const [cancelReason, setCancelReason] = useState('');
@@ -161,8 +88,7 @@ function EventsAdminPageContent() {
   const [deleteModalEvent, setDeleteModalEvent] = useState<EventAdminItem | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // ─── Chargement des données réelles ─────────────────────────────────────────
-
+  // Chargement des données réelles
   const loadOverview = useCallback(async () => {
     try {
       setIsOverviewLoading(true);
@@ -207,77 +133,20 @@ function EventsAdminPageContent() {
     loadEvents();
   }, [loadEvents]);
 
-  // ─── Gestion des participants ───────────────────────────────────────────────
-
-  const openParticipantsModal = async (event: EventAdminItem, page = 1) => {
-    setSelectedEventForParticipants(event);
-    setIsParticipantsModalOpen(true);
-    setIsParticipantsLoading(true);
-    setParticipantsPage(page);
-
-    try {
-      const res = await eventsAdminService.getParticipants(event.id, { page, limit: 15 });
-      setParticipants(res.items || []);
-      setParticipantsTotal(res.pagination?.total ?? 0);
-      setParticipantsTotalPages(res.pagination?.totalPages ?? 1);
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Erreur lors du chargement des participants.';
-      toast.error(msg);
-    } finally {
-      setIsParticipantsLoading(false);
-    }
-  };
-
-  // ─── Formulaire Création & Édition ──────────────────────────────────────────
-
+  // Actions d'ouverture
   const openCreateModal = () => {
     setEditingEvent(null);
-    setFormLanguageMode('both');
-    setActiveLanguageTab('both');
-    setEnabledSections({
-      shortDescription: true,
-      rules: false,
-      participationConditions: true,
-      practicalInfo: true,
-      rewards: true,
-      gameModule: false,
-    });
-
-    setFormSlug('');
-    setFormTitleFr('');
-    setFormTitleMg('');
-    setFormShortDescFr('');
-    setFormShortDescMg('');
-    setFormDescriptionFr('');
-    setFormDescriptionMg('');
-    setFormCategory('CULTURE');
-    setFormParticipationType('OPEN');
-    setFormMinTier('FREE');
-    setFormLocation('Fampiharana Kanto MG');
-    setFormExternalUrl('');
-
-    // Dates par défaut (aujourd'hui -> +7 jours)
-    const now = new Date();
-    const nextWeek = new Date(now.getTime() + 7 * 24 * 3600 * 1000);
-    setFormStartDate(now.toISOString().slice(0, 16));
-    setFormEndDate(nextWeek.toISOString().slice(0, 16));
-    setFormRegistrationDeadline('');
-    setFormMaxParticipants('');
-    setFormIsFeatured(false);
-    setFormRulesFr('');
-    setFormRulesMg('');
-    setFormGameModuleId('');
-    setFormRewards([
-      {
-        rewardType: 'XP',
-        titleFr: 'Bonus d’expérience +150 XP',
-        titleMg: 'Traikefa +150 XP',
-        amount: 150,
-        criteria: 'completion',
-      },
-    ]);
-
     setIsFormModalOpen(true);
+  };
+
+  const openEditModal = (event: EventAdminItem) => {
+    setEditingEvent(event);
+    setIsFormModalOpen(true);
+  };
+
+  const openParticipantsModal = (event: EventAdminItem) => {
+    setSelectedEventForParticipants(event);
+    setIsParticipantsModalOpen(true);
   };
 
   const searchParams = useSearchParams();
@@ -291,185 +160,7 @@ function EventsAdminPageContent() {
     }
   }, [searchParams]);
 
-  const openEditModal = (event: EventAdminItem) => {
-    setEditingEvent(event);
-
-    // Restauration ou inférence intelligente des langues et sections
-    const metadata = event.metadata;
-    const contentConfig = metadata?.contentConfig;
-    if (contentConfig) {
-      setFormLanguageMode(contentConfig.languageMode || 'both');
-      setActiveLanguageTab('both');
-      setEnabledSections({
-        shortDescription: contentConfig.sections?.shortDescription ?? Boolean(event.shortDescFr || event.shortDescMg),
-        rules: contentConfig.sections?.rules ?? Boolean(event.rulesFr || event.rulesMg),
-        participationConditions: contentConfig.sections?.participationConditions ?? Boolean(event.participationType !== 'OPEN' || event.maxParticipants || event.registrationDeadline),
-        practicalInfo: contentConfig.sections?.practicalInfo ?? Boolean(event.location || event.externalUrl),
-        rewards: contentConfig.sections?.rewards ?? Boolean(event.rewards && event.rewards.length > 0),
-        gameModule: contentConfig.sections?.gameModule ?? Boolean(metadata?.gameModuleId),
-      });
-    } else {
-      // Détection rétrocompatible pour anciens événements
-      const hasFr = Boolean(event.titleFr?.trim());
-      const hasMg = Boolean(event.titleMg?.trim());
-      const isBoth = hasFr && hasMg && event.titleFr !== event.titleMg;
-      setFormLanguageMode(isBoth ? 'both' : (hasMg ? 'mg' : 'fr'));
-      setActiveLanguageTab('both');
-      setEnabledSections({
-        shortDescription: Boolean(event.shortDescFr || event.shortDescMg),
-        rules: Boolean(event.rulesFr || event.rulesMg),
-        participationConditions: Boolean(event.participationType !== 'OPEN' || event.maxParticipants || event.registrationDeadline),
-        practicalInfo: Boolean(event.location || event.externalUrl),
-        rewards: Boolean(event.rewards && event.rewards.length > 0),
-        gameModule: Boolean(metadata?.gameModuleId),
-      });
-    }
-
-    setFormSlug(event.slug);
-    setFormTitleFr(event.titleFr);
-    setFormTitleMg(event.titleMg);
-    setFormShortDescFr(event.shortDescFr || '');
-    setFormShortDescMg(event.shortDescMg || '');
-    setFormDescriptionFr(event.descriptionFr);
-    setFormDescriptionMg(event.descriptionMg);
-    setFormCategory(event.category);
-    setFormParticipationType(event.participationType);
-    setFormMinTier(event.minTier || 'FREE');
-    setFormLocation(event.location || '');
-    setFormExternalUrl(event.externalUrl || '');
-    setFormStartDate(new Date(event.startDate).toISOString().slice(0, 16));
-    setFormEndDate(new Date(event.endDate).toISOString().slice(0, 16));
-    setFormRegistrationDeadline(
-      event.registrationDeadline
-        ? new Date(event.registrationDeadline).toISOString().slice(0, 16)
-        : ''
-    );
-    setFormMaxParticipants(event.maxParticipants ? String(event.maxParticipants) : '');
-    setFormIsFeatured(event.isFeatured);
-    setFormRulesFr(event.rulesFr || '');
-    setFormRulesMg(event.rulesMg || '');
-    const moduleMetadata =
-      typeof metadata?.gameModuleId === 'string'
-        ? metadata.gameModuleId
-        : '';
-    setFormGameModuleId(moduleMetadata);
-    setFormRewards(
-      event.rewards?.map((r) => ({
-        rewardType: r.rewardType,
-        titleFr: r.titleFr,
-        titleMg: r.titleMg,
-        amount: r.amount || undefined,
-        badgeId: r.badgeId || undefined,
-        lotDescription: r.lotDescription || undefined,
-        criteria: r.criteria || 'completion',
-      })) || []
-    );
-
-    setIsFormModalOpen(true);
-  };
-
-  const handleSaveEvent = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    const isFr = formLanguageMode === 'fr' || formLanguageMode === 'both';
-    const isMg = formLanguageMode === 'mg' || formLanguageMode === 'both';
-
-    if (isFr && !formTitleFr.trim()) {
-      toast.error('Le titre en français est obligatoire.');
-      return;
-    }
-    if (isFr && !formDescriptionFr.trim()) {
-      toast.error('La description en français est obligatoire.');
-      return;
-    }
-    if (isMg && !formTitleMg.trim()) {
-      toast.error('Ny lohatenin\'ny hetsika amin\'ny teny malagasy dia tsy maintsy fenoina (Titre en malgache obligatoire).');
-      return;
-    }
-    if (isMg && !formDescriptionMg.trim()) {
-      toast.error('Ny famaritana amin\'ny teny malagasy dia tsy maintsy fenoina (Description en malgache obligatoire).');
-      return;
-    }
-    if (!formStartDate || !formEndDate) {
-      toast.error('Les dates de début et de fin sont obligatoires.');
-      return;
-    }
-
-    try {
-      setIsSubmitting(true);
-
-      const titleFrPayload = isFr ? formTitleFr.trim() : (formTitleMg.trim() || undefined);
-      const titleMgPayload = isMg ? formTitleMg.trim() : (formTitleFr.trim() || undefined);
-      const descFrPayload = isFr ? formDescriptionFr.trim() : (formDescriptionMg.trim() || undefined);
-      const descMgPayload = isMg ? formDescriptionMg.trim() : (formDescriptionFr.trim() || undefined);
-
-      const payload: CreateEventInput = {
-        titleFr: titleFrPayload,
-        titleMg: titleMgPayload,
-        shortDescFr: (enabledSections.shortDescription && isFr) ? (formShortDescFr.trim() || undefined) : undefined,
-        shortDescMg: (enabledSections.shortDescription && isMg) ? (formShortDescMg.trim() || undefined) : undefined,
-        descriptionFr: descFrPayload,
-        descriptionMg: descMgPayload,
-        category: formCategory,
-        participationType: enabledSections.participationConditions ? formParticipationType : 'OPEN',
-        minTier: enabledSections.participationConditions ? formMinTier : 'FREE',
-        location: enabledSections.practicalInfo ? (formLocation.trim() || undefined) : undefined,
-        externalUrl: enabledSections.practicalInfo ? (formExternalUrl.trim() || undefined) : undefined,
-        startDate: new Date(formStartDate).toISOString(),
-        endDate: new Date(formEndDate).toISOString(),
-        registrationDeadline: (enabledSections.participationConditions && formRegistrationDeadline)
-          ? new Date(formRegistrationDeadline).toISOString()
-          : undefined,
-        maxParticipants: (enabledSections.participationConditions && formMaxParticipants)
-          ? parseInt(formMaxParticipants, 10)
-          : undefined,
-        isFeatured: formIsFeatured,
-        rulesFr: (enabledSections.rules && isFr) ? (formRulesFr.trim() || undefined) : undefined,
-        rulesMg: (enabledSections.rules && isMg) ? (formRulesMg.trim() || undefined) : undefined,
-        metadata: {
-          contentConfig: {
-            languageMode: formLanguageMode,
-            languages: formLanguageMode === 'both' ? ['mg', 'fr'] : [formLanguageMode],
-            sections: enabledSections,
-          },
-          ...(enabledSections.gameModule && formGameModuleId ? { gameModuleId: formGameModuleId } : {}),
-        },
-      };
-
-      if (enabledSections.rewards && formRewards.length > 0) {
-        payload.rewards = formRewards.map((r) => ({
-          rewardType: r.rewardType,
-          titleFr: isFr ? (r.titleFr.trim() || r.titleMg.trim() || 'Récompense') : (r.titleMg.trim() || 'Loka'),
-          titleMg: isMg ? (r.titleMg.trim() || r.titleFr.trim() || 'Loka') : (r.titleFr.trim() || 'Récompense'),
-          amount: r.amount,
-          badgeId: r.badgeId,
-          lotDescription: r.lotDescription,
-          criteria: r.criteria || 'completion',
-        }));
-      }
-
-      const eventDisplayName = titleFrPayload || titleMgPayload || 'Événement';
-
-      if (editingEvent) {
-        await eventsAdminService.updateEvent(editingEvent.id, payload);
-        toast.success(`Événement "${eventDisplayName}" mis à jour avec succès.`);
-      } else {
-        payload.slug = formSlug.trim() || undefined;
-        await eventsAdminService.createEvent(payload);
-        toast.success(`Événement "${eventDisplayName}" créé avec succès (Brouillon).`);
-      }
-
-      setIsFormModalOpen(false);
-      await Promise.all([loadEvents(), loadOverview()]);
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Erreur lors de l’enregistrement de l’événement.';
-      toast.error(msg);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  // ─── Changement de Statut ──────────────────────────────────────────────────
+  // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Changement de Statut Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
   const openStatusModal = (event: EventAdminItem, nextStatus: EventStatus) => {
     setStatusModalEvent(event);
@@ -489,20 +180,20 @@ function EventsAdminPageContent() {
       );
 
       toast.success(
-        `Statut mis à jour : l'événement est désormais "${targetStatus}".`
+        `Statut mis ÃƒÂ  jour : l'ÃƒÂ©vÃƒÂ©nement est dÃƒÂ©sormais "${targetStatus}".`
       );
       setStatusModalEvent(null);
       setTargetStatus(null);
       await Promise.all([loadEvents(), loadOverview()]);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Impossible de modifier le statut de l’événement.';
+      const msg = err instanceof Error ? err.message : 'Impossible de modifier le statut de lÃ¢â‚¬â„¢ÃƒÂ©vÃƒÂ©nement.';
       toast.error(msg);
     } finally {
       setIsStatusUpdating(false);
     }
   };
 
-  // ─── Suppression / Archivage ───────────────────────────────────────────────
+  // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Suppression / Archivage Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
   const handleConfirmDelete = async () => {
     if (!deleteModalEvent) return;
@@ -518,14 +209,14 @@ function EventsAdminPageContent() {
       setDeleteModalEvent(null);
       await Promise.all([loadEvents(), loadOverview()]);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Erreur lors de la suppression de l’événement.';
+      const msg = err instanceof Error ? err.message : 'Erreur lors de la suppression de lÃ¢â‚¬â„¢ÃƒÂ©vÃƒÂ©nement.';
       toast.error(msg);
     } finally {
       setIsDeleting(false);
     }
   };
 
-  // ─── Helpers visuels ───────────────────────────────────────────────────────
+  // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Helpers visuels Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
   const getStatusBadge = (status: EventStatus) => {
     switch (status) {
@@ -539,13 +230,13 @@ function EventsAdminPageContent() {
       case 'PUBLISHED':
         return (
           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-teal-100 text-teal-800 dark:bg-teal-950/50 dark:text-teal-300 border border-teal-300">
-            Publié
+            PubliÃƒÂ©
           </span>
         );
       case 'SCHEDULED':
         return (
           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800 dark:bg-blue-950/50 dark:text-blue-300 border border-blue-300">
-            <Clock size={11} /> Programmé
+            <Clock size={11} /> ProgrammÃƒÂ©
           </span>
         );
       case 'DRAFT':
@@ -563,19 +254,19 @@ function EventsAdminPageContent() {
       case 'COMPLETED':
         return (
           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 border border-gray-300">
-            <CheckCircle2 size={11} /> Terminé
+            <CheckCircle2 size={11} /> TerminÃƒÂ©
           </span>
         );
       case 'CANCELLED':
         return (
           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800 dark:bg-red-950/50 dark:text-red-300 border border-red-300">
-            <Ban size={11} /> Annulé
+            <Ban size={11} /> AnnulÃƒÂ©
           </span>
         );
       case 'ARCHIVED':
         return (
           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-purple-100 text-purple-800 dark:bg-purple-950/50 dark:text-purple-300 border border-purple-300">
-            <Archive size={11} /> Archivé
+            <Archive size={11} /> ArchivÃƒÂ©
           </span>
         );
       default:
@@ -586,11 +277,11 @@ function EventsAdminPageContent() {
   const getCategoryBadge = (cat: EventCategory) => {
     const map: Record<EventCategory, { label: string; bg: string }> = {
       CULTURE: { label: 'Culture', bg: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-      CHALLENGE: { label: 'Défi', bg: 'bg-amber-50 text-amber-700 border-amber-200' },
-      REWARD: { label: 'Récompense', bg: 'bg-orange-50 text-orange-700 border-orange-200' },
-      COMMUNITY: { label: 'Communauté', bg: 'bg-blue-50 text-blue-700 border-blue-200' },
+      CHALLENGE: { label: 'DÃƒÂ©fi', bg: 'bg-amber-50 text-amber-700 border-amber-200' },
+      REWARD: { label: 'RÃƒÂ©compense', bg: 'bg-orange-50 text-orange-700 border-orange-200' },
+      COMMUNITY: { label: 'CommunautÃƒÂ©', bg: 'bg-blue-50 text-blue-700 border-blue-200' },
       SEASONAL: { label: 'Saisonnier', bg: 'bg-rose-50 text-rose-700 border-rose-200' },
-      SPECIAL: { label: 'Spécial', bg: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
+      SPECIAL: { label: 'SpÃƒÂ©cial', bg: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
     };
     const c = map[cat] || { label: cat, bg: 'bg-gray-50 text-gray-700 border-gray-200' };
     return (
@@ -603,7 +294,7 @@ function EventsAdminPageContent() {
   return (
     <AdminShell>
       <div className="space-y-6 max-w-7xl mx-auto pb-16">
-        {/* En-tête de page */}
+        {/* En-tÃƒÂªte de page */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-[var(--border)] pb-5">
           <div>
             <div className="flex items-center gap-2.5">
@@ -612,10 +303,10 @@ function EventsAdminPageContent() {
               </div>
               <div>
                 <h1 className="text-2xl font-bold text-[var(--foreground)] tracking-tight">
-                  Événements & Défis Kanto MG
+                  Ãƒâ€°vÃƒÂ©nements & DÃƒÂ©fis Kanto MG
                 </h1>
                 <p className="text-sm text-[var(--text-muted)] mt-0.5">
-                  Gestion centralisée, cycle de vie, récompenses et suivi en direct des participants réels.
+                  Gestion centralisÃƒÂ©e, cycle de vie, rÃƒÂ©compenses et suivi en direct des participants rÃƒÂ©els.
                 </p>
               </div>
             </div>
@@ -628,7 +319,7 @@ function EventsAdminPageContent() {
                 loadEvents();
               }}
               className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg border border-[var(--border)] bg-[var(--card)] hover:bg-[var(--card-hover)] text-[var(--foreground)] transition-colors"
-              title="Rafraîchir les données"
+              title="RafraÃƒÂ®chir les donnÃƒÂ©es"
             >
               <RefreshCw size={14} className={isLoading ? 'animate-spin' : ''} />
               <span>Actualiser</span>
@@ -639,19 +330,19 @@ function EventsAdminPageContent() {
               className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg bg-[var(--accent)] hover:opacity-90 text-white shadow-sm transition-opacity"
             >
               <Plus size={16} />
-              <span>Créer un événement</span>
+              <span>CrÃƒÂ©er un ÃƒÂ©vÃƒÂ©nement</span>
             </button>
           </div>
         </div>
 
-        {/* ─── TABLEAU DE BORD KPI RÉEL ───────────────────────────────────────── */}
+        {/* Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ TABLEAU DE BORD KPI RÃƒâ€°EL Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3.5">
           <div className="p-3.5 rounded-xl border border-[var(--border)] bg-[var(--card)] shadow-xs">
-            <span className="text-xs text-[var(--text-muted)] font-medium">Total Événements</span>
+            <span className="text-xs text-[var(--text-muted)] font-medium">Total Ãƒâ€°vÃƒÂ©nements</span>
             <div className="text-2xl font-bold text-[var(--foreground)] mt-1">
               {isOverviewLoading ? '...' : overview?.metrics.totalEvents ?? 0}
             </div>
-            <span className="text-[11px] text-[var(--text-muted)]">En base de données</span>
+            <span className="text-[11px] text-[var(--text-muted)]">En base de donnÃƒÂ©es</span>
           </div>
 
           <div className="p-3.5 rounded-xl border border-emerald-200 dark:border-emerald-900/40 bg-emerald-50/40 dark:bg-emerald-950/20 shadow-xs">
@@ -663,39 +354,39 @@ function EventsAdminPageContent() {
           </div>
 
           <div className="p-3.5 rounded-xl border border-blue-200 dark:border-blue-900/40 bg-blue-50/40 dark:bg-blue-950/20 shadow-xs">
-            <span className="text-xs text-blue-800 dark:text-blue-300 font-medium">Programmés</span>
+            <span className="text-xs text-blue-800 dark:text-blue-300 font-medium">ProgrammÃƒÂ©s</span>
             <div className="text-2xl font-bold text-blue-700 dark:text-blue-400 mt-1">
               {isOverviewLoading ? '...' : overview?.metrics.scheduledCount ?? 0}
             </div>
-            <span className="text-[11px] text-blue-600 dark:text-blue-500">Démarrage planifié</span>
+            <span className="text-[11px] text-blue-600 dark:text-blue-500">DÃƒÂ©marrage planifiÃƒÂ©</span>
           </div>
 
           <div className="p-3.5 rounded-xl border border-[var(--border)] bg-[var(--card)] shadow-xs">
-            <span className="text-xs text-[var(--text-muted)] font-medium">Inscriptions réelles</span>
+            <span className="text-xs text-[var(--text-muted)] font-medium">Inscriptions rÃƒÂ©elles</span>
             <div className="text-2xl font-bold text-[var(--foreground)] mt-1">
               {isOverviewLoading ? '...' : overview?.metrics.totalRegistrations ?? 0}
             </div>
-            <span className="text-[11px] text-[var(--text-muted)]">Participants enregistrés</span>
+            <span className="text-[11px] text-[var(--text-muted)]">Participants enregistrÃƒÂ©s</span>
           </div>
 
           <div className="p-3.5 rounded-xl border border-amber-200 dark:border-amber-900/40 bg-amber-50/40 dark:bg-amber-950/20 shadow-xs">
-            <span className="text-xs text-amber-800 dark:text-amber-300 font-medium">Défis complétés</span>
+            <span className="text-xs text-amber-800 dark:text-amber-300 font-medium">DÃƒÂ©fis complÃƒÂ©tÃƒÂ©s</span>
             <div className="text-2xl font-bold text-amber-700 dark:text-amber-400 mt-1">
               {isOverviewLoading ? '...' : overview?.metrics.completedParticipations ?? 0}
             </div>
-            <span className="text-[11px] text-amber-600 dark:text-amber-500">Participations terminées</span>
+            <span className="text-[11px] text-amber-600 dark:text-amber-500">Participations terminÃƒÂ©es</span>
           </div>
 
           <div className="p-3.5 rounded-xl border border-purple-200 dark:border-purple-900/40 bg-purple-50/40 dark:bg-purple-950/20 shadow-xs">
-            <span className="text-xs text-purple-800 dark:text-purple-300 font-medium">Récompenses remises</span>
+            <span className="text-xs text-purple-800 dark:text-purple-300 font-medium">RÃƒÂ©compenses remises</span>
             <div className="text-2xl font-bold text-purple-700 dark:text-purple-400 mt-1">
               {isOverviewLoading ? '...' : overview?.metrics.totalRewardsDistributed ?? 0}
             </div>
-            <span className="text-[11px] text-purple-600 dark:text-purple-500">XP, Vola & Badges réels</span>
+            <span className="text-[11px] text-purple-600 dark:text-purple-500">XP, Vola & Badges rÃƒÂ©els</span>
           </div>
         </div>
 
-        {/* ─── FILTRES & RECHERCHE ───────────────────────────────────────────── */}
+        {/* Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ FILTRES & RECHERCHE Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */}
         <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 p-4 rounded-xl border border-[var(--border)] bg-[var(--card)]">
           <div className="relative flex-1">
             <Search
@@ -726,16 +417,16 @@ function EventsAdminPageContent() {
             >
               <option value="ALL">Tous les statuts</option>
               <option value="ACTIVE">En cours (Actifs)</option>
-              <option value="PUBLISHED">Publiés</option>
-              <option value="SCHEDULED">Programmés</option>
+              <option value="PUBLISHED">PubliÃƒÂ©s</option>
+              <option value="SCHEDULED">ProgrammÃƒÂ©s</option>
               <option value="DRAFT">Brouillons</option>
               <option value="SUSPENDED">Suspendus</option>
-              <option value="COMPLETED">Terminés</option>
-              <option value="CANCELLED">Annulés</option>
-              <option value="ARCHIVED">Archivés</option>
+              <option value="COMPLETED">TerminÃƒÂ©s</option>
+              <option value="CANCELLED">AnnulÃƒÂ©s</option>
+              <option value="ARCHIVED">ArchivÃƒÂ©s</option>
             </select>
 
-            {/* Filtre Catégorie */}
+            {/* Filtre CatÃƒÂ©gorie */}
             <select
               value={categoryFilter}
               onChange={(e) => {
@@ -744,29 +435,29 @@ function EventsAdminPageContent() {
               }}
               className="px-3 py-2 text-xs font-semibold rounded-lg border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] focus:outline-hidden"
             >
-              <option value="ALL">Toutes les catégories</option>
+              <option value="ALL">Toutes les catÃƒÂ©gories</option>
               <option value="CULTURE">Culture</option>
-              <option value="CHALLENGE">Défis & Jeux</option>
-              <option value="REWARD">Récompenses</option>
-              <option value="COMMUNITY">Communauté</option>
+              <option value="CHALLENGE">DÃƒÂ©fis & Jeux</option>
+              <option value="REWARD">RÃƒÂ©compenses</option>
+              <option value="COMMUNITY">CommunautÃƒÂ©</option>
               <option value="SEASONAL">Saisonnier</option>
-              <option value="SPECIAL">Spécial Kanto</option>
+              <option value="SPECIAL">SpÃƒÂ©cial Kanto</option>
             </select>
           </div>
         </div>
 
-        {/* ─── TABLEAU DES ÉVÉNEMENTS ────────────────────────────────────────── */}
+        {/* Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ TABLEAU DES Ãƒâ€°VÃƒâ€°NEMENTS Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */}
         <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] overflow-hidden shadow-xs">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead className="bg-[var(--background)] border-b border-[var(--border)] text-xs text-[var(--text-muted)] uppercase tracking-wider">
                 <tr>
-                  <th className="px-4 py-3 font-semibold">Événement & Thème</th>
-                  <th className="px-4 py-3 font-semibold">Catégorie</th>
-                  <th className="px-4 py-3 font-semibold">Période</th>
+                  <th className="px-4 py-3 font-semibold">Ãƒâ€°vÃƒÂ©nement & ThÃƒÂ¨me</th>
+                  <th className="px-4 py-3 font-semibold">CatÃƒÂ©gorie</th>
+                  <th className="px-4 py-3 font-semibold">PÃƒÂ©riode</th>
                   <th className="px-4 py-3 font-semibold">Statut</th>
                   <th className="px-4 py-3 font-semibold text-center">Participants</th>
-                  <th className="px-4 py-3 font-semibold">Récompenses</th>
+                  <th className="px-4 py-3 font-semibold">RÃƒÂ©compenses</th>
                   <th className="px-4 py-3 font-semibold text-right">Actions</th>
                 </tr>
               </thead>
@@ -777,7 +468,7 @@ function EventsAdminPageContent() {
                       <div className="flex flex-col items-center justify-center gap-2">
                         <Loader2 size={24} className="animate-spin text-[var(--accent)]" />
                         <span className="text-xs text-[var(--text-muted)]">
-                          Chargement des événements réels...
+                          Chargement des ÃƒÂ©vÃƒÂ©nements rÃƒÂ©els...
                         </span>
                       </div>
                     </td>
@@ -788,12 +479,12 @@ function EventsAdminPageContent() {
                       <div className="flex flex-col items-center justify-center gap-2 text-[var(--text-muted)]">
                         <Calendar size={36} className="opacity-40" />
                         <p className="text-sm font-semibold text-[var(--foreground)]">
-                          Aucun événement trouvé
+                          Aucun ÃƒÂ©vÃƒÂ©nement trouvÃƒÂ©
                         </p>
                         <p className="text-xs max-w-sm">
                           {search || statusFilter !== 'ALL' || categoryFilter !== 'ALL'
-                            ? 'Aucun résultat ne correspond à vos filtres de recherche actuels.'
-                            : 'Aucun événement n’est encore enregistré en base de données. Cliquez sur « Créer un événement ».'}
+                            ? 'Aucun rÃƒÂ©sultat ne correspond ÃƒÂ  vos filtres de recherche actuels.'
+                            : 'Aucun ÃƒÂ©vÃƒÂ©nement nÃ¢â‚¬â„¢est encore enregistrÃƒÂ© en base de donnÃƒÂ©es. Cliquez sur Ã‚Â« CrÃƒÂ©er un ÃƒÂ©vÃƒÂ©nement Ã‚Â».'}
                         </p>
                       </div>
                     </td>
@@ -822,9 +513,9 @@ function EventsAdminPageContent() {
                             {item.isFeatured && (
                               <span
                                 className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300"
-                                title="Événement à la une"
+                                title="Ãƒâ€°vÃƒÂ©nement ÃƒÂ  la une"
                               >
-                                <Flame size={10} /> À la une
+                                <Flame size={10} /> Ãƒâ‚¬ la une
                               </span>
                             )}
                             <span className="font-semibold text-[var(--foreground)] line-clamp-1">
@@ -839,12 +530,12 @@ function EventsAdminPageContent() {
                           </span>
                         </td>
 
-                        {/* Catégorie */}
+                        {/* CatÃƒÂ©gorie */}
                         <td className="px-4 py-3.5 whitespace-nowrap">
                           {getCategoryBadge(item.category)}
                         </td>
 
-                        {/* Période */}
+                        {/* PÃƒÂ©riode */}
                         <td className="px-4 py-3.5 whitespace-nowrap text-xs text-[var(--foreground)]">
                           <div>Du {startDateStr}</div>
                           <div className="text-[var(--text-muted)]">au {endDateStr}</div>
@@ -855,12 +546,12 @@ function EventsAdminPageContent() {
                           {getStatusBadge(item.status)}
                         </td>
 
-                        {/* Participants réels */}
+                        {/* Participants rÃƒÂ©els */}
                         <td className="px-4 py-3.5 text-center whitespace-nowrap">
                           <button
                             onClick={() => openParticipantsModal(item)}
                             className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-[var(--background)] hover:bg-[var(--border)] border border-[var(--border)] transition-colors"
-                            title="Consulter les participants réels"
+                            title="Consulter les participants rÃƒÂ©els"
                           >
                             <Users size={12} className="text-[var(--accent)]" />
                             <span>
@@ -870,7 +561,7 @@ function EventsAdminPageContent() {
                           </button>
                         </td>
 
-                        {/* Récompenses */}
+                        {/* RÃƒÂ©compenses */}
                         <td className="px-4 py-3.5 max-w-xs">
                           {item.rewards && item.rewards.length > 0 ? (
                             <div className="flex flex-wrap gap-1">
@@ -894,7 +585,7 @@ function EventsAdminPageContent() {
                             </div>
                           ) : (
                             <span className="text-xs text-[var(--text-muted)] italic">
-                              Aucune récompense
+                              Aucune rÃƒÂ©compense
                             </span>
                           )}
                         </td>
@@ -907,7 +598,7 @@ function EventsAdminPageContent() {
                               <button
                                 onClick={() => openStatusModal(item, 'PUBLISHED')}
                                 className="p-1.5 text-xs text-teal-700 hover:bg-teal-50 dark:hover:bg-teal-950/50 rounded-lg transition-colors"
-                                title="Publier l'événement"
+                                title="Publier l'ÃƒÂ©vÃƒÂ©nement"
                               >
                                 <Play size={14} />
                               </button>
@@ -917,7 +608,7 @@ function EventsAdminPageContent() {
                               <button
                                 onClick={() => openStatusModal(item, 'ACTIVE')}
                                 className="p-1.5 text-xs text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 rounded-lg transition-colors"
-                                title="Activer immédiatement"
+                                title="Activer immÃƒÂ©diatement"
                               >
                                 <Play size={14} />
                               </button>
@@ -927,13 +618,13 @@ function EventsAdminPageContent() {
                               <button
                                 onClick={() => openStatusModal(item, 'COMPLETED')}
                                 className="p-1.5 text-xs text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
-                                title="Clôturer l'événement (Terminer)"
+                                title="ClÃƒÂ´turer l'ÃƒÂ©vÃƒÂ©nement (Terminer)"
                               >
                                 <CheckCircle2 size={14} />
                               </button>
                             )}
 
-                            {/* Éditer */}
+                            {/* Ãƒâ€°diter */}
                             <button
                               onClick={() => openEditModal(item)}
                               className="p-1.5 text-xs text-[var(--foreground)] hover:bg-[var(--border)] rounded-lg transition-colors"
@@ -947,7 +638,7 @@ function EventsAdminPageContent() {
                               <button
                                 onClick={() => openStatusModal(item, 'CANCELLED')}
                                 className="p-1.5 text-xs text-red-600 hover:bg-red-50 dark:hover:bg-red-950/50 rounded-lg transition-colors"
-                                title="Annuler l'événement"
+                                title="Annuler l'ÃƒÂ©vÃƒÂ©nement"
                               >
                                 <Ban size={14} />
                               </button>
@@ -975,7 +666,7 @@ function EventsAdminPageContent() {
           {pagination.totalPages > 1 && (
             <div className="flex items-center justify-between px-4 py-3 border-t border-[var(--border)] bg-[var(--background)] text-xs text-[var(--text-muted)]">
               <span>
-                Total : {pagination.total} événement(s) — Page {pagination.page} sur{' '}
+                Total : {pagination.total} ÃƒÂ©vÃƒÂ©nement(s) Ã¢â‚¬â€ Page {pagination.page} sur{' '}
                 {pagination.totalPages}
               </span>
               <div className="flex items-center gap-1.5">
@@ -998,12 +689,12 @@ function EventsAdminPageContent() {
           )}
         </div>
 
-        {/* ─── ACTIVITÉ RÉCENTE RÉELLE DU SYSTÈME ─────────────────────────────── */}
+        {/* Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ ACTIVITÃƒâ€° RÃƒâ€°CENTE RÃƒâ€°ELLE DU SYSTÃƒË†ME Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */}
         {overview?.recentActivity && overview.recentActivity.length > 0 && (
           <div className="p-5 rounded-xl border border-[var(--border)] bg-[var(--card)] space-y-3">
             <h3 className="text-sm font-bold text-[var(--foreground)] flex items-center gap-2">
               <Clock size={16} className="text-[var(--accent)]" />
-              <span>Activité récente enregistrée en base de données</span>
+              <span>ActivitÃƒÂ© rÃƒÂ©cente enregistrÃƒÂ©e en base de donnÃƒÂ©es</span>
             </h3>
             <div className="divide-y divide-[var(--border)] text-xs">
               {overview.recentActivity.map((act) => (
@@ -1017,7 +708,7 @@ function EventsAdminPageContent() {
                         {act.userName}
                       </span>{' '}
                       <span className="text-[var(--text-muted)]">
-                        s’est inscrit à « {act.eventTitle} »
+                        sÃ¢â‚¬â„¢est inscrit ÃƒÂ  Ã‚Â« {act.eventTitle} Ã‚Â»
                       </span>
                     </div>
                   </div>
@@ -1035,1032 +726,49 @@ function EventsAdminPageContent() {
           </div>
         )}
 
-        {/* ─── MODAL : PARTICIPANTS RÉELS ────────────────────────────────────── */}
+        {/* â”€â”€â”€ MODAL : SUIVI DES PARTICIPANTS RÃ‰ELS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         {isParticipantsModalOpen && selectedEventForParticipants && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-            <div className="w-full max-w-3xl rounded-xl border border-[var(--border)] bg-[var(--card)] shadow-xl overflow-hidden flex flex-col max-h-[85vh]">
-              <div className="px-5 py-4 border-b border-[var(--border)] flex items-center justify-between">
-                <div>
-                  <h2 className="text-base font-bold text-[var(--foreground)]">
-                    Participants réels — {selectedEventForParticipants.titleFr}
-                  </h2>
-                  <p className="text-xs text-[var(--text-muted)] mt-0.5">
-                    {participantsTotal} participant(s) enregistré(s) dans la base PostgreSQL
-                  </p>
-                </div>
-                <button
-                  onClick={() => setIsParticipantsModalOpen(false)}
-                  className="p-1 rounded-lg text-[var(--text-muted)] hover:bg-[var(--card-hover)]"
-                >
-                  <X size={18} />
-                </button>
-              </div>
-
-              <div className="p-4 flex-1 overflow-y-auto">
-                {isParticipantsLoading ? (
-                  <div className="py-12 flex flex-col items-center justify-center gap-2">
-                    <Loader2 size={24} className="animate-spin text-[var(--accent)]" />
-                    <span className="text-xs text-[var(--text-muted)]">
-                      Chargement des participants réels...
-                    </span>
-                  </div>
-                ) : participants.length === 0 ? (
-                  <div className="py-12 text-center text-xs text-[var(--text-muted)]">
-                    Aucun participant inscrit à cet événement pour le moment.
-                  </div>
-                ) : (
-                  <table className="w-full text-left text-xs">
-                    <thead className="bg-[var(--background)] border-b border-[var(--border)] uppercase text-[var(--text-muted)]">
-                      <tr>
-                        <th className="px-3 py-2 font-semibold">Membre</th>
-                        <th className="px-3 py-2 font-semibold">Statut</th>
-                        <th className="px-3 py-2 font-semibold">Score</th>
-                        <th className="px-3 py-2 font-semibold">Date inscription</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-[var(--border)]">
-                      {participants.map((p) => (
-                        <tr key={p.id}>
-                          <td className="px-3 py-2.5">
-                            <div className="font-semibold text-[var(--foreground)]">{p.userName}</div>
-                            {p.userEmail && (
-                              <div className="text-[11px] text-[var(--text-muted)]">{p.userEmail}</div>
-                            )}
-                          </td>
-                          <td className="px-3 py-2.5">
-                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
-                              {p.status}
-                            </span>
-                          </td>
-                          <td className="px-3 py-2.5 font-semibold text-[var(--foreground)]">
-                            {p.score} pts
-                          </td>
-                          <td className="px-3 py-2.5 text-[var(--text-muted)]">
-                            {new Date(p.registeredAt).toLocaleDateString('fr-FR', {
-                              day: 'numeric',
-                              month: 'short',
-                              year: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit',
-                            })}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                )}
-              </div>
-
-              {participantsTotalPages > 1 && (
-                <div className="px-4 py-3 border-t border-[var(--border)] flex items-center justify-between text-xs text-[var(--text-muted)]">
-                  <span>
-                    Page {participantsPage} sur {participantsTotalPages}
-                  </span>
-                  <div className="flex gap-1">
-                    <button
-                      disabled={participantsPage <= 1}
-                      onClick={() =>
-                        openParticipantsModal(selectedEventForParticipants, participantsPage - 1)
-                      }
-                      className="px-2 py-1 rounded border border-[var(--border)] disabled:opacity-40"
-                    >
-                      Précédent
-                    </button>
-                    <button
-                      disabled={participantsPage >= participantsTotalPages}
-                      onClick={() =>
-                        openParticipantsModal(selectedEventForParticipants, participantsPage + 1)
-                      }
-                      className="px-2 py-1 rounded border border-[var(--border)] disabled:opacity-40"
-                    >
-                      Suivant
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
+          <EventParticipantsModal
+            isOpen={isParticipantsModalOpen}
+            onClose={() => setIsParticipantsModalOpen(false)}
+            event={selectedEventForParticipants}
+            onParticipantsUpdated={() => {
+              loadEvents();
+              loadOverview();
+            }}
+          />
         )}
 
-        {/* ─── MODAL : CRÉATION & ÉDITION D'ÉVÉNEMENT (GESTION FLEXIBLE LANGUES ET SECTIONS) ─── */}
+        {/* â”€â”€â”€ MODAL : WIZARD STEPPER CRÃ‰ATION & Ã‰DITION (5 Ã‰TAPES) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         {isFormModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-            <div className="w-full max-w-4xl rounded-xl border border-[var(--border)] bg-[var(--card)] shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
-              {/* En-tête du modal */}
-              <div className="px-6 py-4 border-b border-[var(--border)] flex items-center justify-between bg-[var(--card)]">
-                <div>
-                  <h2 className="text-lg font-bold text-[var(--foreground)]">
-                    {editingEvent ? `Modifier : ${editingEvent.titleFr || editingEvent.titleMg}` : 'Créer un nouvel événement'}
-                  </h2>
-                  <p className="text-xs text-[var(--text-muted)] mt-0.5">
-                    Personnalisez librement les langues et les sections de contenu à communiquer.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setIsFormModalOpen(false)}
-                  className="p-1 rounded-lg text-[var(--text-muted)] hover:bg-[var(--card-hover)] transition-colors"
-                >
-                  <X size={18} />
-                </button>
-              </div>
-
-              <form onSubmit={handleSaveEvent} className="p-6 space-y-6 overflow-y-auto flex-1">
-                {/* ───────────────────────────────────────────────────────────── */}
-                {/* 1. CHOIX LIBRE DES LANGUES (MG seul, FR seul, Bilingue)       */}
-                {/* ───────────────────────────────────────────────────────────── */}
-                <div className="p-4 rounded-xl border border-[var(--border)] bg-[var(--background)] space-y-3">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
-                    <span className="text-xs font-bold text-[var(--foreground)] uppercase tracking-wider flex items-center gap-1.5">
-                      <Globe size={14} className="text-[var(--accent)]" />
-                      Langue(s) de l&apos;événement
-                    </span>
-                    <span className="text-[11px] text-[var(--text-muted)]">
-                      L&apos;organisateur choisit librement la ou les langues à renseigner
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setFormLanguageMode('both')}
-                      className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg border text-xs font-bold transition-all ${
-                        formLanguageMode === 'both'
-                          ? 'border-[var(--accent)] bg-[var(--accent)]/15 text-[var(--foreground)] shadow-xs ring-1 ring-[var(--accent)]/30'
-                          : 'border-[var(--border)] bg-[var(--card)] text-[var(--text-muted)] hover:bg-[var(--card-hover)]'
-                      }`}
-                    >
-                      <span className="text-sm">🌍</span>
-                      <span>Bilingue (MG + FR)</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setFormLanguageMode('mg')}
-                      className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg border text-xs font-bold transition-all ${
-                        formLanguageMode === 'mg'
-                          ? 'border-emerald-500 bg-emerald-500/15 text-[var(--foreground)] shadow-xs ring-1 ring-emerald-500/30'
-                          : 'border-[var(--border)] bg-[var(--card)] text-[var(--text-muted)] hover:bg-[var(--card-hover)]'
-                      }`}
-                    >
-                      <span className="text-sm">🇲🇬</span>
-                      <span>Malgache uniquement</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setFormLanguageMode('fr')}
-                      className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg border text-xs font-bold transition-all ${
-                        formLanguageMode === 'fr'
-                          ? 'border-blue-500 bg-blue-500/15 text-[var(--foreground)] shadow-xs ring-1 ring-blue-500/30'
-                          : 'border-[var(--border)] bg-[var(--card)] text-[var(--text-muted)] hover:bg-[var(--card-hover)]'
-                      }`}
-                    >
-                      <span className="text-sm">🇫🇷</span>
-                      <span>Français uniquement</span>
-                    </button>
-                  </div>
-
-                  {/* Sous-onglets de vue pour le mode bilingue */}
-                  {formLanguageMode === 'both' && (
-                    <div className="flex items-center justify-between pt-2 border-t border-[var(--border)] text-xs">
-                      <span className="text-[11px] text-[var(--text-muted)]">
-                        Vue de saisie bilingue :
-                      </span>
-                      <div className="flex items-center gap-1">
-                        <button
-                          type="button"
-                          onClick={() => setActiveLanguageTab('both')}
-                          className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition-colors ${
-                            activeLanguageTab === 'both'
-                              ? 'bg-[var(--accent)] text-white'
-                              : 'text-[var(--text-muted)] hover:bg-[var(--card)]'
-                          }`}
-                        >
-                          Côte à côte
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setActiveLanguageTab('mg')}
-                          className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition-colors ${
-                            activeLanguageTab === 'mg'
-                              ? 'bg-emerald-600 text-white'
-                              : 'text-[var(--text-muted)] hover:bg-[var(--card)]'
-                          }`}
-                        >
-                          🇲🇬 Malagasy
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setActiveLanguageTab('fr')}
-                          className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition-colors ${
-                            activeLanguageTab === 'fr'
-                              ? 'bg-blue-600 text-white'
-                              : 'text-[var(--text-muted)] hover:bg-[var(--card)]'
-                          }`}
-                        >
-                          🇫🇷 Français
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* ───────────────────────────────────────────────────────────── */}
-                {/* 2. ACTIVATION ET DÉSACTIVATION DES SECTIONS INDIVIDUELLES      */}
-                {/* ───────────────────────────────────────────────────────────── */}
-                <div className="p-4 rounded-xl border border-[var(--border)] bg-[var(--card)] space-y-2.5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-[var(--foreground)] uppercase tracking-wider flex items-center gap-1.5">
-                      <Sliders size={14} className="text-[var(--accent)]" />
-                      Sections de contenu à renseigner
-                    </span>
-                    <span className="text-[11px] text-[var(--text-muted)]">
-                      Activez ou désactivez selon les besoins de votre événement
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
-                    {/* Section 1 : Titre & Description (fixe, obligatoire) */}
-                    <div className="flex items-center justify-between p-2 rounded-lg border border-emerald-500/40 bg-emerald-500/10 text-[var(--foreground)]">
-                      <span className="font-semibold text-xs flex items-center gap-1.5">
-                        <FileText size={13} className="text-emerald-600" />
-                        Titre & Description
-                      </span>
-                      <span className="text-[10px] font-bold uppercase text-emerald-700 bg-emerald-100 dark:bg-emerald-950 px-1.5 py-0.5 rounded">
-                        Requis
-                      </span>
-                    </div>
-
-                    {/* Section 2 : Accroche / Description courte */}
-                    <button
-                      type="button"
-                      onClick={() => toggleSection('shortDescription')}
-                      className={`flex items-center justify-between p-2 rounded-lg border transition-all text-left ${
-                        enabledSections.shortDescription
-                          ? 'border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--foreground)]'
-                          : 'border-[var(--border)] bg-[var(--background)] text-[var(--text-muted)] hover:bg-[var(--card-hover)]'
-                      }`}
-                    >
-                      <span className="font-medium text-xs">Infos complémentaires</span>
-                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
-                        enabledSections.shortDescription ? 'bg-[var(--accent)] text-white' : 'bg-[var(--border)] text-[var(--text-muted)]'
-                      }`}>
-                        {enabledSections.shortDescription ? 'Actif' : 'Masqué'}
-                      </span>
-                    </button>
-
-                    {/* Section 3 : Conditions d'accès */}
-                    <button
-                      type="button"
-                      onClick={() => toggleSection('participationConditions')}
-                      className={`flex items-center justify-between p-2 rounded-lg border transition-all text-left ${
-                        enabledSections.participationConditions
-                          ? 'border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--foreground)]'
-                          : 'border-[var(--border)] bg-[var(--background)] text-[var(--text-muted)] hover:bg-[var(--card-hover)]'
-                      }`}
-                    >
-                      <span className="font-medium text-xs">Conditions d&apos;accès</span>
-                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
-                        enabledSections.participationConditions ? 'bg-[var(--accent)] text-white' : 'bg-[var(--border)] text-[var(--text-muted)]'
-                      }`}>
-                        {enabledSections.participationConditions ? 'Actif' : 'Masqué'}
-                      </span>
-                    </button>
-
-                    {/* Section 4 : Infos pratiques */}
-                    <button
-                      type="button"
-                      onClick={() => toggleSection('practicalInfo')}
-                      className={`flex items-center justify-between p-2 rounded-lg border transition-all text-left ${
-                        enabledSections.practicalInfo
-                          ? 'border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--foreground)]'
-                          : 'border-[var(--border)] bg-[var(--background)] text-[var(--text-muted)] hover:bg-[var(--card-hover)]'
-                      }`}
-                    >
-                      <span className="font-medium text-xs">Infos pratiques & Liens</span>
-                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
-                        enabledSections.practicalInfo ? 'bg-[var(--accent)] text-white' : 'bg-[var(--border)] text-[var(--text-muted)]'
-                      }`}>
-                        {enabledSections.practicalInfo ? 'Actif' : 'Masqué'}
-                      </span>
-                    </button>
-
-                    {/* Section 5 : Programme & Règles */}
-                    <button
-                      type="button"
-                      onClick={() => toggleSection('rules')}
-                      className={`flex items-center justify-between p-2 rounded-lg border transition-all text-left ${
-                        enabledSections.rules
-                          ? 'border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--foreground)]'
-                          : 'border-[var(--border)] bg-[var(--background)] text-[var(--text-muted)] hover:bg-[var(--card-hover)]'
-                      }`}
-                    >
-                      <span className="font-medium text-xs">Programme & Règles</span>
-                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
-                        enabledSections.rules ? 'bg-[var(--accent)] text-white' : 'bg-[var(--border)] text-[var(--text-muted)]'
-                      }`}>
-                        {enabledSections.rules ? 'Actif' : 'Masqué'}
-                      </span>
-                    </button>
-
-                    {/* Section 6 : Récompenses & Lots */}
-                    <button
-                      type="button"
-                      onClick={() => toggleSection('rewards')}
-                      className={`flex items-center justify-between p-2 rounded-lg border transition-all text-left ${
-                        enabledSections.rewards
-                          ? 'border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--foreground)]'
-                          : 'border-[var(--border)] bg-[var(--background)] text-[var(--text-muted)] hover:bg-[var(--card-hover)]'
-                      }`}
-                    >
-                      <span className="font-medium text-xs">Récompenses & Lots</span>
-                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
-                        enabledSections.rewards ? 'bg-[var(--accent)] text-white' : 'bg-[var(--border)] text-[var(--text-muted)]'
-                      }`}>
-                        {enabledSections.rewards ? 'Actif' : 'Masqué'}
-                      </span>
-                    </button>
-
-                    {/* Section 7 : Défi interactif */}
-                    <button
-                      type="button"
-                      onClick={() => toggleSection('gameModule')}
-                      className={`flex items-center justify-between p-2 rounded-lg border transition-all text-left col-span-2 sm:col-span-1 ${
-                        enabledSections.gameModule
-                          ? 'border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--foreground)]'
-                          : 'border-[var(--border)] bg-[var(--background)] text-[var(--text-muted)] hover:bg-[var(--card-hover)]'
-                      }`}
-                    >
-                      <span className="font-medium text-xs">Défi interactif Kanto</span>
-                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
-                        enabledSections.gameModule ? 'bg-[var(--accent)] text-white' : 'bg-[var(--border)] text-[var(--text-muted)]'
-                      }`}>
-                        {enabledSections.gameModule ? 'Actif' : 'Masqué'}
-                      </span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* ───────────────────────────────────────────────────────────── */}
-                {/* 3. SECTION PRINCIPALE : TITRE & DESCRIPTION COMPLÈTE          */}
-                {/* ───────────────────────────────────────────────────────────── */}
-                <div className="space-y-4 pt-1">
-                  <div className="flex items-center gap-2 pb-1 border-b border-[var(--border)]">
-                    <FileText size={16} className="text-[var(--accent)]" />
-                    <h3 className="text-sm font-bold text-[var(--foreground)]">
-                      Titre & Description principale *
-                    </h3>
-                  </div>
-
-                  {/* Ligne des Titres */}
-                  <div className={`grid gap-4 ${
-                    formLanguageMode === 'both' && activeLanguageTab === 'both'
-                      ? 'grid-cols-1 md:grid-cols-2'
-                      : 'grid-cols-1'
-                  }`}>
-                    {(formLanguageMode === 'fr' || (formLanguageMode === 'both' && (activeLanguageTab === 'both' || activeLanguageTab === 'fr'))) && (
-                      <div>
-                        <label className="block text-xs font-semibold text-[var(--foreground)] mb-1">
-                          🇫🇷 Titre de l&apos;événement (Français) *
-                        </label>
-                        <input
-                          type="text"
-                          required
-                          value={formTitleFr}
-                          onChange={(e) => setFormTitleFr(e.target.value)}
-                          placeholder="Ex: Semaine de la Langue Malgache"
-                          className="w-full px-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] focus:outline-hidden focus:border-[var(--accent)]"
-                        />
-                      </div>
-                    )}
-
-                    {(formLanguageMode === 'mg' || (formLanguageMode === 'both' && (activeLanguageTab === 'both' || activeLanguageTab === 'mg'))) && (
-                      <div>
-                        <label className="block text-xs font-semibold text-[var(--foreground)] mb-1">
-                          🇲🇬 Lohatenin&apos;ny hetsika (Malagasy) *
-                        </label>
-                        <input
-                          type="text"
-                          required
-                          value={formTitleMg}
-                          onChange={(e) => setFormTitleMg(e.target.value)}
-                          placeholder="Ex: Herinandron'ny Teny Malagasy"
-                          className="w-full px-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] focus:outline-hidden focus:border-[var(--accent)]"
-                        />
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Ligne des Descriptions Complètes */}
-                  <div className={`grid gap-4 ${
-                    formLanguageMode === 'both' && activeLanguageTab === 'both'
-                      ? 'grid-cols-1 md:grid-cols-2'
-                      : 'grid-cols-1'
-                  }`}>
-                    {(formLanguageMode === 'fr' || (formLanguageMode === 'both' && (activeLanguageTab === 'both' || activeLanguageTab === 'fr'))) && (
-                      <div>
-                        <label className="block text-xs font-semibold text-[var(--foreground)] mb-1">
-                          🇫🇷 Description complète (Français) *
-                        </label>
-                        <textarea
-                          required
-                          rows={4}
-                          value={formDescriptionFr}
-                          onChange={(e) => setFormDescriptionFr(e.target.value)}
-                          placeholder="Contexte, présentation et déroulement détaillé..."
-                          className="w-full px-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] focus:outline-hidden focus:border-[var(--accent)]"
-                        />
-                      </div>
-                    )}
-
-                    {(formLanguageMode === 'mg' || (formLanguageMode === 'both' && (activeLanguageTab === 'both' || activeLanguageTab === 'mg'))) && (
-                      <div>
-                        <label className="block text-xs font-semibold text-[var(--foreground)] mb-1">
-                          🇲🇬 Famaritana feno (Malagasy) *
-                        </label>
-                        <textarea
-                          required
-                          rows={4}
-                          value={formDescriptionMg}
-                          onChange={(e) => setFormDescriptionMg(e.target.value)}
-                          placeholder="Fanazavana feno momba ny hetsika sy ny lanjany..."
-                          className="w-full px-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] focus:outline-hidden focus:border-[var(--accent)]"
-                        />
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* ───────────────────────────────────────────────────────────── */}
-                {/* 4. SECTION OPTIONNELLE : INFOS COMPLÉMENTAIRES (ACCROCHE)     */}
-                {/* ───────────────────────────────────────────────────────────── */}
-                {enabledSections.shortDescription && (
-                  <div className="p-4 rounded-xl border border-[var(--border)] bg-[var(--card)] space-y-3">
-                    <div className="flex items-center justify-between pb-1 border-b border-[var(--border)]">
-                      <h4 className="text-xs font-bold text-[var(--foreground)] uppercase tracking-wider flex items-center gap-1.5">
-                        <Info size={14} className="text-[var(--accent)]" />
-                        Informations complémentaires (Description courte pour aperçus mobiles)
-                      </h4>
-                      <button
-                        type="button"
-                        onClick={() => toggleSection('shortDescription')}
-                        className="text-[11px] text-[var(--text-muted)] hover:text-red-600 transition-colors"
-                      >
-                        Désactiver la section
-                      </button>
-                    </div>
-
-                    <div className={`grid gap-4 ${
-                      formLanguageMode === 'both' && activeLanguageTab === 'both'
-                        ? 'grid-cols-1 md:grid-cols-2'
-                        : 'grid-cols-1'
-                    }`}>
-                      {(formLanguageMode === 'fr' || (formLanguageMode === 'both' && (activeLanguageTab === 'both' || activeLanguageTab === 'fr'))) && (
-                        <div>
-                          <label className="block text-xs font-semibold text-[var(--foreground)] mb-1">
-                            🇫🇷 Description courte (Français)
-                          </label>
-                          <input
-                            type="text"
-                            value={formShortDescFr}
-                            onChange={(e) => setFormShortDescFr(e.target.value)}
-                            placeholder="Accroche en une phrase pour les cartes mobiles"
-                            className="w-full px-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] focus:outline-hidden focus:border-[var(--accent)]"
-                          />
-                        </div>
-                      )}
-
-                      {(formLanguageMode === 'mg' || (formLanguageMode === 'both' && (activeLanguageTab === 'both' || activeLanguageTab === 'mg'))) && (
-                        <div>
-                          <label className="block text-xs font-semibold text-[var(--foreground)] mb-1">
-                            🇲🇬 Famaritana fohy (Malagasy)
-                          </label>
-                          <input
-                            type="text"
-                            value={formShortDescMg}
-                            onChange={(e) => setFormShortDescMg(e.target.value)}
-                            placeholder="Famaritana fohy ho an'ny karatra finday"
-                            className="w-full px-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] focus:outline-hidden focus:border-[var(--accent)]"
-                          />
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* ───────────────────────────────────────────────────────────── */}
-                {/* 5. DATES & PÉRIODE (FONDAMENTAL)                               */}
-                {/* ───────────────────────────────────────────────────────────── */}
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2 pb-1 border-b border-[var(--border)]">
-                    <Calendar size={16} className="text-[var(--accent)]" />
-                    <h3 className="text-sm font-bold text-[var(--foreground)]">
-                      Période & Dates de l&apos;événement *
-                    </h3>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                    <div>
-                      <label className="block text-xs font-semibold text-[var(--foreground)] mb-1">
-                        Date & Heure de début *
-                      </label>
-                      <input
-                        type="datetime-local"
-                        required
-                        value={formStartDate}
-                        onChange={(e) => setFormStartDate(e.target.value)}
-                        className="w-full px-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] focus:outline-hidden focus:border-[var(--accent)]"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-semibold text-[var(--foreground)] mb-1">
-                        Date & Heure de fin *
-                      </label>
-                      <input
-                        type="datetime-local"
-                        required
-                        value={formEndDate}
-                        onChange={(e) => setFormEndDate(e.target.value)}
-                        className="w-full px-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] focus:outline-hidden focus:border-[var(--accent)]"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-semibold text-[var(--foreground)] mb-1">
-                        Catégorie *
-                      </label>
-                      <select
-                        value={formCategory}
-                        onChange={(e) => setFormCategory(e.target.value as EventCategory)}
-                        className="w-full px-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] focus:outline-hidden focus:border-[var(--accent)]"
-                      >
-                        <option value="CULTURE">Culture & Patrimoine</option>
-                        <option value="CHALLENGE">Défis & Compétitions</option>
-                        <option value="REWARD">Récompenses & Lots</option>
-                        <option value="COMMUNITY">Communauté & Fihavanana</option>
-                        <option value="SEASONAL">Saisonnier & Fêtes</option>
-                        <option value="SPECIAL">Spécial Kanto MG</option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
-
-                {/* ───────────────────────────────────────────────────────────── */}
-                {/* 6. CONDITIONS DE PARTICIPATION & ACCÈS                        */}
-                {/* ───────────────────────────────────────────────────────────── */}
-                {enabledSections.participationConditions && (
-                  <div className="p-4 rounded-xl border border-[var(--border)] bg-[var(--card)] space-y-3">
-                    <div className="flex items-center justify-between pb-1 border-b border-[var(--border)]">
-                      <h4 className="text-xs font-bold text-[var(--foreground)] uppercase tracking-wider flex items-center gap-1.5">
-                        <Users size={14} className="text-[var(--accent)]" />
-                        Conditions de participation & Accès
-                      </h4>
-                      <button
-                        type="button"
-                        onClick={() => toggleSection('participationConditions')}
-                        className="text-[11px] text-[var(--text-muted)] hover:text-red-600 transition-colors"
-                      >
-                        Désactiver la section
-                      </button>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                      <div>
-                        <label className="block text-xs font-semibold text-[var(--foreground)] mb-1">
-                          Type de participation
-                        </label>
-                        <select
-                          value={formParticipationType}
-                          onChange={(e) =>
-                            setFormParticipationType(e.target.value as EventParticipationType)
-                          }
-                          className="w-full px-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] focus:outline-hidden"
-                        >
-                          <option value="OPEN">Ouvert à tous (Sans inscription)</option>
-                          <option value="REGISTRATION_REQUIRED">Inscription obligatoire</option>
-                          <option value="EXCLUSIVE_TIER">Réservé VIP / Premium</option>
-                        </select>
-                      </div>
-
-                      <div>
-                        <label className="block text-xs font-semibold text-[var(--foreground)] mb-1">
-                          Niveau / Tier requis
-                        </label>
-                        <select
-                          value={formMinTier}
-                          onChange={(e) => setFormMinTier(e.target.value)}
-                          className="w-full px-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] focus:outline-hidden"
-                        >
-                          <option value="FREE">Tous les membres (Gratuit)</option>
-                          <option value="PREMIUM">Membres Premium</option>
-                          <option value="VIP">Membres VIP uniquement</option>
-                        </select>
-                      </div>
-
-                      <div>
-                        <label className="block text-xs font-semibold text-[var(--foreground)] mb-1">
-                          Date limite d&apos;inscription
-                        </label>
-                        <input
-                          type="datetime-local"
-                          value={formRegistrationDeadline}
-                          onChange={(e) => setFormRegistrationDeadline(e.target.value)}
-                          className="w-full px-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] focus:outline-hidden"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-xs font-semibold text-[var(--foreground)] mb-1">
-                          Capacité max. de participants
-                        </label>
-                        <input
-                          type="number"
-                          min={1}
-                          value={formMaxParticipants}
-                          onChange={(e) => setFormMaxParticipants(e.target.value)}
-                          placeholder="Illimité si vide"
-                          className="w-full px-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] focus:outline-hidden"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* ───────────────────────────────────────────────────────────── */}
-                {/* 7. INFORMATIONS PRATIQUES & LIENS                             */}
-                {/* ───────────────────────────────────────────────────────────── */}
-                {enabledSections.practicalInfo && (
-                  <div className="p-4 rounded-xl border border-[var(--border)] bg-[var(--card)] space-y-3">
-                    <div className="flex items-center justify-between pb-1 border-b border-[var(--border)]">
-                      <h4 className="text-xs font-bold text-[var(--foreground)] uppercase tracking-wider flex items-center gap-1.5">
-                        <MapPin size={14} className="text-[var(--accent)]" />
-                        Informations pratiques & Liens
-                      </h4>
-                      <button
-                        type="button"
-                        onClick={() => toggleSection('practicalInfo')}
-                        className="text-[11px] text-[var(--text-muted)] hover:text-red-600 transition-colors"
-                      >
-                        Désactiver la section
-                      </button>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-xs font-semibold text-[var(--foreground)] mb-1">
-                          Lieu / Format de l&apos;événement
-                        </label>
-                        <input
-                          type="text"
-                          value={formLocation}
-                          onChange={(e) => setFormLocation(e.target.value)}
-                          placeholder="Ex: Fampiharana Kanto MG, En ligne ou Palais d'Andafiavaratra"
-                          className="w-full px-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] focus:outline-hidden"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-xs font-semibold text-[var(--foreground)] mb-1">
-                          Lien externe billetterie ou ressources (URL)
-                        </label>
-                        <input
-                          type="url"
-                          value={formExternalUrl}
-                          onChange={(e) => setFormExternalUrl(e.target.value)}
-                          placeholder="https://..."
-                          className="w-full px-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] focus:outline-hidden"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* ───────────────────────────────────────────────────────────── */}
-                {/* 8. PROGRAMME & RÈGLEMENT                                      */}
-                {/* ───────────────────────────────────────────────────────────── */}
-                {enabledSections.rules && (
-                  <div className="p-4 rounded-xl border border-[var(--border)] bg-[var(--card)] space-y-3">
-                    <div className="flex items-center justify-between pb-1 border-b border-[var(--border)]">
-                      <h4 className="text-xs font-bold text-[var(--foreground)] uppercase tracking-wider flex items-center gap-1.5">
-                        <FileText size={14} className="text-[var(--accent)]" />
-                        Programme, Règlement & Déroulement
-                      </h4>
-                      <button
-                        type="button"
-                        onClick={() => toggleSection('rules')}
-                        className="text-[11px] text-[var(--text-muted)] hover:text-red-600 transition-colors"
-                      >
-                        Désactiver la section
-                      </button>
-                    </div>
-
-                    <div className={`grid gap-4 ${
-                      formLanguageMode === 'both' && activeLanguageTab === 'both'
-                        ? 'grid-cols-1 md:grid-cols-2'
-                        : 'grid-cols-1'
-                    }`}>
-                      {(formLanguageMode === 'fr' || (formLanguageMode === 'both' && (activeLanguageTab === 'both' || activeLanguageTab === 'fr'))) && (
-                        <div>
-                          <label className="block text-xs font-semibold text-[var(--foreground)] mb-1">
-                            🇫🇷 Programme & Règlement (Français)
-                          </label>
-                          <textarea
-                            rows={3}
-                            value={formRulesFr}
-                            onChange={(e) => setFormRulesFr(e.target.value)}
-                            placeholder="Étapes clés, barème de points, critères de validation..."
-                            className="w-full px-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] focus:outline-hidden"
-                          />
-                        </div>
-                      )}
-
-                      {(formLanguageMode === 'mg' || (formLanguageMode === 'both' && (activeLanguageTab === 'both' || activeLanguageTab === 'mg'))) && (
-                        <div>
-                          <label className="block text-xs font-semibold text-[var(--foreground)] mb-1">
-                            🇲🇬 Fitsipika sy fandaharam-potoana (Malagasy)
-                          </label>
-                          <textarea
-                            rows={3}
-                            value={formRulesMg}
-                            onChange={(e) => setFormRulesMg(e.target.value)}
-                            placeholder="Dingana arahina, fitsipika sy fepetra..."
-                            className="w-full px-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] focus:outline-hidden"
-                          />
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* ───────────────────────────────────────────────────────────── */}
-                {/* 9. DÉFI INTERACTIF KANTO                                      */}
-                {/* ───────────────────────────────────────────────────────────── */}
-                {enabledSections.gameModule && (
-                  <div className="p-4 rounded-xl border border-[var(--border)] bg-[var(--card)] space-y-3">
-                    <div className="flex items-center justify-between pb-1 border-b border-[var(--border)]">
-                      <h4 className="text-xs font-bold text-[var(--foreground)] uppercase tracking-wider flex items-center gap-1.5">
-                        <Gamepad2 size={14} className="text-[var(--accent)]" />
-                        Défi interactif & Jeu associé
-                      </h4>
-                      <button
-                        type="button"
-                        onClick={() => toggleSection('gameModule')}
-                        className="text-[11px] text-[var(--text-muted)] hover:text-red-600 transition-colors"
-                      >
-                        Désactiver la section
-                      </button>
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-semibold text-[var(--foreground)] mb-1">
-                        Module de jeu connecté pour la compétition
-                      </label>
-                      <select
-                        value={formGameModuleId}
-                        onChange={(e) => setFormGameModuleId(e.target.value)}
-                        className="w-full px-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] focus:outline-hidden"
-                      >
-                        <option value="">Sélectionner un jeu Kanto...</option>
-                        <option value="quizGame">Kanto Quiz Culturel (Questions interactives)</option>
-                        <option value="trueFalseGame">Vrai ou Faux (Marina sa Diso)</option>
-                        <option value="riddleGame">Devinettes & Énigmes (Ankamantatra)</option>
-                      </select>
-                    </div>
-                  </div>
-                )}
-
-                {/* ───────────────────────────────────────────────────────────── */}
-                {/* 10. RÉCOMPENSES & LOTS À REMPORTER                            */}
-                {/* ───────────────────────────────────────────────────────────── */}
-                {enabledSections.rewards && (
-                  <div className="p-4 rounded-xl border border-[var(--border)] bg-[var(--card)] space-y-3">
-                    <div className="flex items-center justify-between pb-1 border-b border-[var(--border)]">
-                      <h4 className="text-xs font-bold text-[var(--foreground)] uppercase tracking-wider flex items-center gap-1.5">
-                        <Gift size={14} className="text-[var(--accent)]" />
-                        Récompenses & Lots à remporter
-                      </h4>
-                      <button
-                        type="button"
-                        onClick={() => toggleSection('rewards')}
-                        className="text-[11px] text-[var(--text-muted)] hover:text-red-600 transition-colors"
-                      >
-                        Désactiver la section
-                      </button>
-                    </div>
-
-                    <div className="space-y-3">
-                      {formRewards.map((reward, idx) => (
-                        <div
-                          key={idx}
-                          className="p-3 rounded-lg border border-[var(--border)] bg-[var(--background)] space-y-2 relative"
-                        >
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs font-bold text-[var(--foreground)]">
-                              Récompense #{idx + 1}
-                            </span>
-                            {formRewards.length > 1 && (
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  setFormRewards((prev) => prev.filter((_, i) => i !== idx))
-                                }
-                                className="text-[11px] text-red-600 hover:underline"
-                              >
-                                Supprimer
-                              </button>
-                            )}
-                          </div>
-
-                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                            <div>
-                              <label className="block text-[11px] font-semibold text-[var(--text-muted)] mb-0.5">
-                                Type de récompense
-                              </label>
-                              <select
-                                value={reward.rewardType}
-                                onChange={(e) => {
-                                  const val = e.target.value as EventRewardType;
-                                  setFormRewards((prev) =>
-                                    prev.map((r, i) => (i === idx ? { ...r, rewardType: val } : r))
-                                  );
-                                }}
-                                className="w-full px-2 py-1.5 text-xs rounded border border-[var(--border)] bg-[var(--card)]"
-                              >
-                                <option value="XP">Points d’expérience (XP)</option>
-                                <option value="COINS">Pièces Kanto (Vola)</option>
-                                <option value="BADGE">Badge culturel officiel</option>
-                                <option value="PHYSICAL_LOT">Lot physique / Avantage</option>
-                              </select>
-                            </div>
-
-                            {(formLanguageMode === 'fr' || formLanguageMode === 'both') && (
-                              <div>
-                                <label className="block text-[11px] font-semibold text-[var(--text-muted)] mb-0.5">
-                                  🇫🇷 Titre (FR)
-                                </label>
-                                <input
-                                  type="text"
-                                  value={reward.titleFr}
-                                  onChange={(e) => {
-                                    const val = e.target.value;
-                                    setFormRewards((prev) =>
-                                      prev.map((r, i) => (i === idx ? { ...r, titleFr: val } : r))
-                                    );
-                                  }}
-                                  placeholder="Ex: +150 XP"
-                                  className="w-full px-2 py-1.5 text-xs rounded border border-[var(--border)] bg-[var(--card)]"
-                                />
-                              </div>
-                            )}
-
-                            {(formLanguageMode === 'mg' || formLanguageMode === 'both') && (
-                              <div>
-                                <label className="block text-[11px] font-semibold text-[var(--text-muted)] mb-0.5">
-                                  🇲🇬 Lohateny (MG)
-                                </label>
-                                <input
-                                  type="text"
-                                  value={reward.titleMg}
-                                  onChange={(e) => {
-                                    const val = e.target.value;
-                                    setFormRewards((prev) =>
-                                      prev.map((r, i) => (i === idx ? { ...r, titleMg: val } : r))
-                                    );
-                                  }}
-                                  placeholder="Ex: +150 XP"
-                                  className="w-full px-2 py-1.5 text-xs rounded border border-[var(--border)] bg-[var(--card)]"
-                                />
-                              </div>
-                            )}
-
-                            {(reward.rewardType === 'XP' || reward.rewardType === 'COINS') && (
-                              <div>
-                                <label className="block text-[11px] font-semibold text-[var(--text-muted)] mb-0.5">
-                                  Montant numérique
-                                </label>
-                                <input
-                                  type="number"
-                                  min={1}
-                                  value={reward.amount || ''}
-                                  onChange={(e) => {
-                                    const val = parseInt(e.target.value, 10) || 0;
-                                    setFormRewards((prev) =>
-                                      prev.map((r, i) => (i === idx ? { ...r, amount: val } : r))
-                                    );
-                                  }}
-                                  className="w-full px-2 py-1.5 text-xs rounded border border-[var(--border)] bg-[var(--card)]"
-                                />
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setFormRewards((prev) => [
-                            ...prev,
-                            {
-                              rewardType: 'COINS',
-                              titleFr: 'Pièces Kanto +50',
-                              titleMg: 'Vola Kanto +50',
-                              amount: 50,
-                              criteria: 'completion',
-                            },
-                          ])
-                        }
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-dashed border-[var(--border)] text-xs font-semibold text-[var(--accent)] hover:bg-[var(--card-hover)] transition-colors"
-                      >
-                        <Plus size={14} />
-                        <span>Ajouter une autre récompense</span>
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {/* ───────────────────────────────────────────────────────────── */}
-                {/* 11. VISIBILITÉ, SLUG & MISE EN AVANT                          */}
-                {/* ───────────────────────────────────────────────────────────── */}
-                <div className="p-4 rounded-xl border border-[var(--border)] bg-[var(--background)] space-y-3">
-                  {!editingEvent && (
-                    <div>
-                      <label className="block text-xs font-semibold text-[var(--foreground)] mb-1">
-                        Identifiant URL / Slug personnalisé (optionnel)
-                      </label>
-                      <input
-                        type="text"
-                        value={formSlug}
-                        onChange={(e) => setFormSlug(e.target.value)}
-                        placeholder="Laissez vide pour générer automatiquement depuis le titre"
-                        className="w-full px-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--card)] text-[var(--foreground)] focus:outline-hidden"
-                      />
-                    </div>
-                  )}
-
-                  <div className="flex items-center gap-2 p-3 rounded-lg border border-[var(--border)] bg-[var(--card)]">
-                    <input
-                      type="checkbox"
-                      id="isFeatured"
-                      checked={formIsFeatured}
-                      onChange={(e) => setFormIsFeatured(e.target.checked)}
-                      className="w-4 h-4 rounded text-[var(--accent)]"
-                    />
-                    <label
-                      htmlFor="isFeatured"
-                      className="text-xs font-semibold text-[var(--foreground)] cursor-pointer flex items-center gap-1.5"
-                    >
-                      <Flame size={14} className="text-amber-500" />
-                      Mettre en avant comme événement « À la une » (mis en vedette sur l&apos;application mobile)
-                    </label>
-                  </div>
-                </div>
-
-                {/* ───────────────────────────────────────────────────────────── */}
-                {/* BOUTONS D'ACTION DU FORMULAIRE                                */}
-                {/* ───────────────────────────────────────────────────────────── */}
-                <div className="flex items-center justify-end gap-3 pt-4 border-t border-[var(--border)]">
-                  <button
-                    type="button"
-                    onClick={() => setIsFormModalOpen(false)}
-                    className="px-4 py-2 text-xs font-semibold rounded-lg border border-[var(--border)] hover:bg-[var(--card-hover)] transition-colors"
-                  >
-                    Annuler
-                  </button>
-
-                  <button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="inline-flex items-center gap-2 px-6 py-2 text-xs font-bold rounded-lg bg-[var(--accent)] hover:opacity-90 text-white disabled:opacity-50 transition-opacity shadow-sm"
-                  >
-                    {isSubmitting && <Loader2 size={14} className="animate-spin" />}
-                    <span>{editingEvent ? 'Mettre à jour l’événement' : 'Créer l’événement'}</span>
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
+          <EventWizardModal
+            isOpen={isFormModalOpen}
+            onClose={() => setIsFormModalOpen(false)}
+            editingEvent={editingEvent}
+            onSaved={() => {
+              loadEvents();
+              loadOverview();
+            }}
+          />
         )}
 
-        {/* ─── MODAL : TRANSITION DE STATUT & ANNULATION ─────────────────────── */}
+        {/* Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ MODAL : TRANSITION DE STATUT & ANNULATION Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */}
         {statusModalEvent && targetStatus && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
             <div className="w-full max-w-md rounded-xl border border-[var(--border)] bg-[var(--card)] p-5 shadow-2xl">
               <h3 className="text-base font-bold text-[var(--foreground)]">
                 {targetStatus === 'CANCELLED'
-                  ? 'Confirmer l’annulation de l’événement'
+                  ? 'Confirmer lÃ¢â‚¬â„¢annulation de lÃ¢â‚¬â„¢ÃƒÂ©vÃƒÂ©nement'
                   : `Passer au statut : ${targetStatus}`}
               </h3>
               <p className="text-xs text-[var(--text-muted)] mt-1">
-                Événement : <strong className="text-[var(--foreground)]">{statusModalEvent.titleFr}</strong>
+                Ãƒâ€°vÃƒÂ©nement : <strong className="text-[var(--foreground)]">{statusModalEvent.titleFr}</strong>
               </p>
 
               {targetStatus === 'CANCELLED' && (
                 <div className="mt-4">
                   <label className="block text-xs font-semibold text-[var(--foreground)] mb-1">
-                    Motif de l’annulation (notifié aux participants inscrits)
+                    Motif de lÃ¢â‚¬â„¢annulation (notifiÃƒÂ© aux participants inscrits)
                   </label>
                   <textarea
                     rows={3}
@@ -2101,7 +809,7 @@ function EventsAdminPageContent() {
           </div>
         )}
 
-        {/* ─── MODAL : CONFIRMATION SUPPRESSION / ARCHIVAGE ───────────────────── */}
+        {/* Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ MODAL : CONFIRMATION SUPPRESSION / ARCHIVAGE Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */}
         {deleteModalEvent && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
             <div className="w-full max-w-md rounded-xl border border-[var(--border)] bg-[var(--card)] p-5 shadow-2xl">
@@ -2110,14 +818,14 @@ function EventsAdminPageContent() {
                 <span>Suppression ou Archivage</span>
               </h3>
               <p className="text-xs text-[var(--text-muted)] mt-2">
-                Voulez-vous supprimer l’événement{' '}
+                Voulez-vous supprimer lÃ¢â‚¬â„¢ÃƒÂ©vÃƒÂ©nement{' '}
                 <strong className="text-[var(--foreground)]">{deleteModalEvent.titleFr}</strong> ?
               </p>
               <p className="text-xs text-[var(--text-muted)] mt-1.5">
-                Règle de sécurité : si des participants sont déjà inscrits, l’événement sera
-                automatiquement basculé en statut <strong>ARCHIVÉ</strong> pour préserver l’historique
-                et les points des utilisateurs. S’il est encore en brouillon sans inscription, il sera
-                définitivement supprimé.
+                RÃƒÂ¨gle de sÃƒÂ©curitÃƒÂ© : si des participants sont dÃƒÂ©jÃƒÂ  inscrits, lÃ¢â‚¬â„¢ÃƒÂ©vÃƒÂ©nement sera
+                automatiquement basculÃƒÂ© en statut <strong>ARCHIVÃƒâ€°</strong> pour prÃƒÂ©server lÃ¢â‚¬â„¢historique
+                et les points des utilisateurs. SÃ¢â‚¬â„¢il est encore en brouillon sans inscription, il sera
+                dÃƒÂ©finitivement supprimÃƒÂ©.
               </p>
 
               <div className="flex items-center justify-end gap-3 mt-5">
