@@ -40,7 +40,7 @@ import {
 function EventsAdminPageContent() {
   const { toast } = useToast();
 
-  // Ãƒâ€°tats principaux
+  // États principaux
   const [overview, setOverview] = useState<EventAdminOverview | null>(null);
   const [events, setEvents] = useState<EventAdminItem[]>([]);
   const [pagination, setPagination] = useState({
@@ -64,7 +64,7 @@ function EventsAdminPageContent() {
   }, [toast]);
 
 
-  // Debounce de recherche pour ÃƒÂ©viter de saturer l'API
+  // Debounce de recherche pour éviter de saturer l'API
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(search);
@@ -160,7 +160,7 @@ function EventsAdminPageContent() {
     }
   }, [searchParams]);
 
-  // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Changement de Statut Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+  // ─── Changement de Statut ──────────────────────────────────────────────────
 
   const openStatusModal = (event: EventAdminItem, nextStatus: EventStatus) => {
     setStatusModalEvent(event);
@@ -180,20 +180,20 @@ function EventsAdminPageContent() {
       );
 
       toast.success(
-        `Statut mis ÃƒÂ  jour : l'ÃƒÂ©vÃƒÂ©nement est dÃƒÂ©sormais "${targetStatus}".`
+        `Statut mis à jour : l'événement est désormais "${targetStatus}".`
       );
       setStatusModalEvent(null);
       setTargetStatus(null);
       await Promise.all([loadEvents(), loadOverview()]);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Impossible de modifier le statut de lÃ¢â‚¬â„¢ÃƒÂ©vÃƒÂ©nement.';
+      const msg = err instanceof Error ? err.message : 'Impossible de modifier le statut de l’événement.';
       toast.error(msg);
     } finally {
       setIsStatusUpdating(false);
     }
   };
 
-  // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Suppression / Archivage Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+  // ─── Suppression / Archivage ───────────────────────────────────────────────
 
   const handleConfirmDelete = async () => {
     if (!deleteModalEvent) return;
@@ -209,14 +209,14 @@ function EventsAdminPageContent() {
       setDeleteModalEvent(null);
       await Promise.all([loadEvents(), loadOverview()]);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Erreur lors de la suppression de lÃ¢â‚¬â„¢ÃƒÂ©vÃƒÂ©nement.';
+      const msg = err instanceof Error ? err.message : 'Erreur lors de la suppression de l’événement.';
       toast.error(msg);
     } finally {
       setIsDeleting(false);
     }
   };
 
-  // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Helpers visuels Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+  // ─── Helpers visuels ───────────────────────────────────────────────────────
 
   const getStatusBadge = (status: EventStatus) => {
     switch (status) {
@@ -230,13 +230,13 @@ function EventsAdminPageContent() {
       case 'PUBLISHED':
         return (
           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-teal-100 text-teal-800 dark:bg-teal-950/50 dark:text-teal-300 border border-teal-300">
-            PubliÃƒÂ©
+            Publié
           </span>
         );
       case 'SCHEDULED':
         return (
           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800 dark:bg-blue-950/50 dark:text-blue-300 border border-blue-300">
-            <Clock size={11} /> ProgrammÃƒÂ©
+            <Clock size={11} /> Programmé
           </span>
         );
       case 'DRAFT':
@@ -254,19 +254,19 @@ function EventsAdminPageContent() {
       case 'COMPLETED':
         return (
           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 border border-gray-300">
-            <CheckCircle2 size={11} /> TerminÃƒÂ©
+            <CheckCircle2 size={11} /> Terminé
           </span>
         );
       case 'CANCELLED':
         return (
           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800 dark:bg-red-950/50 dark:text-red-300 border border-red-300">
-            <Ban size={11} /> AnnulÃƒÂ©
+            <Ban size={11} /> Annulé
           </span>
         );
       case 'ARCHIVED':
         return (
           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-purple-100 text-purple-800 dark:bg-purple-950/50 dark:text-purple-300 border border-purple-300">
-            <Archive size={11} /> ArchivÃƒÂ©
+            <Archive size={11} /> Archivé
           </span>
         );
       default:
@@ -277,11 +277,11 @@ function EventsAdminPageContent() {
   const getCategoryBadge = (cat: EventCategory) => {
     const map: Record<EventCategory, { label: string; bg: string }> = {
       CULTURE: { label: 'Culture', bg: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-      CHALLENGE: { label: 'DÃƒÂ©fi', bg: 'bg-amber-50 text-amber-700 border-amber-200' },
-      REWARD: { label: 'RÃƒÂ©compense', bg: 'bg-orange-50 text-orange-700 border-orange-200' },
-      COMMUNITY: { label: 'CommunautÃƒÂ©', bg: 'bg-blue-50 text-blue-700 border-blue-200' },
+      CHALLENGE: { label: 'Défi', bg: 'bg-amber-50 text-amber-700 border-amber-200' },
+      REWARD: { label: 'Récompense', bg: 'bg-orange-50 text-orange-700 border-orange-200' },
+      COMMUNITY: { label: 'Communauté', bg: 'bg-blue-50 text-blue-700 border-blue-200' },
       SEASONAL: { label: 'Saisonnier', bg: 'bg-rose-50 text-rose-700 border-rose-200' },
-      SPECIAL: { label: 'SpÃƒÂ©cial', bg: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
+      SPECIAL: { label: 'Spécial', bg: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
     };
     const c = map[cat] || { label: cat, bg: 'bg-gray-50 text-gray-700 border-gray-200' };
     return (
@@ -294,7 +294,7 @@ function EventsAdminPageContent() {
   return (
     <AdminShell>
       <div className="space-y-6 max-w-7xl mx-auto pb-16">
-        {/* En-tÃƒÂªte de page */}
+        {/* En-tête de page */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-[var(--border)] pb-5">
           <div>
             <div className="flex items-center gap-2.5">
@@ -303,10 +303,10 @@ function EventsAdminPageContent() {
               </div>
               <div>
                 <h1 className="text-2xl font-bold text-[var(--foreground)] tracking-tight">
-                  Ãƒâ€°vÃƒÂ©nements & DÃƒÂ©fis Kanto MG
+                  Événements & Défis Kanto MG
                 </h1>
                 <p className="text-sm text-[var(--text-muted)] mt-0.5">
-                  Gestion centralisÃƒÂ©e, cycle de vie, rÃƒÂ©compenses et suivi en direct des participants rÃƒÂ©els.
+                  Gestion centralisée, cycle de vie, récompenses et suivi en direct des participants réels.
                 </p>
               </div>
             </div>
@@ -319,7 +319,7 @@ function EventsAdminPageContent() {
                 loadEvents();
               }}
               className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg border border-[var(--border)] bg-[var(--card)] hover:bg-[var(--card-hover)] text-[var(--foreground)] transition-colors"
-              title="RafraÃƒÂ®chir les donnÃƒÂ©es"
+              title="Rafraîchir les données"
             >
               <RefreshCw size={14} className={isLoading ? 'animate-spin' : ''} />
               <span>Actualiser</span>
@@ -330,19 +330,19 @@ function EventsAdminPageContent() {
               className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg bg-[var(--accent)] hover:opacity-90 text-white shadow-sm transition-opacity"
             >
               <Plus size={16} />
-              <span>CrÃƒÂ©er un ÃƒÂ©vÃƒÂ©nement</span>
+              <span>Créer un événement</span>
             </button>
           </div>
         </div>
 
-        {/* Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ TABLEAU DE BORD KPI RÃƒâ€°EL Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */}
+        {/* ─── TABLEAU DE BORD KPI RÉEL ───────────────────────────────────────── */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3.5">
           <div className="p-3.5 rounded-xl border border-[var(--border)] bg-[var(--card)] shadow-xs">
-            <span className="text-xs text-[var(--text-muted)] font-medium">Total Ãƒâ€°vÃƒÂ©nements</span>
+            <span className="text-xs text-[var(--text-muted)] font-medium">Total Événements</span>
             <div className="text-2xl font-bold text-[var(--foreground)] mt-1">
               {isOverviewLoading ? '...' : overview?.metrics.totalEvents ?? 0}
             </div>
-            <span className="text-[11px] text-[var(--text-muted)]">En base de donnÃƒÂ©es</span>
+            <span className="text-[11px] text-[var(--text-muted)]">En base de données</span>
           </div>
 
           <div className="p-3.5 rounded-xl border border-emerald-200 dark:border-emerald-900/40 bg-emerald-50/40 dark:bg-emerald-950/20 shadow-xs">
@@ -354,39 +354,39 @@ function EventsAdminPageContent() {
           </div>
 
           <div className="p-3.5 rounded-xl border border-blue-200 dark:border-blue-900/40 bg-blue-50/40 dark:bg-blue-950/20 shadow-xs">
-            <span className="text-xs text-blue-800 dark:text-blue-300 font-medium">ProgrammÃƒÂ©s</span>
+            <span className="text-xs text-blue-800 dark:text-blue-300 font-medium">Programmés</span>
             <div className="text-2xl font-bold text-blue-700 dark:text-blue-400 mt-1">
               {isOverviewLoading ? '...' : overview?.metrics.scheduledCount ?? 0}
             </div>
-            <span className="text-[11px] text-blue-600 dark:text-blue-500">DÃƒÂ©marrage planifiÃƒÂ©</span>
+            <span className="text-[11px] text-blue-600 dark:text-blue-500">Démarrage planifié</span>
           </div>
 
           <div className="p-3.5 rounded-xl border border-[var(--border)] bg-[var(--card)] shadow-xs">
-            <span className="text-xs text-[var(--text-muted)] font-medium">Inscriptions rÃƒÂ©elles</span>
+            <span className="text-xs text-[var(--text-muted)] font-medium">Inscriptions réelles</span>
             <div className="text-2xl font-bold text-[var(--foreground)] mt-1">
               {isOverviewLoading ? '...' : overview?.metrics.totalRegistrations ?? 0}
             </div>
-            <span className="text-[11px] text-[var(--text-muted)]">Participants enregistrÃƒÂ©s</span>
+            <span className="text-[11px] text-[var(--text-muted)]">Participants enregistrés</span>
           </div>
 
           <div className="p-3.5 rounded-xl border border-amber-200 dark:border-amber-900/40 bg-amber-50/40 dark:bg-amber-950/20 shadow-xs">
-            <span className="text-xs text-amber-800 dark:text-amber-300 font-medium">DÃƒÂ©fis complÃƒÂ©tÃƒÂ©s</span>
+            <span className="text-xs text-amber-800 dark:text-amber-300 font-medium">Défis complétés</span>
             <div className="text-2xl font-bold text-amber-700 dark:text-amber-400 mt-1">
               {isOverviewLoading ? '...' : overview?.metrics.completedParticipations ?? 0}
             </div>
-            <span className="text-[11px] text-amber-600 dark:text-amber-500">Participations terminÃƒÂ©es</span>
+            <span className="text-[11px] text-amber-600 dark:text-amber-500">Participations terminées</span>
           </div>
 
           <div className="p-3.5 rounded-xl border border-purple-200 dark:border-purple-900/40 bg-purple-50/40 dark:bg-purple-950/20 shadow-xs">
-            <span className="text-xs text-purple-800 dark:text-purple-300 font-medium">RÃƒÂ©compenses remises</span>
+            <span className="text-xs text-purple-800 dark:text-purple-300 font-medium">Récompenses remises</span>
             <div className="text-2xl font-bold text-purple-700 dark:text-purple-400 mt-1">
               {isOverviewLoading ? '...' : overview?.metrics.totalRewardsDistributed ?? 0}
             </div>
-            <span className="text-[11px] text-purple-600 dark:text-purple-500">XP, Vola & Badges rÃƒÂ©els</span>
+            <span className="text-[11px] text-purple-600 dark:text-purple-500">XP, Vola & Badges réels</span>
           </div>
         </div>
 
-        {/* Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ FILTRES & RECHERCHE Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */}
+        {/* ─── FILTRES & RECHERCHE ───────────────────────────────────────────── */}
         <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 p-4 rounded-xl border border-[var(--border)] bg-[var(--card)]">
           <div className="relative flex-1">
             <Search
@@ -417,16 +417,16 @@ function EventsAdminPageContent() {
             >
               <option value="ALL">Tous les statuts</option>
               <option value="ACTIVE">En cours (Actifs)</option>
-              <option value="PUBLISHED">PubliÃƒÂ©s</option>
-              <option value="SCHEDULED">ProgrammÃƒÂ©s</option>
+              <option value="PUBLISHED">Publiés</option>
+              <option value="SCHEDULED">Programmés</option>
               <option value="DRAFT">Brouillons</option>
               <option value="SUSPENDED">Suspendus</option>
-              <option value="COMPLETED">TerminÃƒÂ©s</option>
-              <option value="CANCELLED">AnnulÃƒÂ©s</option>
-              <option value="ARCHIVED">ArchivÃƒÂ©s</option>
+              <option value="COMPLETED">Terminés</option>
+              <option value="CANCELLED">Annulés</option>
+              <option value="ARCHIVED">Archivés</option>
             </select>
 
-            {/* Filtre CatÃƒÂ©gorie */}
+            {/* Filtre Catégorie */}
             <select
               value={categoryFilter}
               onChange={(e) => {
@@ -435,29 +435,29 @@ function EventsAdminPageContent() {
               }}
               className="px-3 py-2 text-xs font-semibold rounded-lg border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] focus:outline-hidden"
             >
-              <option value="ALL">Toutes les catÃƒÂ©gories</option>
+              <option value="ALL">Toutes les catégories</option>
               <option value="CULTURE">Culture</option>
-              <option value="CHALLENGE">DÃƒÂ©fis & Jeux</option>
-              <option value="REWARD">RÃƒÂ©compenses</option>
-              <option value="COMMUNITY">CommunautÃƒÂ©</option>
+              <option value="CHALLENGE">Défis & Jeux</option>
+              <option value="REWARD">Récompenses</option>
+              <option value="COMMUNITY">Communauté</option>
               <option value="SEASONAL">Saisonnier</option>
-              <option value="SPECIAL">SpÃƒÂ©cial Kanto</option>
+              <option value="SPECIAL">Spécial Kanto</option>
             </select>
           </div>
         </div>
 
-        {/* Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ TABLEAU DES Ãƒâ€°VÃƒâ€°NEMENTS Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */}
+        {/* ─── TABLEAU DES ÉVÉNEMENTS ────────────────────────────────────────── */}
         <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] overflow-hidden shadow-xs">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead className="bg-[var(--background)] border-b border-[var(--border)] text-xs text-[var(--text-muted)] uppercase tracking-wider">
                 <tr>
-                  <th className="px-4 py-3 font-semibold">Ãƒâ€°vÃƒÂ©nement & ThÃƒÂ¨me</th>
-                  <th className="px-4 py-3 font-semibold">CatÃƒÂ©gorie</th>
-                  <th className="px-4 py-3 font-semibold">PÃƒÂ©riode</th>
+                  <th className="px-4 py-3 font-semibold">Événement & Thème</th>
+                  <th className="px-4 py-3 font-semibold">Catégorie</th>
+                  <th className="px-4 py-3 font-semibold">Période</th>
                   <th className="px-4 py-3 font-semibold">Statut</th>
                   <th className="px-4 py-3 font-semibold text-center">Participants</th>
-                  <th className="px-4 py-3 font-semibold">RÃƒÂ©compenses</th>
+                  <th className="px-4 py-3 font-semibold">Récompenses</th>
                   <th className="px-4 py-3 font-semibold text-right">Actions</th>
                 </tr>
               </thead>
@@ -468,7 +468,7 @@ function EventsAdminPageContent() {
                       <div className="flex flex-col items-center justify-center gap-2">
                         <Loader2 size={24} className="animate-spin text-[var(--accent)]" />
                         <span className="text-xs text-[var(--text-muted)]">
-                          Chargement des ÃƒÂ©vÃƒÂ©nements rÃƒÂ©els...
+                          Chargement des événements réels...
                         </span>
                       </div>
                     </td>
@@ -479,12 +479,12 @@ function EventsAdminPageContent() {
                       <div className="flex flex-col items-center justify-center gap-2 text-[var(--text-muted)]">
                         <Calendar size={36} className="opacity-40" />
                         <p className="text-sm font-semibold text-[var(--foreground)]">
-                          Aucun ÃƒÂ©vÃƒÂ©nement trouvÃƒÂ©
+                          Aucun événement trouvé
                         </p>
                         <p className="text-xs max-w-sm">
                           {search || statusFilter !== 'ALL' || categoryFilter !== 'ALL'
-                            ? 'Aucun rÃƒÂ©sultat ne correspond ÃƒÂ  vos filtres de recherche actuels.'
-                            : 'Aucun ÃƒÂ©vÃƒÂ©nement nÃ¢â‚¬â„¢est encore enregistrÃƒÂ© en base de donnÃƒÂ©es. Cliquez sur Ã‚Â« CrÃƒÂ©er un ÃƒÂ©vÃƒÂ©nement Ã‚Â».'}
+                            ? 'Aucun résultat ne correspond à vos filtres de recherche actuels.'
+                            : 'Aucun événement n’est encore enregistré en base de données. Cliquez sur « Créer un événement ».'}
                         </p>
                       </div>
                     </td>
@@ -513,9 +513,9 @@ function EventsAdminPageContent() {
                             {item.isFeatured && (
                               <span
                                 className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300"
-                                title="Ãƒâ€°vÃƒÂ©nement ÃƒÂ  la une"
+                                title="Événement à la une"
                               >
-                                <Flame size={10} /> Ãƒâ‚¬ la une
+                                <Flame size={10} /> À la une
                               </span>
                             )}
                             <span className="font-semibold text-[var(--foreground)] line-clamp-1">
@@ -530,12 +530,12 @@ function EventsAdminPageContent() {
                           </span>
                         </td>
 
-                        {/* CatÃƒÂ©gorie */}
+                        {/* Catégorie */}
                         <td className="px-4 py-3.5 whitespace-nowrap">
                           {getCategoryBadge(item.category)}
                         </td>
 
-                        {/* PÃƒÂ©riode */}
+                        {/* Période */}
                         <td className="px-4 py-3.5 whitespace-nowrap text-xs text-[var(--foreground)]">
                           <div>Du {startDateStr}</div>
                           <div className="text-[var(--text-muted)]">au {endDateStr}</div>
@@ -546,12 +546,12 @@ function EventsAdminPageContent() {
                           {getStatusBadge(item.status)}
                         </td>
 
-                        {/* Participants rÃƒÂ©els */}
+                        {/* Participants réels */}
                         <td className="px-4 py-3.5 text-center whitespace-nowrap">
                           <button
                             onClick={() => openParticipantsModal(item)}
                             className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-[var(--background)] hover:bg-[var(--border)] border border-[var(--border)] transition-colors"
-                            title="Consulter les participants rÃƒÂ©els"
+                            title="Consulter les participants réels"
                           >
                             <Users size={12} className="text-[var(--accent)]" />
                             <span>
@@ -561,7 +561,7 @@ function EventsAdminPageContent() {
                           </button>
                         </td>
 
-                        {/* RÃƒÂ©compenses */}
+                        {/* Récompenses */}
                         <td className="px-4 py-3.5 max-w-xs">
                           {item.rewards && item.rewards.length > 0 ? (
                             <div className="flex flex-wrap gap-1">
@@ -585,7 +585,7 @@ function EventsAdminPageContent() {
                             </div>
                           ) : (
                             <span className="text-xs text-[var(--text-muted)] italic">
-                              Aucune rÃƒÂ©compense
+                              Aucune récompense
                             </span>
                           )}
                         </td>
@@ -598,7 +598,7 @@ function EventsAdminPageContent() {
                               <button
                                 onClick={() => openStatusModal(item, 'PUBLISHED')}
                                 className="p-1.5 text-xs text-teal-700 hover:bg-teal-50 dark:hover:bg-teal-950/50 rounded-lg transition-colors"
-                                title="Publier l'ÃƒÂ©vÃƒÂ©nement"
+                                title="Publier l'événement"
                               >
                                 <Play size={14} />
                               </button>
@@ -608,7 +608,7 @@ function EventsAdminPageContent() {
                               <button
                                 onClick={() => openStatusModal(item, 'ACTIVE')}
                                 className="p-1.5 text-xs text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 rounded-lg transition-colors"
-                                title="Activer immÃƒÂ©diatement"
+                                title="Activer immédiatement"
                               >
                                 <Play size={14} />
                               </button>
@@ -618,13 +618,13 @@ function EventsAdminPageContent() {
                               <button
                                 onClick={() => openStatusModal(item, 'COMPLETED')}
                                 className="p-1.5 text-xs text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
-                                title="ClÃƒÂ´turer l'ÃƒÂ©vÃƒÂ©nement (Terminer)"
+                                title="Clôturer l'événement (Terminer)"
                               >
                                 <CheckCircle2 size={14} />
                               </button>
                             )}
 
-                            {/* Ãƒâ€°diter */}
+                            {/* Éditer */}
                             <button
                               onClick={() => openEditModal(item)}
                               className="p-1.5 text-xs text-[var(--foreground)] hover:bg-[var(--border)] rounded-lg transition-colors"
@@ -638,7 +638,7 @@ function EventsAdminPageContent() {
                               <button
                                 onClick={() => openStatusModal(item, 'CANCELLED')}
                                 className="p-1.5 text-xs text-red-600 hover:bg-red-50 dark:hover:bg-red-950/50 rounded-lg transition-colors"
-                                title="Annuler l'ÃƒÂ©vÃƒÂ©nement"
+                                title="Annuler l'événement"
                               >
                                 <Ban size={14} />
                               </button>
@@ -666,7 +666,7 @@ function EventsAdminPageContent() {
           {pagination.totalPages > 1 && (
             <div className="flex items-center justify-between px-4 py-3 border-t border-[var(--border)] bg-[var(--background)] text-xs text-[var(--text-muted)]">
               <span>
-                Total : {pagination.total} ÃƒÂ©vÃƒÂ©nement(s) Ã¢â‚¬â€ Page {pagination.page} sur{' '}
+                Total : {pagination.total} événement(s) — Page {pagination.page} sur{' '}
                 {pagination.totalPages}
               </span>
               <div className="flex items-center gap-1.5">
@@ -689,12 +689,12 @@ function EventsAdminPageContent() {
           )}
         </div>
 
-        {/* Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ ACTIVITÃƒâ€° RÃƒâ€°CENTE RÃƒâ€°ELLE DU SYSTÃƒË†ME Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */}
+        {/* ─── ACTIVITÉ RÉCENTE RÉELLE DU SYSTÈME ─────────────────────────────── */}
         {overview?.recentActivity && overview.recentActivity.length > 0 && (
           <div className="p-5 rounded-xl border border-[var(--border)] bg-[var(--card)] space-y-3">
             <h3 className="text-sm font-bold text-[var(--foreground)] flex items-center gap-2">
               <Clock size={16} className="text-[var(--accent)]" />
-              <span>ActivitÃƒÂ© rÃƒÂ©cente enregistrÃƒÂ©e en base de donnÃƒÂ©es</span>
+              <span>Activité récente enregistrée en base de données</span>
             </h3>
             <div className="divide-y divide-[var(--border)] text-xs">
               {overview.recentActivity.map((act) => (
@@ -708,7 +708,7 @@ function EventsAdminPageContent() {
                         {act.userName}
                       </span>{' '}
                       <span className="text-[var(--text-muted)]">
-                        sÃ¢â‚¬â„¢est inscrit ÃƒÂ  Ã‚Â« {act.eventTitle} Ã‚Â»
+                        s’est inscrit à « {act.eventTitle} »
                       </span>
                     </div>
                   </div>
@@ -726,7 +726,7 @@ function EventsAdminPageContent() {
           </div>
         )}
 
-        {/* â”€â”€â”€ MODAL : SUIVI DES PARTICIPANTS RÃ‰ELS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+        {/* ─── MODAL : SUIVI DES PARTICIPANTS RÉELS ─────────────────────────────── */}
         {isParticipantsModalOpen && selectedEventForParticipants && (
           <EventParticipantsModal
             isOpen={isParticipantsModalOpen}
@@ -739,7 +739,7 @@ function EventsAdminPageContent() {
           />
         )}
 
-        {/* â”€â”€â”€ MODAL : WIZARD STEPPER CRÃ‰ATION & Ã‰DITION (5 Ã‰TAPES) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+        {/* ─── MODAL : WIZARD STEPPER CRÉATION & ÉDITION (5 ÉTAPES) ──────────────── */}
         {isFormModalOpen && (
           <EventWizardModal
             isOpen={isFormModalOpen}
@@ -752,23 +752,23 @@ function EventsAdminPageContent() {
           />
         )}
 
-        {/* Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ MODAL : TRANSITION DE STATUT & ANNULATION Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */}
+        {/* ─── MODAL : TRANSITION DE STATUT & ANNULATION ─────────────────────── */}
         {statusModalEvent && targetStatus && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
             <div className="w-full max-w-md rounded-xl border border-[var(--border)] bg-[var(--card)] p-5 shadow-2xl">
               <h3 className="text-base font-bold text-[var(--foreground)]">
                 {targetStatus === 'CANCELLED'
-                  ? 'Confirmer lÃ¢â‚¬â„¢annulation de lÃ¢â‚¬â„¢ÃƒÂ©vÃƒÂ©nement'
+                  ? 'Confirmer l’annulation de l’événement'
                   : `Passer au statut : ${targetStatus}`}
               </h3>
               <p className="text-xs text-[var(--text-muted)] mt-1">
-                Ãƒâ€°vÃƒÂ©nement : <strong className="text-[var(--foreground)]">{statusModalEvent.titleFr}</strong>
+                Événement : <strong className="text-[var(--foreground)]">{statusModalEvent.titleFr}</strong>
               </p>
 
               {targetStatus === 'CANCELLED' && (
                 <div className="mt-4">
                   <label className="block text-xs font-semibold text-[var(--foreground)] mb-1">
-                    Motif de lÃ¢â‚¬â„¢annulation (notifiÃƒÂ© aux participants inscrits)
+                    Motif de l’annulation (notifié aux participants inscrits)
                   </label>
                   <textarea
                     rows={3}
@@ -809,7 +809,7 @@ function EventsAdminPageContent() {
           </div>
         )}
 
-        {/* Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ MODAL : CONFIRMATION SUPPRESSION / ARCHIVAGE Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */}
+        {/* ─── MODAL : CONFIRMATION SUPPRESSION / ARCHIVAGE ───────────────────── */}
         {deleteModalEvent && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
             <div className="w-full max-w-md rounded-xl border border-[var(--border)] bg-[var(--card)] p-5 shadow-2xl">
@@ -818,14 +818,14 @@ function EventsAdminPageContent() {
                 <span>Suppression ou Archivage</span>
               </h3>
               <p className="text-xs text-[var(--text-muted)] mt-2">
-                Voulez-vous supprimer lÃ¢â‚¬â„¢ÃƒÂ©vÃƒÂ©nement{' '}
+                Voulez-vous supprimer l’événement{' '}
                 <strong className="text-[var(--foreground)]">{deleteModalEvent.titleFr}</strong> ?
               </p>
               <p className="text-xs text-[var(--text-muted)] mt-1.5">
-                RÃƒÂ¨gle de sÃƒÂ©curitÃƒÂ© : si des participants sont dÃƒÂ©jÃƒÂ  inscrits, lÃ¢â‚¬â„¢ÃƒÂ©vÃƒÂ©nement sera
-                automatiquement basculÃƒÂ© en statut <strong>ARCHIVÃƒâ€°</strong> pour prÃƒÂ©server lÃ¢â‚¬â„¢historique
-                et les points des utilisateurs. SÃ¢â‚¬â„¢il est encore en brouillon sans inscription, il sera
-                dÃƒÂ©finitivement supprimÃƒÂ©.
+                Règle de sécurité : si des participants sont déjà inscrits, l’événement sera
+                automatiquement basculé en statut <strong>ARCHIVÉ</strong> pour préserver l’historique
+                et les points des utilisateurs. S’il est encore en brouillon sans inscription, il sera
+                définitivement supprimé.
               </p>
 
               <div className="flex items-center justify-end gap-3 mt-5">
