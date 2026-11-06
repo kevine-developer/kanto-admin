@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
+import { useSession } from '@/lib/auth-client';
 import { AdminShell } from '@/components/layout/AdminShell';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { systemService } from '@/services/system.service';
@@ -32,9 +33,13 @@ import {
 type PeriodType = 'today' | '7d' | '30d' | 'all';
 
 export default function AdminDashboardPage() {
+  const { data: session, isPending: isSessionLoading } = useSession();
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
   const [period, setPeriod] = useState<PeriodType>('7d');
   const [isLoading, setIsLoading] = useState(true);
+
+  const role = (session?.user as { role?: string } | undefined)?.role?.toString().trim().toUpperCase();
+  const isAdmin = role === 'ADMIN';
 
   const loadMetrics = useCallback(async () => {
     try {
@@ -49,8 +54,10 @@ export default function AdminDashboardPage() {
   }, [period]);
 
   useEffect(() => {
-    void loadMetrics();
-  }, [loadMetrics]);
+    if (!isSessionLoading && isAdmin) {
+      void loadMetrics();
+    }
+  }, [loadMetrics, isSessionLoading, isAdmin]);
 
   const hasUrgentActions =
     (metrics?.moderation.totalUrgent || 0) > 0;

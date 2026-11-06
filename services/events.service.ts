@@ -69,6 +69,11 @@ export interface EventAdminItem {
   endDate: string;
   registrationDeadline?: string | null;
   maxParticipants?: number | null;
+  enableWaitlist?: boolean;
+  waitlistCapacity?: number | null;
+  isPaid?: boolean;
+  ticketPrice?: number | null;
+  currency?: string | null;
   currentParticipantsCount: number;
   viewsCount: number;
   sharesCount: number;
@@ -130,6 +135,12 @@ export interface AdminEventParticipantItem {
   progressPercent: number;
   registeredAt: string;
   completedAt?: string | null;
+  waitlistPosition?: number | null;
+  cancelledByRole?: string | null;
+  cancellationReason?: string | null;
+  cancelledAt?: string | null;
+  adminNotes?: string | null;
+  promotedFromWaitlistAt?: string | null;
 }
 
 export interface AdminEventParticipantsResponse {
@@ -188,6 +199,11 @@ export interface CreateEventInput {
   endDate: string;
   registrationDeadline?: string;
   maxParticipants?: number;
+  enableWaitlist?: boolean;
+  waitlistCapacity?: number;
+  isPaid?: boolean;
+  ticketPrice?: number;
+  currency?: string;
   isFeatured?: boolean;
   rulesMg?: string;
   rulesFr?: string;
@@ -321,6 +337,53 @@ export const eventsAdminService = {
       qs.toString() ? `?${qs.toString()}` : ''
     }`;
     return fetchApi<AdminEventParticipantsResponse>(url);
+  },
+
+  /**
+   * Upload sécurisé d'une photo de présentation / couverture d'événement (ratio 16:9 recommandé)
+   */
+  async uploadCover(
+    base64Data: string,
+    originalName?: string
+  ): Promise<{ success: boolean; url: string; provider: 'cloudinary' | 'local' }> {
+    return fetchApi<{ success: boolean; url: string; provider: 'cloudinary' | 'local' }>(
+      '/events/admin/upload-cover',
+      {
+        method: 'POST',
+        body: JSON.stringify({ base64Data, originalName }),
+      }
+    );
+  },
+
+  /**
+   * Annulation administrative d'un participant avec motif et notification
+   */
+  async cancelParticipant(
+    eventId: string,
+    userId: string,
+    data: {
+      reason: string;
+      internalNotes?: string;
+      notifyUser?: boolean;
+    }
+  ): Promise<{
+    success: boolean;
+    message: string;
+    cancelledParticipation: unknown;
+    promotedUserId: string | null;
+  }> {
+    return fetchApi<{
+      success: boolean;
+      message: string;
+      cancelledParticipation: unknown;
+      promotedUserId: string | null;
+    }>(
+      `/events/admin/${encodeURIComponent(eventId)}/participants/${encodeURIComponent(userId)}/cancel`,
+      {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }
+    );
   },
 
   /**

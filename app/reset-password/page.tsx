@@ -16,7 +16,6 @@ import {
   ShieldAlert,
   KeyRound,
   Check,
-  Sparkles,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -50,18 +49,18 @@ function ResetPasswordForm() {
   // Compte à rebours de redirection après succès
   useEffect(() => {
     if (!isSuccess) return;
-    const interval = setInterval(() => {
-      setRedirectCountdown((prev) => {
-        if (prev <= 1) {
-          clearInterval(interval);
-          router.push('/login');
-          return 0;
-        }
-        return prev - 1;
-      });
+
+    if (redirectCountdown <= 0) {
+      router.push('/login');
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      setRedirectCountdown((prev) => prev - 1);
     }, 1000);
-    return () => clearInterval(interval);
-  }, [isSuccess, router]);
+
+    return () => clearTimeout(timer);
+  }, [isSuccess, redirectCountdown, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -231,7 +230,7 @@ function ResetPasswordForm() {
 
               <div className="space-y-2">
                 <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                  <Sparkles size={12} />
+                  <CheckCircle2 size={12} />
                   Compte sécurisé avec succès
                 </div>
                 <h1
