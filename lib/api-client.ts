@@ -18,6 +18,15 @@ export async function fetchApi<T = unknown>(
   });
 
   if (!response.ok) {
+    if (
+      response.status === 401 &&
+      typeof window !== 'undefined' &&
+      !window.location.pathname.startsWith('/login') &&
+      !window.location.pathname.startsWith('/reset-password')
+    ) {
+      window.location.href = '/login';
+    }
+
     let errorMsg = `Erreur HTTP ${response.status}`;
     try {
       const errJson = (await response.json()) as { message?: string };
