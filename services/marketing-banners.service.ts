@@ -22,6 +22,8 @@ export interface MarketingBanner {
   modalCtaLabelFr?: string | null;
   modalCtaLabelMg?: string | null;
   modalCtaLink?: string | null;
+  targetLocation?: 'HOME' | 'CATEGORY' | 'ALL';
+  categoryKey?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -47,7 +49,28 @@ export interface CreateMarketingBannerInput {
   modalCtaLabelFr?: string;
   modalCtaLabelMg?: string;
   modalCtaLink?: string;
+  targetLocation?: 'HOME' | 'CATEGORY' | 'ALL';
+  categoryKey?: string | null;
 }
+
+export const BANNER_TARGET_LOCATIONS = [
+  { value: 'HOME', label: "Accueil (Home)", description: "Carrousel en haut de la page d'accueil" },
+  { value: 'CATEGORY', label: "Listes de catégories", description: "Bannière en tête des listes de contenus culturels" },
+  { value: 'ALL', label: "Partout (Accueil + Catégories)", description: "Visible à la fois sur l'accueil et dans les catégories" },
+] as const;
+
+export const BANNER_CATEGORIES = [
+  { value: 'ALL', label: 'Toutes les catégories' },
+  { value: 'conte', label: 'Contes & Légendes (Angano)' },
+  { value: 'proverbe', label: 'Proverbes & Sagesses (Ohabolana)' },
+  { value: 'expression', label: 'Expressions imagées (Oha-pitenenana)' },
+  { value: 'dicton', label: 'Dictons populaires (Fomba fiteny)' },
+  { value: 'citation', label: 'Citations & Penseurs (Tenin\'olon-kendry)' },
+  { value: 'raki-teny', label: 'Mots Rares & Insolites (Raki-teny Miafina)' },
+  { value: 'discours', label: 'Discours & Kabary' },
+  { value: 'poesie', label: 'Poésies (Tononkalo)' },
+  { value: 'recitation', label: 'Récitations (Tsianjery)' },
+] as const;
 
 export type UpdateMarketingBannerInput = Partial<CreateMarketingBannerInput>;
 

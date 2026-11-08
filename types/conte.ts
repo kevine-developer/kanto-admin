@@ -28,6 +28,8 @@ export interface ConteItem {
   moralFr?: string | null;
   audioUrlMg?: string | null;
   audioUrlFr?: string | null;
+  isHumanVoiceMg?: boolean;
+  isHumanVoiceFr?: boolean;
   viewCount?: number;
   likesCount?: number;
   paragraphs?: ConteParagraph[];
@@ -41,6 +43,10 @@ export interface ConteFormData {
   author?: string;
   moralMg?: string;
   moralFr?: string;
+  audioUrlMg?: string | null;
+  audioUrlFr?: string | null;
+  isHumanVoiceMg?: boolean;
+  isHumanVoiceFr?: boolean;
   paragraphs: Array<{ textMg: string; textFr: string }>;
 }
 

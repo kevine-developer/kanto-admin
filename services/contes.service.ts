@@ -44,6 +44,10 @@ export const contesService = {
         author: data.author?.trim() || 'Angano Malagasy',
         moralMg: data.moralMg?.trim() || undefined,
         moralFr: data.moralFr?.trim() || undefined,
+        audioUrlMg: data.audioUrlMg ?? undefined,
+        audioUrlFr: data.audioUrlFr ?? undefined,
+        isHumanVoiceMg: data.isHumanVoiceMg ?? undefined,
+        isHumanVoiceFr: data.isHumanVoiceFr ?? undefined,
         paragraphs: validParagraphs,
       }),
     });
@@ -73,6 +77,10 @@ export const contesService = {
         author: data.author?.trim() || 'Angano Malagasy',
         moralMg: data.moralMg?.trim() || undefined,
         moralFr: data.moralFr?.trim() || undefined,
+        audioUrlMg: data.audioUrlMg ?? undefined,
+        audioUrlFr: data.audioUrlFr ?? undefined,
+        isHumanVoiceMg: data.isHumanVoiceMg ?? undefined,
+        isHumanVoiceFr: data.isHumanVoiceFr ?? undefined,
         paragraphs: validParagraphs,
       }),
     });
@@ -117,6 +125,46 @@ export const contesService = {
     return fetchApi(`/contes/${id}/generate-audio`, {
       method: 'POST',
       body: JSON.stringify({ language: lang, force, voiceId }),
+    });
+  },
+
+  /**
+   * Téléverse un fichier audio (humain / studio) et l'héberge sur Cloudinary CDN.
+   * @param id - Identifiant du conte
+   * @param lang - Langue de l'audio ('mg' ou 'fr')
+   * @param file - Fichier audio sélectionné
+   * @param isHumanVoice - Indique s'il s'agit d'une voix humaine certifiée
+   */
+  async uploadAudio(
+    id: string,
+    lang: 'mg' | 'fr',
+    file: File,
+    isHumanVoice: boolean = true,
+  ): Promise<{
+    id?: string;
+    slug?: string;
+    audioUrl: string;
+    language: string;
+    audioUrlMg?: string | null;
+    audioUrlFr?: string | null;
+    isHumanVoiceMg?: boolean;
+    isHumanVoiceFr?: boolean;
+    status: string;
+  }> {
+    const base64Data = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = (err) => reject(err);
+      reader.readAsDataURL(file);
+    });
+
+    return fetchApi(`/contes/${id}/upload-audio`, {
+      method: 'POST',
+      body: JSON.stringify({
+        language: lang,
+        base64Data,
+        isHumanVoice,
+      }),
     });
   },
 };

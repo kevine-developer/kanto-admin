@@ -7,6 +7,8 @@ import {
   marketingBannersService,
   MarketingBanner,
   CreateMarketingBannerInput,
+  BANNER_TARGET_LOCATIONS,
+  BANNER_CATEGORIES,
 } from '@/services/marketing-banners.service';
 import { DEFAULT_DEEP_LINK_OPTIONS } from '@/constants/deep-links.constant';
 import {
@@ -28,6 +30,8 @@ import {
   Search,
   PanelBottomOpen,
   MessageSquare,
+  Home,
+  LayoutGrid,
 } from 'lucide-react';
 
 const PRESET_COLORS = [
@@ -44,6 +48,10 @@ export default function MarketingBannersAdminPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedPreviewBanner, setSelectedPreviewBanner] = useState<MarketingBanner | null>(null);
   const { toast } = useToast();
+
+  // Filtres d'affichage
+  const [locationFilter, setLocationFilter] = useState<'ALL' | 'HOME' | 'CATEGORY'>('ALL');
+  const [categoryFilter, setCategoryFilter] = useState<string>('ALL');
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -63,6 +71,10 @@ export default function MarketingBannersAdminPage() {
   const [deepLink, setDeepLink] = useState('/(screens)/subscription');
   const [accentColor, setAccentColor] = useState('#F59E0B');
   const [isActive, setIsActive] = useState(true);
+
+  // Emplacement & Ciblage de catégorie
+  const [targetLocation, setTargetLocation] = useState<'HOME' | 'CATEGORY' | 'ALL'>('HOME');
+  const [categoryKey, setCategoryKey] = useState<string>('ALL');
 
   // Nouveaux types d'action & modales d'information
   const [actionType, setActionType] = useState<'DEEP_LINK' | 'BOTTOM_SHEET' | 'CENTER_MODAL'>('DEEP_LINK');
@@ -108,6 +120,8 @@ export default function MarketingBannersAdminPage() {
     setDeepLink('/(screens)/subscription');
     setAccentColor('#F59E0B');
     setIsActive(true);
+    setTargetLocation('HOME');
+    setCategoryKey('ALL');
     setActionType('DEEP_LINK');
     setModalBodyFr('');
     setModalBodyMg('');
@@ -137,6 +151,8 @@ export default function MarketingBannersAdminPage() {
     setDeepLink(banner.deepLink);
     setAccentColor(banner.accentColor || '#F59E0B');
     setIsActive(banner.isActive);
+    setTargetLocation(banner.targetLocation || 'HOME');
+    setCategoryKey(banner.categoryKey || 'ALL');
     setActionType(banner.actionType || 'DEEP_LINK');
     setModalBodyFr(banner.modalBodyFr || '');
     setModalBodyMg(banner.modalBodyMg || '');
@@ -174,6 +190,10 @@ export default function MarketingBannersAdminPage() {
         deepLink: deepLink.trim(),
         accentColor,
         isActive,
+        targetLocation,
+        categoryKey: (targetLocation === 'CATEGORY' || targetLocation === 'ALL')
+          ? (categoryKey && categoryKey !== 'ALL' ? categoryKey : 'ALL')
+          : null,
         actionType,
         modalBodyFr: modalBodyFr.trim() || undefined,
         modalBodyMg: modalBodyMg.trim() || undefined,
@@ -252,6 +272,26 @@ export default function MarketingBannersAdminPage() {
     }
   };
 
+  const countHome = banners.filter(
+    (b) => (b.targetLocation || 'HOME') === 'HOME' || b.targetLocation === 'ALL'
+  ).length;
+
+  const countCategory = banners.filter(
+    (b) => b.targetLocation === 'CATEGORY' || b.targetLocation === 'ALL'
+  ).length;
+
+  const filteredBanners = banners.filter((b) => {
+    const loc = b.targetLocation || 'HOME';
+    if (locationFilter === 'HOME' && loc !== 'HOME' && loc !== 'ALL') return false;
+    if (locationFilter === 'CATEGORY' && loc !== 'CATEGORY' && loc !== 'ALL') return false;
+    if (categoryFilter !== 'ALL') {
+      if (loc === 'HOME') return false;
+      const bCat = (b.categoryKey || 'ALL').toLowerCase();
+      if (bCat !== 'all' && bCat !== categoryFilter.toLowerCase()) return false;
+    }
+    return true;
+  });
+
   return (
     <AdminShell>
       <div className="space-y-6">
@@ -283,6 +323,27 @@ export default function MarketingBannersAdminPage() {
                 Aperçu mobile (Design épuré & arrondis design system)
               </span>
               <div className="flex items-center gap-2">
+                {/* Badge d'emplacement dans l'aperçu */}
+                <span className="text-[11px] px-2 py-0.5 rounded font-semibold border flex items-center gap-1 bg-muted text-foreground">
+                  {(selectedPreviewBanner.targetLocation || 'HOME') === 'HOME' ? (
+                    <>
+                      <Home className="w-3 h-3 text-blue-400" />
+                      Accueil
+                    </>
+                  ) : selectedPreviewBanner.targetLocation === 'CATEGORY' ? (
+                    <>
+                      <LayoutGrid className="w-3 h-3 text-purple-400" />
+                      {selectedPreviewBanner.categoryKey && selectedPreviewBanner.categoryKey !== 'ALL'
+                        ? BANNER_CATEGORIES.find((c) => c.value === selectedPreviewBanner.categoryKey)?.label || selectedPreviewBanner.categoryKey
+                        : 'Toutes catégories'}
+                    </>
+                  ) : (
+                    <>
+                      <Layers className="w-3 h-3 text-amber-400" />
+                      Accueil + Catégories
+                    </>
+                  )}
+                </span>
                 <span className="text-[11px] px-2 py-0.5 rounded font-medium border bg-muted text-foreground flex items-center gap-1">
                   {selectedPreviewBanner.actionType === 'BOTTOM_SHEET' ? (
                     <>
@@ -369,21 +430,80 @@ export default function MarketingBannersAdminPage() {
           </div>
         )}
 
+        {/* Filtres par Emplacement & Catégorie */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3 rounded-xl border border-border bg-card">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs font-semibold text-muted-foreground mr-1">Filtrer par :</span>
+            <button
+              onClick={() => {
+                setLocationFilter('ALL');
+                setCategoryFilter('ALL');
+              }}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
+                locationFilter === 'ALL'
+                  ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
+                  : 'bg-muted/50 text-foreground border-border hover:bg-muted'
+              }`}
+            >
+              Tous ({banners.length})
+            </button>
+            <button
+              onClick={() => setLocationFilter('HOME')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold border flex items-center gap-1.5 transition-colors ${
+                locationFilter === 'HOME'
+                  ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
+                  : 'bg-muted/50 text-foreground border-border hover:bg-muted'
+              }`}
+            >
+              <Home className="w-3.5 h-3.5" />
+              Accueil ({countHome})
+            </button>
+            <button
+              onClick={() => setLocationFilter('CATEGORY')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold border flex items-center gap-1.5 transition-colors ${
+                locationFilter === 'CATEGORY'
+                  ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
+                  : 'bg-muted/50 text-foreground border-border hover:bg-muted'
+              }`}
+            >
+              <LayoutGrid className="w-3.5 h-3.5" />
+              Catégories ({countCategory})
+            </button>
+          </div>
+
+          {(locationFilter === 'CATEGORY' || locationFilter === 'ALL') && (
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <span className="text-xs text-muted-foreground whitespace-nowrap">Catégorie :</span>
+              <select
+                value={categoryFilter}
+                onChange={(e) => setCategoryFilter(e.target.value)}
+                className="text-xs px-2.5 py-1.5 rounded-lg border border-border bg-background focus:outline-none focus:ring-1 focus:ring-emerald-500 w-full sm:w-auto"
+              >
+                {BANNER_CATEGORIES.map((cat) => (
+                  <option key={cat.value} value={cat.value}>
+                    {cat.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+        </div>
+
         {/* Liste des bannières */}
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-16 text-muted-foreground gap-3">
             <Loader2 className="w-7 h-7 animate-spin text-emerald-500" />
             <p className="text-sm">Chargement des bannières marketing...</p>
           </div>
-        ) : banners.length === 0 ? (
+        ) : filteredBanners.length === 0 ? (
           <div className="text-center py-16 border border-dashed rounded-xl bg-card">
             <p className="text-muted-foreground text-sm">
-              Aucune bannière configurée. Créez-en une pour dynamiser l&apos;accueil mobile !
+              Aucune bannière trouvée pour les filtres sélectionnés.
             </p>
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-3">
-            {banners.map((banner, index) => (
+            {filteredBanners.map((banner, index) => (
               <div
                 key={banner.id}
                 onClick={() => setSelectedPreviewBanner(banner)}
@@ -432,6 +552,35 @@ export default function MarketingBannersAdminPage() {
                         }`}
                       >
                         {banner.isActive ? 'Actif' : 'Inactif'}
+                      </span>
+                      {/* Badge Emplacement / Catégorie */}
+                      <span
+                        className={`text-[10px] px-2 py-0.5 rounded font-semibold border flex items-center gap-1 ${
+                          (banner.targetLocation || 'HOME') === 'HOME'
+                            ? 'bg-blue-500/10 text-blue-400 border-blue-500/20'
+                            : banner.targetLocation === 'CATEGORY'
+                            ? 'bg-purple-500/10 text-purple-400 border-purple-500/20'
+                            : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                        }`}
+                      >
+                        {(banner.targetLocation || 'HOME') === 'HOME' ? (
+                          <>
+                            <Home className="w-3 h-3" />
+                            Accueil
+                          </>
+                        ) : banner.targetLocation === 'CATEGORY' ? (
+                          <>
+                            <LayoutGrid className="w-3 h-3" />
+                            {banner.categoryKey && banner.categoryKey !== 'ALL'
+                              ? BANNER_CATEGORIES.find((c) => c.value === banner.categoryKey)?.label || banner.categoryKey
+                              : 'Toutes catégories'}
+                          </>
+                        ) : (
+                          <>
+                            <Layers className="w-3 h-3" />
+                            Accueil + Catégories
+                          </>
+                        )}
                       </span>
                       <span
                         className={`text-[10px] px-2 py-0.5 rounded font-medium border ${
@@ -665,6 +814,87 @@ export default function MarketingBannersAdminPage() {
                       className="w-full text-sm px-3 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-1 focus:ring-emerald-500"
                     />
                   </div>
+                </div>
+
+                {/* Emplacement d'affichage & Catégorie ciblée */}
+                <div className="p-4 rounded-xl border border-border bg-muted/20 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold uppercase tracking-wider text-foreground flex items-center gap-1.5">
+                      <LayoutGrid className="w-4 h-4 text-emerald-500" />
+                      Emplacement d&apos;affichage dans l&apos;application mobile
+                    </span>
+                    <span className="text-[11px] text-muted-foreground">
+                      Accueil ou listes de catégories
+                    </span>
+                  </div>
+
+                  {/* Sélecteur d'emplacement (HOME / CATEGORY / ALL) */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                    {BANNER_TARGET_LOCATIONS.map((loc) => {
+                      const isSelected = targetLocation === loc.value;
+                      return (
+                        <button
+                          key={loc.value}
+                          type="button"
+                          onClick={() =>
+                            setTargetLocation(loc.value as 'HOME' | 'CATEGORY' | 'ALL')
+                          }
+                          className={`p-3 rounded-lg border text-left transition-all ${
+                            isSelected
+                              ? 'border-emerald-500 bg-emerald-500/10 shadow-sm'
+                              : 'border-border bg-background hover:bg-muted/40'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2">
+                            {loc.value === 'HOME' ? (
+                              <Home className="w-4 h-4 text-blue-400" />
+                            ) : loc.value === 'CATEGORY' ? (
+                              <LayoutGrid className="w-4 h-4 text-purple-400" />
+                            ) : (
+                              <Layers className="w-4 h-4 text-amber-400" />
+                            )}
+                            <span className="text-xs font-bold text-foreground">
+                              {loc.label}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-muted-foreground mt-1 line-clamp-2">
+                            {loc.description}
+                          </p>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Si CATEGORY ou ALL : sélecteur de catégorie */}
+                  {(targetLocation === 'CATEGORY' || targetLocation === 'ALL') && (
+                    <div className="pt-3 border-t border-border/80 space-y-1.5">
+                      <label
+                        htmlFor="banner-category-key"
+                        className="text-xs font-semibold text-muted-foreground block"
+                      >
+                        Catégorie culturelle ciblée
+                      </label>
+                      <select
+                        id="banner-category-key"
+                        value={categoryKey || 'ALL'}
+                        onChange={(e) => setCategoryKey(e.target.value)}
+                        className="w-full text-sm px-3 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                      >
+                        {BANNER_CATEGORIES.map((cat) => (
+                          <option key={cat.value} value={cat.value}>
+                            {cat.label}
+                          </option>
+                        ))}
+                      </select>
+                      <p className="text-[11px] text-muted-foreground">
+                        {categoryKey === 'ALL' || !categoryKey
+                          ? "La bannière sera affichée en tête de toutes les listes de catégories (Contes, Proverbes, Citations, etc.)."
+                          : `La bannière sera affichée spécifiquement en tête de la liste « ${
+                              BANNER_CATEGORIES.find((c) => c.value === categoryKey)?.label || categoryKey
+                            } ».`}
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 {/* 5. Comportement au clic : Redirection directe ou Modale d'information */}

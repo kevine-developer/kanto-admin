@@ -98,33 +98,46 @@ export function ContesTable({
                 {/* Audio Malagasy */}
                 <td className="py-3 px-3.5 align-top">
                   {conte.audioUrlMg ? (
-                    <div className="flex items-center gap-1.5">
-                      <AudioPlayerInline
-                        url={conte.audioUrlMg}
-                        lang="MG"
-                        label="Voix MG"
-                        className="py-1 px-2"
-                      />
-                      <button
-                        onClick={() => onGenerateAudio(conte.id, 'mg', 'Charon')}
-                        disabled={isGenMg}
-                        className="p-1.5 rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] text-[var(--text-muted)] hover:text-[var(--foreground)] transition cursor-pointer"
-                        title="Régénérer avec la voix Sage Malagasy (Charon - sans accent)"
-                      >
-                        {isGenMg ? (
-                          <Loader2 size={12} className="animate-spin text-[var(--accent)]" />
-                        ) : (
-                          <RotateCcw size={12} />
-                        )}
-                      </button>
-                      <button
-                        onClick={() => onGenerateAudio(conte.id, 'mg', 'Aoede')}
-                        disabled={isGenMg}
-                        className="px-2 py-1 rounded-lg text-[10px] font-semibold border border-[var(--card-border)] bg-[var(--input-bg)] hover:bg-[var(--card-hover)] text-[var(--text-muted)] hover:text-[var(--foreground)] transition cursor-pointer"
-                        title="Régénérer avec la voix Conteuse Renibe (Aoede - sans accent)"
-                      >
-                        Voix ♀
-                      </button>
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-1.5">
+                        <AudioPlayerInline
+                          url={conte.audioUrlMg}
+                          lang="MG"
+                          label="Voix MG"
+                          className="py-1 px-2"
+                        />
+                        <button
+                          onClick={() => onGenerateAudio(conte.id, 'mg', 'Charon')}
+                          disabled={isGenMg}
+                          className="p-1.5 rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] text-[var(--text-muted)] hover:text-[var(--foreground)] transition cursor-pointer"
+                          title="Régénérer avec la voix Sage Malagasy (Charon - sans accent)"
+                        >
+                          {isGenMg ? (
+                            <Loader2 size={12} className="animate-spin text-[var(--accent)]" />
+                          ) : (
+                            <RotateCcw size={12} />
+                          )}
+                        </button>
+                        <button
+                          onClick={() => onGenerateAudio(conte.id, 'mg', 'Aoede')}
+                          disabled={isGenMg}
+                          className="px-2 py-1 rounded-lg text-[10px] font-semibold border border-[var(--card-border)] bg-[var(--input-bg)] hover:bg-[var(--card-hover)] text-[var(--text-muted)] hover:text-[var(--foreground)] transition cursor-pointer"
+                          title="Régénérer avec la voix Conteuse Renibe (Aoede - sans accent)"
+                        >
+                          Voix ♀
+                        </button>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span
+                          className={`text-[9px] px-1.5 py-0.5 rounded font-bold border ${
+                            conte.isHumanVoiceMg
+                              ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30'
+                              : 'bg-amber-500/10 text-amber-500 border-amber-500/30'
+                          }`}
+                        >
+                          {conte.isHumanVoiceMg ? 'Voix humaine' : 'Voix IA'}
+                        </span>
+                      </div>
                     </div>
                   ) : (
                     <div className="flex items-center gap-1.5">
@@ -161,25 +174,38 @@ export function ContesTable({
                 {/* Audio Français */}
                 <td className="py-3 px-3.5 align-top">
                   {conte.audioUrlFr ? (
-                    <div className="flex items-center gap-1.5">
-                      <AudioPlayerInline
-                        url={conte.audioUrlFr}
-                        lang="FR"
-                        label="Voix FR"
-                        className="py-1 px-2"
-                      />
-                      <button
-                        onClick={() => onGenerateAudio(conte.id, 'fr')}
-                        disabled={isGenFr}
-                        className="p-1.5 rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] text-[var(--text-muted)] hover:text-[var(--foreground)] transition cursor-pointer"
-                        title="Régénérer l'audio FR"
-                      >
-                        {isGenFr ? (
-                          <Loader2 size={12} className="animate-spin text-[var(--accent)]" />
-                        ) : (
-                          <RotateCcw size={12} />
-                        )}
-                      </button>
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center gap-1.5">
+                        <AudioPlayerInline
+                          url={conte.audioUrlFr}
+                          lang="FR"
+                          label="Voix FR"
+                          className="py-1 px-2"
+                        />
+                        <button
+                          onClick={() => onGenerateAudio(conte.id, 'fr')}
+                          disabled={isGenFr}
+                          className="p-1.5 rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] text-[var(--text-muted)] hover:text-[var(--foreground)] transition cursor-pointer"
+                          title="Régénérer l'audio FR"
+                        >
+                          {isGenFr ? (
+                            <Loader2 size={12} className="animate-spin text-[var(--accent)]" />
+                          ) : (
+                            <RotateCcw size={12} />
+                          )}
+                        </button>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span
+                          className={`text-[9px] px-1.5 py-0.5 rounded font-bold border ${
+                            conte.isHumanVoiceFr
+                              ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30'
+                              : 'bg-amber-500/10 text-amber-500 border-amber-500/30'
+                          }`}
+                        >
+                          {conte.isHumanVoiceFr ? 'Voix humaine' : 'Voix IA'}
+                        </span>
+                      </div>
                     </div>
                   ) : (
                     <button
