@@ -1,9 +1,19 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Modal, Field } from '@/components/ui';
 import { ConteFormData } from '@/types/conte';
-import { Plus, Trash2, Loader2 } from 'lucide-react';
+import {
+  Plus,
+  Trash2,
+  Loader2,
+  Upload,
+  Mic,
+  Bot,
+  Volume2,
+  ToggleLeft,
+  ToggleRight,
+} from 'lucide-react';
 import { contesService } from '@/services/contes.service';
 
 interface ConteModalProps {
@@ -21,6 +31,11 @@ export function ConteModal({
 }: ConteModalProps) {
   const isEditing = !!editingId;
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isUploadingMg, setIsUploadingMg] = useState(false);
+  const [isUploadingFr, setIsUploadingFr] = useState(false);
+  const fileInputMgRef = useRef<HTMLInputElement>(null);
+  const fileInputFrRef = useRef<HTMLInputElement>(null);
+
   const [formData, setFormData] = useState<ConteFormData>({
     title: '',
     titleFr: '',
@@ -28,6 +43,10 @@ export function ConteModal({
     author: 'Angano Malagasy',
     moralMg: '',
     moralFr: '',
+    audioUrlMg: '',
+    audioUrlFr: '',
+    isHumanVoiceMg: false,
+    isHumanVoiceFr: false,
     paragraphs: [{ textMg: '', textFr: '' }],
   });
 
@@ -50,6 +69,10 @@ export function ConteModal({
             author: full.author || 'Angano Malagasy',
             moralMg: full.moralMg || '',
             moralFr: full.moralFr || '',
+            audioUrlMg: full.audioUrlMg || '',
+            audioUrlFr: full.audioUrlFr || '',
+            isHumanVoiceMg: !!full.isHumanVoiceMg,
+            isHumanVoiceFr: !!full.isHumanVoiceFr,
             paragraphs,
           });
         })
@@ -62,6 +85,10 @@ export function ConteModal({
         author: 'Angano Malagasy',
         moralMg: '',
         moralFr: '',
+        audioUrlMg: '',
+        audioUrlFr: '',
+        isHumanVoiceMg: false,
+        isHumanVoiceFr: false,
         paragraphs: [{ textMg: '', textFr: '' }],
       });
     }
@@ -70,6 +97,33 @@ export function ConteModal({
       isMounted = false;
     };
   }, [editingId]);
+
+  const handleUploadFile = async (lang: 'mg' | 'fr', file: File) => {
+    if (!editingId) {
+      alert('Veuillez d’abord enregistrer le conte avant de téléverser un fichier audio.');
+      return;
+    }
+
+    const isMg = lang === 'mg';
+    if (isMg) setIsUploadingMg(true);
+    else setIsUploadingFr(true);
+
+    try {
+      const res = await contesService.uploadAudio(editingId, lang, file, true);
+      setFormData((prev) => ({
+        ...prev,
+        [isMg ? 'audioUrlMg' : 'audioUrlFr']: res.audioUrl,
+        [isMg ? 'isHumanVoiceMg' : 'isHumanVoiceFr']: true,
+      }));
+      alert(`Audio ${lang.toUpperCase()} téléversé et validé par Cloudinary avec succès !`);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Erreur';
+      alert(`Erreur de téléversement Cloudinary : ${msg}`);
+    } finally {
+      if (isMg) setIsUploadingMg(false);
+      else setIsUploadingFr(false);
+    }
+  };
 
   const handleAddParagraph = () => {
     setFormData((prev) => ({
@@ -274,6 +328,217 @@ export function ConteModal({
               className="w-full p-2 text-xs rounded-lg bg-[var(--input-bg)] border border-[var(--input-border)] text-[var(--foreground)] focus:outline-none focus:border-[var(--accent)] resize-none"
             />
           </Field>
+        </div>
+
+        {/* Section Audio & Voix Humaine vs Voix IA */}
+        <div className="space-y-3 pt-3 border-t border-[var(--card-border)] bg-[var(--input-bg)] p-3 rounded-xl border">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--foreground)] flex items-center gap-1.5">
+              <Volume2 size={13} className="text-[var(--accent)]" />
+              Pistes Audio &amp; Voix (Cloudinary &amp; Certification humaine)
+            </span>
+            <span className="text-[10px] text-[var(--text-muted)]">
+              Validez la voix humaine ou téléversez un audio studio
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {/* Audio Malagasy */}
+            <div className="p-2.5 rounded-lg border border-[var(--card-border)] bg-[var(--card)] space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-[var(--foreground)]">
+                  Audio Malagasy (MG)
+                </span>
+                {formData.audioUrlMg ? (
+                  <span
+                    className={`text-[9.5px] px-1.5 py-0.5 rounded font-bold border flex items-center gap-1 ${
+                      formData.isHumanVoiceMg
+                        ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30'
+                        : 'bg-amber-500/10 text-amber-500 border-amber-500/30'
+                    }`}
+                  >
+                    {formData.isHumanVoiceMg ? (
+                      <>
+                        <Mic size={10} />
+                        Voix humaine
+                      </>
+                    ) : (
+                      <>
+                        <Bot size={10} />
+                        Voix IA (TTS)
+                      </>
+                    )}
+                  </span>
+                ) : (
+                  <span className="text-[9.5px] px-1.5 py-0.5 rounded bg-muted text-[var(--text-muted)] border">
+                    Aucun audio
+                  </span>
+                )}
+              </div>
+
+              {formData.audioUrlMg ? (
+                <div className="space-y-2">
+                  <audio
+                    controls
+                    src={formData.audioUrlMg}
+                    className="w-full h-7 rounded"
+                  />
+                  {/* Switch Voix Humaine */}
+                  <div className="flex items-center justify-between pt-1 border-t border-[var(--card-border)]">
+                    <span className="text-[11px] text-[var(--text-muted)]">
+                      Certifié voix humaine
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          isHumanVoiceMg: !prev.isHumanVoiceMg,
+                        }))
+                      }
+                      className="cursor-pointer text-[var(--foreground)] flex items-center gap-1 text-[11px]"
+                    >
+                      {formData.isHumanVoiceMg ? (
+                        <ToggleRight size={22} className="text-emerald-500" />
+                      ) : (
+                        <ToggleLeft size={22} className="text-neutral-400" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+
+              {/* Téléversement d'un fichier audio Cloudinary */}
+              <input
+                ref={fileInputMgRef}
+                type="file"
+                accept="audio/*,.mp3,.m4a,.wav,.aac,.ogg"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleUploadFile('mg', file);
+                }}
+              />
+              <button
+                type="button"
+                disabled={isUploadingMg}
+                onClick={() => fileInputMgRef.current?.click()}
+                className="w-full py-1.5 px-2.5 rounded-lg border border-dashed border-[var(--card-border)] hover:bg-[var(--card-hover)] text-[11px] font-semibold text-[var(--foreground)] flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+              >
+                {isUploadingMg ? (
+                  <>
+                    <Loader2 size={12} className="animate-spin text-[var(--accent)]" />
+                    <span>Téléversement Cloudinary...</span>
+                  </>
+                ) : (
+                  <>
+                    <Upload size={12} className="text-[var(--accent)]" />
+                    <span>
+                      {formData.audioUrlMg ? 'Remplacer audio MG' : 'Téléverser audio MG'}
+                    </span>
+                  </>
+                )}
+              </button>
+            </div>
+
+            {/* Audio Français */}
+            <div className="p-2.5 rounded-lg border border-[var(--card-border)] bg-[var(--card)] space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-[var(--foreground)]">
+                  Audio Français (FR)
+                </span>
+                {formData.audioUrlFr ? (
+                  <span
+                    className={`text-[9.5px] px-1.5 py-0.5 rounded font-bold border flex items-center gap-1 ${
+                      formData.isHumanVoiceFr
+                        ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30'
+                        : 'bg-amber-500/10 text-amber-500 border-amber-500/30'
+                    }`}
+                  >
+                    {formData.isHumanVoiceFr ? (
+                      <>
+                        <Mic size={10} />
+                        Voix humaine
+                      </>
+                    ) : (
+                      <>
+                        <Bot size={10} />
+                        Voix IA (TTS)
+                      </>
+                    )}
+                  </span>
+                ) : (
+                  <span className="text-[9.5px] px-1.5 py-0.5 rounded bg-muted text-[var(--text-muted)] border">
+                    Aucun audio
+                  </span>
+                )}
+              </div>
+
+              {formData.audioUrlFr ? (
+                <div className="space-y-2">
+                  <audio
+                    controls
+                    src={formData.audioUrlFr}
+                    className="w-full h-7 rounded"
+                  />
+                  {/* Switch Voix Humaine */}
+                  <div className="flex items-center justify-between pt-1 border-t border-[var(--card-border)]">
+                    <span className="text-[11px] text-[var(--text-muted)]">
+                      Certifié voix humaine
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          isHumanVoiceFr: !prev.isHumanVoiceFr,
+                        }))
+                      }
+                      className="cursor-pointer text-[var(--foreground)] flex items-center gap-1 text-[11px]"
+                    >
+                      {formData.isHumanVoiceFr ? (
+                        <ToggleRight size={22} className="text-emerald-500" />
+                      ) : (
+                        <ToggleLeft size={22} className="text-neutral-400" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+
+              {/* Téléversement d'un fichier audio Cloudinary */}
+              <input
+                ref={fileInputFrRef}
+                type="file"
+                accept="audio/*,.mp3,.m4a,.wav,.aac,.ogg"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleUploadFile('fr', file);
+                }}
+              />
+              <button
+                type="button"
+                disabled={isUploadingFr}
+                onClick={() => fileInputFrRef.current?.click()}
+                className="w-full py-1.5 px-2.5 rounded-lg border border-dashed border-[var(--card-border)] hover:bg-[var(--card-hover)] text-[11px] font-semibold text-[var(--foreground)] flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+              >
+                {isUploadingFr ? (
+                  <>
+                    <Loader2 size={12} className="animate-spin text-[var(--accent)]" />
+                    <span>Téléversement Cloudinary...</span>
+                  </>
+                ) : (
+                  <>
+                    <Upload size={12} className="text-[var(--accent)]" />
+                    <span>
+                      {formData.audioUrlFr ? 'Remplacer audio FR' : 'Téléverser audio FR'}
+                    </span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
         </div>
 
         <div className="flex items-center justify-end gap-2 pt-2 border-t border-[var(--card-border)]">
