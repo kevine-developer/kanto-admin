@@ -547,17 +547,25 @@ function EventsAdminPageContent() {
                         </td>
 
                         {/* Participants réels */}
+                        {/* Participants réels & Liste d'attente */}
                         <td className="px-4 py-3.5 text-center whitespace-nowrap">
                           <button
                             onClick={() => openParticipantsModal(item)}
-                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-[var(--background)] hover:bg-[var(--border)] border border-[var(--border)] transition-colors"
-                            title="Consulter les participants réels"
+                            className="inline-flex flex-col items-center gap-0.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-[var(--background)] hover:bg-[var(--border)] border border-[var(--border)] transition-colors"
+                            title="Consulter les participants réels et la liste d’attente"
                           >
-                            <Users size={12} className="text-[var(--accent)]" />
-                            <span>
-                              {item.currentParticipantsCount}
-                              {item.maxParticipants ? ` / ${item.maxParticipants}` : ''}
-                            </span>
+                            <div className="flex items-center gap-1.5">
+                              <Users size={12} className="text-[var(--accent)]" />
+                              <span>
+                                {item.currentParticipantsCount}
+                                {item.maxParticipants ? ` / ${item.maxParticipants}` : ''}
+                              </span>
+                            </div>
+                            {item.waitlistCount !== undefined && item.waitlistCount > 0 && (
+                              <span className="inline-flex items-center gap-0.5 text-[10px] text-amber-600 dark:text-amber-400 font-medium">
+                                <Clock size={10} /> {item.waitlistCount} en attente
+                              </span>
+                            )}
                           </button>
                         </td>
 

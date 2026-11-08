@@ -75,6 +75,7 @@ export interface EventAdminItem {
   ticketPrice?: number | null;
   currency?: string | null;
   currentParticipantsCount: number;
+  waitlistCount?: number;
   viewsCount: number;
   sharesCount: number;
   isFeatured: boolean;
