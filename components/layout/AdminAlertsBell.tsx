@@ -11,8 +11,10 @@ import {
   CheckCircle,
   RefreshCw,
   ShieldAlert,
+  WifiOff,
 } from 'lucide-react';
 import { fetchApi } from '@/lib/api-client';
+import { useSession } from '@/lib/auth-client';
 
 export interface AdminAlertItem {
   id: string;
@@ -36,36 +38,62 @@ interface AdminAlertsResponse {
 }
 
 export function AdminAlertsBell() {
+  const { data: session, isPending: isSessionPending } = useSession();
+  const user = session?.user as { role?: string } | undefined;
+  const role = user?.role?.toString().trim().toUpperCase();
+  const isAdmin = role === 'ADMIN';
+
   const [isOpen, setIsOpen] = useState(false);
   const [data, setData] = useState<AdminAlertsResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [hasConnectionError, setHasConnectionError] = useState(false);
   const [filter, setFilter] = useState<'all' | 'critical' | 'reports' | 'contributions'>('all');
   const [dismissedLocally, _setDismissedLocally] = useState<Set<string>>(new Set());
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const consecutiveFailuresRef = useRef(0);
 
-  const loadAlerts = useCallback(async (silent = false) => {
-    if (!silent) setIsLoading(true);
-    try {
-      const res = await fetchApi<AdminAlertsResponse>('/admin/notifications/alerts');
-      if (res && Array.isArray(res.alerts)) {
-        setData(res);
+  const loadAlerts = useCallback(
+    async (silent = false) => {
+      // Ne pas initier d'appel réseau si la session n'est pas authentifiée comme ADMIN
+      if (!isAdmin) return;
+
+      if (!silent) setIsLoading(true);
+      try {
+        const res = await fetchApi<AdminAlertsResponse>('/admin/notifications/alerts');
+        if (res && Array.isArray(res.alerts)) {
+          setData(res);
+          setHasConnectionError(false);
+          consecutiveFailuresRef.current = 0;
+        }
+      } catch (err: unknown) {
+        consecutiveFailuresRef.current += 1;
+        setHasConnectionError(true);
+
+        // Ne logger dans la console que si l'administrateur a explicitement cliqué ou rafraîchi (pas en polling silencieux)
+        if (!silent) {
+          const msg = err instanceof Error ? err.message : String(err);
+          console.warn('⚠️ [AdminAlerts] Impossible de joindre le service d’alertes :', msg);
+        }
+      } finally {
+        if (!silent) setIsLoading(false);
       }
-    } catch (err) {
-      // Ignorer silencieusement si l'admin n'est pas encore connecté
-      console.warn('⚠️ [AdminAlerts] Erreur chargement alertes :', err);
-    } finally {
-      if (!silent) setIsLoading(false);
-    }
-  }, []);
+    },
+    [isAdmin]
+  );
 
   useEffect(() => {
-    void loadAlerts();
+    if (!isAdmin || isSessionPending) return;
+
+    void loadAlerts(true);
     const interval = setInterval(() => {
+      // Pause intelligente : ne pas requêter si l'onglet est masqué ou s'il y a des échecs réseau consécutifs
+      if (typeof document !== 'undefined' && document.hidden) return;
+      if (consecutiveFailuresRef.current >= 3) return; // Arrêt du spam réseau jusqu'au prochain rafraîchissement manuel
       void loadAlerts(true);
-    }, 45_000); // Rafraîchissement périodique toutes les 45s
+    }, 45_000);
 
     return () => clearInterval(interval);
-  }, [loadAlerts]);
+  }, [isAdmin, isSessionPending, loadAlerts]);
 
   // Fermeture du dropdown lors d'un clic extérieur
   useEffect(() => {
@@ -226,7 +254,24 @@ export function AdminAlertsBell() {
 
           {/* Liste des alertes */}
           <div className="max-h-[380px] overflow-y-auto divide-y divide-[var(--card-border)]">
-            {filteredAlerts.length === 0 ? (
+            {hasConnectionError && !data ? (
+              <div className="py-8 px-4 text-center">
+                <WifiOff size={26} className="mx-auto text-amber-500 mb-2 opacity-80" />
+                <p className="text-xs font-semibold text-[var(--foreground)]">
+                  Serveur Kanto non joignable
+                </p>
+                <p className="text-[11px] text-[var(--text-muted)] mt-1 max-w-[260px] mx-auto">
+                  Impossible de charger les alertes. Vérifiez que le backend NestJS est en cours d&apos;exécution.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => void loadAlerts(false)}
+                  className="mt-3 px-3 py-1 text-xs font-medium bg-[var(--card-hover)] hover:bg-[var(--card-border)] rounded-md text-[var(--foreground)] transition cursor-pointer"
+                >
+                  Réessayer
+                </button>
+              </div>
+            ) : filteredAlerts.length === 0 ? (
               <div className="py-8 px-4 text-center">
                 <CheckCircle size={28} className="mx-auto text-emerald-500 mb-2 opacity-80" />
                 <p className="text-xs font-semibold text-[var(--foreground)]">
