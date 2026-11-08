@@ -7,21 +7,13 @@ import {
   Megaphone,
   Plus,
   Calendar,
-  CheckCircle2,
-  Clock,
-  XCircle,
   Eye,
   MousePointerClick,
-  Users,
   MessageSquare,
   Send,
   Loader2,
   RefreshCw,
-  Sparkles,
   Layers,
-  ArrowRight,
-  ShieldCheck,
-  AlertCircle,
 } from 'lucide-react';
 
 interface PlacementItem {
@@ -63,12 +55,18 @@ interface PartnerMarketingRequest {
   createdAt: string;
 }
 
+interface EventSimple {
+  id: string;
+  titleFr: string;
+  slug?: string;
+}
+
 export default function PartnerPortalMarketingPage() {
   const { toast } = useToast();
 
   const [placements, setPlacements] = useState<PlacementItem[]>([]);
   const [requests, setRequests] = useState<PartnerMarketingRequest[]>([]);
-  const [myEvents, setMyEvents] = useState<any[]>([]);
+  const [myEvents, setMyEvents] = useState<EventSimple[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   // Modal Demande
@@ -92,17 +90,18 @@ export default function PartnerPortalMarketingPage() {
       const [placementsRes, requestsRes, eventsRes] = await Promise.all([
         fetchApi<{ items?: PlacementItem[] } | PlacementItem[]>('/v1/marketing/placements').catch(() => []),
         fetchApi<{ items: PartnerMarketingRequest[] }>('/admin/partners/marketing/requests').catch(() => ({ items: [] })),
-        fetchApi<{ items: any[] }>('/admin/partners/events/list').catch(() => ({ items: [] })),
+        fetchApi<{ items: EventSimple[] }>('/admin/partners/events/list').catch(() => ({ items: [] })),
       ]);
 
-      const plList = Array.isArray(placementsRes)
+      const plList: PlacementItem[] = Array.isArray(placementsRes)
         ? placementsRes
-        : (placementsRes as any)?.items || [];
+        : (placementsRes as { items?: PlacementItem[] })?.items || [];
       setPlacements(plList);
       setRequests(requestsRes.items || []);
       setMyEvents(eventsRes.items || []);
-    } catch (err: any) {
-      toast.error(err?.message || 'Erreur lors du chargement des prestations.');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Erreur lors du chargement des prestations.';
+      toast.error(msg);
     } finally {
       setIsLoading(false);
     }
@@ -153,8 +152,9 @@ export default function PartnerPortalMarketingPage() {
       setCampaignGoals('');
       setProposedBudget('');
       loadData();
-    } catch (err: any) {
-      toast.error(err?.message || 'Impossible de créer la demande de visibilité.');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Impossible de créer la demande de visibilité.';
+      toast.error(msg);
     } finally {
       setIsSubmitting(false);
     }
@@ -181,7 +181,7 @@ export default function PartnerPortalMarketingPage() {
       );
       setActiveRequest(updated);
       loadData();
-    } catch (err: any) {
+    } catch {
       toast.error('Erreur lors de l’envoi du message.');
     } finally {
       setIsSendingChat(false);
@@ -198,8 +198,8 @@ export default function PartnerPortalMarketingPage() {
             Prestations Marketing & Sponsoring Kanto
           </h1>
           <p className="text-xs text-zinc-400 mt-1">
-            Sollicitez des mises en avant stratégiques sur l'application mobile Kanto MG pour
-            développer l'audience de vos événements culturels.
+            Sollicitez des mises en avant stratégiques sur l&apos;application mobile Kanto MG pour
+            développer l&apos;audience de vos événements culturels.
           </p>
         </div>
 
@@ -354,7 +354,7 @@ export default function PartnerPortalMarketingPage() {
                 <div className="space-y-2.5 pt-2 border-t border-zinc-800">
                   <div className="text-xs font-semibold text-zinc-300 flex items-center gap-1.5">
                     <MessageSquare className="w-3.5 h-3.5 text-amber-400" />
-                    Échanges avec l'équipe Kanto
+                    Échanges avec l&apos;équipe Kanto
                   </div>
 
                   <div className="max-h-56 overflow-y-auto space-y-2 pr-1">
@@ -424,7 +424,7 @@ export default function PartnerPortalMarketingPage() {
                 Demande de Prestation Marketing
               </h3>
               <p className="text-xs text-zinc-400 mt-1">
-                Choisissez l'événement à valoriser et les emplacements visuels souhaités.
+                Choisissez l&apos;événement à valoriser et les emplacements visuels souhaités.
               </p>
             </div>
 

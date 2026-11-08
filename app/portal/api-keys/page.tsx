@@ -13,16 +13,12 @@ import {
   Plus,
   Copy,
   Check,
-  AlertTriangle,
-  Clock,
   ShieldAlert,
   Trash2,
   BookOpen,
   ExternalLink,
-  Code2,
   RefreshCw,
   Loader2,
-  Eye,
   Terminal,
 } from 'lucide-react';
 
@@ -64,8 +60,9 @@ export default function PartnerApiKeysPage() {
     try {
       const data = await partnerPortalService.listApiKeys();
       setKeys(data || []);
-    } catch (err: any) {
-      toast.error(err?.message || 'Impossible de récupérer vos clés API.');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Impossible de récupérer vos clés API.';
+      toast.error(msg);
     } finally {
       setIsLoading(false);
     }
@@ -112,8 +109,9 @@ export default function PartnerApiKeysPage() {
       setKeyName('');
       setSelectedScopes(['events:read', 'events:write', 'registrations:read']);
       fetchKeys();
-    } catch (err: any) {
-      toast.error(err?.message || 'Erreur lors de la génération de la clé API.');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Erreur lors de la génération de la clé API.';
+      toast.error(msg);
     } finally {
       setIsCreating(false);
     }
@@ -128,8 +126,9 @@ export default function PartnerApiKeysPage() {
       await partnerPortalService.revokeApiKey(keyId);
       toast.success(`La clé « ${name} » a été révoquée immédiatement.`);
       fetchKeys();
-    } catch (err: any) {
-      toast.error(err?.message || 'Impossible de révoquer la clé.');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Impossible de révoquer la clé.';
+      toast.error(msg);
     }
   };
 
@@ -186,12 +185,12 @@ export default function PartnerApiKeysPage() {
       <div className="bg-zinc-900/60 border border-zinc-800 rounded-2xl p-5 space-y-3">
         <div className="flex items-center gap-2 text-xs font-semibold text-zinc-300">
           <Terminal className="w-4 h-4 text-emerald-400" />
-          Exemple d'appel d'authentification cURL :
+          Exemple d&apos;appel d&apos;authentification cURL :
         </div>
         <div className="bg-zinc-950 p-3.5 rounded-xl font-mono text-xs text-zinc-300 overflow-x-auto border border-zinc-800/80">
-          curl -X GET "https://partners-api.gastsar.fr/v1/events" \<br />
-          &nbsp;&nbsp;-H <span className="text-emerald-400">"X-API-Key: kanto_live_votre_cle_secrete"</span> \<br />
-          &nbsp;&nbsp;-H "Content-Type: application/json"
+          curl -X GET &quot;https://partners-api.gastsar.fr/v1/events&quot; \<br />
+          &nbsp;&nbsp;-H <span className="text-emerald-400">&quot;X-API-Key: kanto_live_votre_cle_secrete&quot;</span> \<br />
+          &nbsp;&nbsp;-H &quot;Content-Type: application/json&quot;
         </div>
       </div>
 
@@ -212,7 +211,7 @@ export default function PartnerApiKeysPage() {
         {isLoading ? (
           <div className="py-16 flex flex-col items-center justify-center text-zinc-400 gap-3">
             <Loader2 className="w-7 h-7 animate-spin text-emerald-500" />
-            <p className="text-xs">Chargement de vos clés d'API...</p>
+            <p className="text-xs">Chargement de vos clés d&apos;API...</p>
           </div>
         ) : keys.length === 0 ? (
           <div className="py-16 text-center text-zinc-500 space-y-2">
@@ -365,7 +364,7 @@ export default function PartnerApiKeysPage() {
                 Générer une nouvelle clé API
               </h3>
               <p className="text-xs text-zinc-400 mt-1">
-                Définissez le nom, l'environnement et les permissions restreintes accordées à cette
+                Définissez le nom, l&apos;environnement et les permissions restreintes accordées à cette
                 clé.
               </p>
             </div>
@@ -373,7 +372,7 @@ export default function PartnerApiKeysPage() {
             <form onSubmit={handleCreateKey} className="space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-1">
-                  Nom d'usage de la clé *
+                  Nom d&apos;usage de la clé *
                 </label>
                 <input
                   type="text"
@@ -417,7 +416,7 @@ export default function PartnerApiKeysPage() {
 
               <div>
                 <label className="block text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-2">
-                  Scopes d'autorisation (Permissions)
+                  Scopes d&apos;autorisation (Permissions)
                 </label>
                 <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
                   {AVAILABLE_SCOPES.map((scope) => {
@@ -510,7 +509,7 @@ export default function PartnerApiKeysPage() {
                 onClick={() => setSecretResult(null)}
                 className="w-full py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-semibold rounded-xl border border-zinc-700 transition"
               >
-                J'ai copié et sécurisé ma clé API
+                J&apos;ai copié et sécurisé ma clé API
               </button>
             </div>
           </div>

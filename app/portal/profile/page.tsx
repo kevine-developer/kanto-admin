@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/lib/hooks/useToast';
 import {
   partnerPortalService,
@@ -8,17 +8,10 @@ import {
 } from '@/services/portal.service';
 import {
   Building2,
-  Mail,
-  Phone,
-  Globe,
-  MapPin,
   ShieldCheck,
   Clock,
-  Ban,
   Save,
   Loader2,
-  RefreshCw,
-  ExternalLink,
 } from 'lucide-react';
 
 export default function PartnerProfilePage() {
@@ -36,7 +29,7 @@ export default function PartnerProfilePage() {
   const [websiteUrl, setWebsiteUrl] = useState('');
   const [description, setDescription] = useState('');
 
-  const loadProfile = async () => {
+  const loadProfile = useCallback(async () => {
     setIsLoading(true);
     try {
       const p = await partnerPortalService.getMyProfile();
@@ -47,16 +40,16 @@ export default function PartnerProfilePage() {
       setAddress(p.address || '');
       setWebsiteUrl(p.websiteUrl || '');
       setDescription(p.description || '');
-    } catch (err: any) {
+    } catch {
       toast.error('Impossible de charger votre profil.');
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [toast]);
 
   useEffect(() => {
     loadProfile();
-  }, []);
+  }, [loadProfile]);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -78,8 +71,9 @@ export default function PartnerProfilePage() {
 
       setProfile(updated);
       toast.success('Profil organisateur mis à jour avec succès.');
-    } catch (err: any) {
-      toast.error(err?.message || 'Erreur lors de la sauvegarde.');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Erreur lors de la sauvegarde.';
+      toast.error(msg);
     } finally {
       setIsSaving(false);
     }
@@ -103,7 +97,7 @@ export default function PartnerProfilePage() {
             Profil Organisateur & Coordonnées
           </h1>
           <p className="text-xs text-zinc-400 mt-1">
-            Gérez la fiche d'identité publique de votre association ou entreprise sur Kanto MG.
+            Gérez la fiche d&apos;identité publique de votre association ou entreprise sur Kanto MG.
           </p>
         </div>
 

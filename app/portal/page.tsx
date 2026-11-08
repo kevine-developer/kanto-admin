@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useToast } from '@/lib/hooks/useToast';
 import {
@@ -9,22 +9,17 @@ import {
   PartnerDashboardStats,
 } from '@/services/portal.service';
 import {
-  LayoutDashboard,
   Calendar,
   Users,
   Eye,
-  Share2,
   KeyRound,
   Megaphone,
   Plus,
   ArrowRight,
   ShieldCheck,
   Clock,
-  Sparkles,
   Building2,
   Loader2,
-  ExternalLink,
-  ChevronRight,
 } from 'lucide-react';
 
 export default function PartnerPortalDashboardPage() {
@@ -44,7 +39,7 @@ export default function PartnerPortalDashboardPage() {
   const [orgWebsite, setOrgWebsite] = useState('');
   const [isSubmittingOnboarding, setIsSubmittingOnboarding] = useState(false);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setIsLoading(true);
     try {
       const p = await partnerPortalService.getMyProfile();
@@ -53,20 +48,22 @@ export default function PartnerPortalDashboardPage() {
 
       const s = await partnerPortalService.getDashboardStats();
       setStats(s);
-    } catch (err: any) {
-      if (err?.status === 404 || err?.message?.includes('introuvable')) {
+    } catch (err: unknown) {
+      const errorObj = err as { status?: number; message?: string };
+      if (errorObj?.status === 404 || errorObj?.message?.includes('introuvable')) {
         setNeedsOnboarding(true);
       } else {
-        toast.error(err?.message || 'Impossible de charger le tableau de bord.');
+        const msg = err instanceof Error ? err.message : 'Impossible de charger le tableau de bord.';
+        toast.error(msg);
       }
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [toast]);
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [loadData]);
 
   const handleRegisterOrganization = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -88,8 +85,9 @@ export default function PartnerPortalDashboardPage() {
 
       toast.success('Organisation enregistrée avec succès !');
       loadData();
-    } catch (err: any) {
-      toast.error(err?.message || 'Erreur lors de la création de l’organisation.');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Erreur lors de la création de l’organisation.';
+      toast.error(msg);
     } finally {
       setIsSubmittingOnboarding(false);
     }
@@ -116,14 +114,14 @@ export default function PartnerPortalDashboardPage() {
             <h2 className="text-2xl font-bold text-zinc-100">Enregistrer votre Organisation</h2>
             <p className="text-sm text-zinc-400 max-w-md mx-auto">
               Créez votre profil partenaire pour commencer à publier vos événements et obtenir vos
-              identifiants d'API développeur.
+              identifiants d&apos;API développeur.
             </p>
           </div>
 
           <form onSubmit={handleRegisterOrganization} className="space-y-4 pt-2">
             <div>
               <label className="block text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-1.5">
-                Nom de l'organisation / Entreprise *
+                Nom de l&apos;organisation / Entreprise *
               </label>
               <input
                 type="text"
@@ -138,7 +136,7 @@ export default function PartnerPortalDashboardPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-1.5">
-                  Type d'organisation *
+                  Type d&apos;organisation *
                 </label>
                 <select
                   value={orgType}
@@ -334,7 +332,7 @@ export default function PartnerPortalDashboardPage() {
           </div>
           <p className="text-xs text-zinc-400 leading-relaxed">
             Consultez la liste de vos manifestations culturelles, suivez en temps réel la jauge et la
-            liste d'attente, ou exportez les participants au format CSV pour votre accueil physique.
+            liste d&apos;attente, ou exportez les participants au format CSV pour votre accueil physique.
           </p>
           <div className="pt-2">
             <Link

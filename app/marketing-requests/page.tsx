@@ -10,29 +10,23 @@ import {
 } from '@/services/partners.service';
 import {
   Megaphone,
-  Search,
   CheckCircle2,
   XCircle,
   Clock,
   Building2,
   Calendar,
   MessageSquare,
-  BarChart3,
   Send,
   Loader2,
   RefreshCw,
   Eye,
-  MousePointerClick,
-  Users,
 } from 'lucide-react';
 
 export default function MarketingRequestsAdminPage() {
   const { toast } = useToast();
 
   const [requests, setRequests] = useState<MarketingRequestItem[]>([]);
-  const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
+  const [page] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
 
   // Filtres
@@ -53,10 +47,9 @@ export default function MarketingRequestsAdminPage() {
         limit: 15,
       });
       setRequests(res.items || []);
-      setTotal(res.pagination?.total || 0);
-      setTotalPages(res.pagination?.totalPages || 1);
-    } catch (err: any) {
-      toast.error(err?.message || 'Impossible de récupérer les demandes marketing.');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Impossible de récupérer les demandes marketing.';
+      toast.error(msg);
     } finally {
       setIsLoading(false);
     }
@@ -85,8 +78,9 @@ export default function MarketingRequestsAdminPage() {
       setSelectedRequest(updated);
       setNewMessage('');
       fetchRequests();
-    } catch (err: any) {
-      toast.error(err?.message || 'Une erreur est survenue lors de l’envoi.');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Une erreur est survenue lors de l’envoi.';
+      toast.error(msg);
     } finally {
       setIsSendingMessage(false);
     }
@@ -108,8 +102,9 @@ export default function MarketingRequestsAdminPage() {
       );
       setSelectedRequest(updated);
       fetchRequests();
-    } catch (err: any) {
-      toast.error(err?.message || 'Impossible de modifier le statut.');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Impossible de modifier le statut.';
+      toast.error(msg);
     } finally {
       setIsUpdatingStatus(false);
     }
@@ -174,7 +169,7 @@ export default function MarketingRequestsAdminPage() {
             >
               <option value="ALL">Tous les statuts</option>
               <option value="SUBMITTED">Soumises (Nouvelles)</option>
-              <option value="UNDER_REVIEW">En cours d'étude</option>
+              <option value="UNDER_REVIEW">En cours d&apos;étude</option>
               <option value="ACCEPTED">Acceptées / Devis validé</option>
               <option value="SCHEDULED">Programmées</option>
               <option value="RUNNING">En cours de diffusion</option>
@@ -207,7 +202,7 @@ export default function MarketingRequestsAdminPage() {
                 <div className="py-16 flex flex-col items-center justify-center text-zinc-500 gap-2">
                   <Megaphone className="w-10 h-10 text-zinc-600 stroke-1" />
                   <p className="text-base font-medium text-zinc-300">Aucune demande marketing</p>
-                  <p className="text-sm">Aucun partenaire n'a sollicité de visibilité pour l'instant.</p>
+                  <p className="text-sm">Aucun partenaire n&apos;a sollicité de visibilité pour l&apos;instant.</p>
                 </div>
               ) : (
                 <div className="divide-y divide-zinc-800/60">

@@ -18,7 +18,6 @@ import {
   ExternalLink,
   KeyRound,
   Calendar,
-  Layers,
   RefreshCw,
   Loader2,
   ShieldCheck,
@@ -56,8 +55,9 @@ export default function PartnersAdminPage() {
       setPartners(res.items || []);
       setTotal(res.pagination?.total || 0);
       setTotalPages(res.pagination?.totalPages || 1);
-    } catch (err: any) {
-      toast.error(err?.message || 'Impossible de récupérer les partenaires.');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Impossible de récupérer les partenaires.';
+      toast.error(msg);
     } finally {
       setIsLoading(false);
     }
@@ -93,8 +93,9 @@ export default function PartnersAdminPage() {
       setModalAction(null);
       setRejectionReason('');
       fetchPartners();
-    } catch (err: any) {
-      toast.error(err?.message || 'Une erreur est survenue lors de la mise à jour.');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Une erreur est survenue lors de la mise à jour.';
+      toast.error(msg);
     } finally {
       setIsSubmitting(false);
     }
@@ -135,7 +136,7 @@ export default function PartnersAdminPage() {
         <div>
           <h1 className="text-2xl font-bold text-zinc-100">Organisations Partenaires & API</h1>
           <p className="text-sm text-zinc-400 mt-1">
-            Gestion des associations, entreprises et tiers autorisés à publier des événements et utiliser l'API Partenaires.
+            Gestion des associations, entreprises et tiers autorisés à publier des événements et utiliser l&apos;API Partenaires.
           </p>
         </div>
         {/* Barre de contrôle et filtres */}
@@ -209,6 +210,7 @@ export default function PartnersAdminPage() {
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-lg bg-zinc-800 border border-zinc-700/80 flex items-center justify-center text-zinc-300 font-bold shrink-0">
                             {partner.logoUrl ? (
+                              /* eslint-disable-next-line @next/next/no-img-element */
                               <img
                                 src={partner.logoUrl}
                                 alt={partner.name}
@@ -379,7 +381,7 @@ export default function PartnersAdminPage() {
 
               {modalAction === 'SUSPEND' && (
                 <p className="text-sm text-zinc-300 leading-relaxed bg-amber-950/20 border border-amber-900/30 p-3.5 rounded-xl">
-                  La suspension révoquera temporairement l'accès de l'organisation à l'API et
+                  La suspension révoquera temporairement l&apos;accès de l&apos;organisation à l&apos;API et
                   désactivera la synchronisation de ses événements publics.
                 </p>
               )}

@@ -14,17 +14,12 @@ import {
   KeyRound,
   Megaphone,
   BookOpen,
-  User,
   LogOut,
   Building2,
-  CheckCircle2,
   Clock,
   Ban,
-  XCircle,
   ExternalLink,
   Loader2,
-  ChevronRight,
-  ShieldCheck,
 } from 'lucide-react';
 
 export default function PartnerPortalLayout({
@@ -89,7 +84,7 @@ export default function PartnerPortalLayout({
         <div className="bg-amber-500/10 border-b border-amber-500/20 px-4 py-2 text-xs text-amber-300 flex items-center justify-center gap-2">
           <Clock className="w-4 h-4 text-amber-400" />
           <span>
-            Votre dossier est en cours de validation par l'équipe Kanto MG. Vous pouvez préparer vos
+            Votre dossier est en cours de validation par l&apos;équipe Kanto MG. Vous pouvez préparer vos
             brouillons d’événements et générer des clés de test.
           </span>
         </div>
@@ -100,7 +95,7 @@ export default function PartnerPortalLayout({
           <Ban className="w-4 h-4 text-rose-400" />
           <span>
             Votre compte partenaire est temporairement suspendu. Contactez le support pour plus
-            d'informations.
+            d&apos;informations.
           </span>
         </div>
       )}

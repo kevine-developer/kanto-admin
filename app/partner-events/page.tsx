@@ -16,12 +16,9 @@ import {
   Clock,
   Building2,
   Users,
-  MapPin,
-  ExternalLink,
   RefreshCw,
   Loader2,
   AlertTriangle,
-  Eye,
 } from 'lucide-react';
 
 export default function PartnerEventsAdminPage() {
@@ -58,8 +55,9 @@ export default function PartnerEventsAdminPage() {
       setEvents(res.items || []);
       setTotal(res.pagination?.total || 0);
       setTotalPages(res.pagination?.totalPages || 1);
-    } catch (err: any) {
-      toast.error(err?.message || 'Impossible de récupérer les événements partenaires.');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Impossible de récupérer les événements partenaires.';
+      toast.error(msg);
     } finally {
       setIsLoading(false);
     }
@@ -90,8 +88,9 @@ export default function PartnerEventsAdminPage() {
       setDecision(null);
       setRejectionReason('');
       fetchEvents();
-    } catch (err: any) {
-      toast.error(err?.message || 'Une erreur est survenue.');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Une erreur est survenue.';
+      toast.error(msg);
     } finally {
       setIsSubmitting(false);
     }
@@ -138,7 +137,7 @@ export default function PartnerEventsAdminPage() {
         <div>
           <h1 className="text-2xl font-bold text-zinc-100">Modération des Événements Partenaires</h1>
           <p className="text-sm text-zinc-400 mt-1">
-            Examinez et validez les événements culturels soumis par les tiers avant leur parution dans l'application Kanto MG.
+            Examinez et validez les événements culturels soumis par les tiers avant leur parution dans l&apos;application Kanto MG.
           </p>
         </div>
         {/* Barre de recherche et filtres */}
@@ -201,6 +200,7 @@ export default function PartnerEventsAdminPage() {
                   <div className="flex items-start gap-4">
                     <div className="w-14 h-14 rounded-xl bg-zinc-800 border border-zinc-700/80 overflow-hidden shrink-0 flex items-center justify-center text-zinc-500">
                       {event.imageUrl ? (
+                        /* eslint-disable-next-line @next/next/no-img-element */
                         <img
                           src={event.imageUrl}
                           alt={event.titleFr}

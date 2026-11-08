@@ -12,14 +12,9 @@ import {
   Eye,
   Clock,
   CheckCircle2,
-  XCircle,
-  Ban,
-  ArrowRight,
   Download,
-  AlertTriangle,
   Loader2,
   RefreshCw,
-  FileSpreadsheet,
 } from 'lucide-react';
 
 interface EventItem {
@@ -39,6 +34,15 @@ interface EventItem {
   sharesCount: number;
   isPaid: boolean;
   ticketPrice?: number | null;
+}
+
+interface ParticipantItem {
+  id?: string;
+  status: string;
+  createdAt?: string;
+  registeredAt?: string;
+  user?: { name?: string | null; username?: string | null };
+  participant?: { displayName?: string | null; username?: string | null };
 }
 
 export default function PartnerPortalEventsPage() {
@@ -63,7 +67,7 @@ export default function PartnerPortalEventsPage() {
 
   // Modal Participants & Export
   const [selectedEventForExport, setSelectedEventForExport] = useState<EventItem | null>(null);
-  const [participants, setParticipants] = useState<any[]>([]);
+  const [participants, setParticipants] = useState<ParticipantItem[]>([]);
   const [isParticipantsLoading, setIsParticipantsLoading] = useState(false);
 
   const fetchEvents = useCallback(async () => {
@@ -72,8 +76,9 @@ export default function PartnerPortalEventsPage() {
       // Endpoint partenaire pour lister ses événements
       const res = await fetchApi<{ items: EventItem[] }>('/admin/partners/events/list');
       setEvents(res.items || []);
-    } catch (err: any) {
-      toast.error(err?.message || 'Impossible de récupérer vos événements.');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Impossible de récupérer vos événements.';
+      toast.error(msg);
     } finally {
       setIsLoading(false);
     }
@@ -122,8 +127,9 @@ export default function PartnerPortalEventsPage() {
       setStartDate('');
       setEndDate('');
       fetchEvents();
-    } catch (err: any) {
-      toast.error(err?.message || 'Erreur lors de la création de l’événement.');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Erreur lors de la création de l’événement.';
+      toast.error(msg);
     } finally {
       setIsSubmitting(false);
     }
@@ -133,18 +139,18 @@ export default function PartnerPortalEventsPage() {
     setSelectedEventForExport(event);
     setIsParticipantsLoading(true);
     try {
-      const res = await fetchApi<{ items?: any[]; participants?: any[] }>(
+      const res = await fetchApi<{ items?: ParticipantItem[]; participants?: ParticipantItem[] }>(
         `/events/admin/${encodeURIComponent(event.id)}/participants`
       );
       setParticipants(res.items || res.participants || []);
-    } catch (err: any) {
+    } catch {
       toast.error('Impossible de charger la liste des participants.');
     } finally {
       setIsParticipantsLoading(false);
     }
   };
 
-  const exportCsv = (event: EventItem, list: any[]) => {
+  const exportCsv = (event: EventItem, list: ParticipantItem[]) => {
     if (list.length === 0) {
       toast.warning('Aucun participant à exporter.');
       return;
@@ -187,7 +193,7 @@ export default function PartnerPortalEventsPage() {
           </h1>
           <p className="text-xs text-zinc-400 mt-1">
             Gérez vos manifestations culturelles, suivez les inscrits et exportez les listes
-            d'émargement conformes RGPD.
+            d&apos;émargement conformes RGPD.
           </p>
         </div>
 
@@ -331,7 +337,7 @@ export default function PartnerPortalEventsPage() {
               </div>
             ) : participants.length === 0 ? (
               <div className="py-10 text-center text-xs text-zinc-500">
-                Aucun participant inscrit pour l'instant.
+                Aucun participant inscrit pour l&apos;instant.
               </div>
             ) : (
               <div className="max-h-72 overflow-y-auto divide-y divide-zinc-800/50">
@@ -481,17 +487,31 @@ export default function PartnerPortalEventsPage() {
                 />
               </div>
 
-              <div className="flex items-center gap-2 bg-zinc-800/40 p-3 rounded-xl border border-zinc-800">
-                <input
-                  type="checkbox"
-                  id="submitReview"
-                  checked={submitForReview}
-                  onChange={(e) => setSubmitForReview(e.target.checked)}
-                  className="accent-emerald-500"
-                />
-                <label htmlFor="submitReview" className="text-xs text-zinc-300 cursor-pointer">
-                  Soumettre immédiatement pour modération Kanto MG
-                </label>
+              <div className="flex flex-col gap-2 bg-zinc-800/40 p-3 rounded-xl border border-zinc-800">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="enableWaitlist"
+                    checked={enableWaitlist}
+                    onChange={(e) => setEnableWaitlist(e.target.checked)}
+                    className="accent-emerald-500"
+                  />
+                  <label htmlFor="enableWaitlist" className="text-xs text-zinc-300 cursor-pointer">
+                    Activer la liste d’attente automatique en cas de jauge atteinte
+                  </label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="submitReview"
+                    checked={submitForReview}
+                    onChange={(e) => setSubmitForReview(e.target.checked)}
+                    className="accent-emerald-500"
+                  />
+                  <label htmlFor="submitReview" className="text-xs text-zinc-300 cursor-pointer">
+                    Soumettre immédiatement pour modération Kanto MG
+                  </label>
+                </div>
               </div>
 
               <div className="flex items-center justify-end gap-3 pt-2">
