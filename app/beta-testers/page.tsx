@@ -73,6 +73,7 @@ export default function BetaTestersPage() {
   const [search, setSearch] = useState('');
   const [selectedPlatform, setSelectedPlatform] = useState<'ALL' | 'ANDROID' | 'IOS'>('ALL');
   const [selectedStatus, setSelectedStatus] = useState<string>('ALL');
+  const [selectedConfirmationStatus, setSelectedConfirmationStatus] = useState<string>('ALL');
   const [selectedGroupId, setSelectedGroupId] = useState<string>('ALL');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -124,11 +125,18 @@ export default function BetaTestersPage() {
   const [isAutomationLoading, setIsAutomationLoading] = useState(false);
   const [isSavingAutomation, setIsSavingAutomation] = useState(false);
   const [autoPlayStoreWebLink, setAutoPlayStoreWebLink] = useState('');
+  const [autoPlayStoreAppLink, setAutoPlayStoreAppLink] = useState('');
+  const [autoAppStorePublicLink, setAutoAppStorePublicLink] = useState('');
   const [autoTestFlightPublicLink, setAutoTestFlightPublicLink] = useState('');
   const [autoSupportEmail, setAutoSupportEmail] = useState('');
+  const [autoAndroidAvailability, setAutoAndroidAvailability] = useState('BETA_OPEN');
+  const [autoIosAvailability, setAutoIosAvailability] = useState('BETA_OPEN');
+  const [autoInstructionsAndroid, setAutoInstructionsAndroid] = useState('');
+  const [autoInstructionsIos, setAutoInstructionsIos] = useState('');
 
   // ─── MODALES PARTICIPANT & EXPORTS ───
   const [detailTester, setDetailTester] = useState<BetaTester | null>(null);
+  const [isUpdatingDetailStatus, setIsUpdatingDetailStatus] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [exportedEmailsText, setExportedEmailsText] = useState('');
 
@@ -146,6 +154,7 @@ export default function BetaTestersPage() {
       const res = await betaTestersService.getTesters({
         platform: selectedPlatform,
         status: selectedStatus,
+        confirmationStatus: selectedConfirmationStatus !== 'ALL' ? selectedConfirmationStatus : undefined,
         groupId: selectedGroupId,
         search: search.trim() || undefined,
         page,
@@ -161,7 +170,7 @@ export default function BetaTestersPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [selectedPlatform, selectedStatus, selectedGroupId, search, page]);
+  }, [selectedPlatform, selectedStatus, selectedConfirmationStatus, selectedGroupId, search, page]);
 
   const loadGroups = useCallback(async () => {
     try {
@@ -224,8 +233,14 @@ export default function BetaTestersPage() {
       const config = await betaTestersService.getAutomationConfig();
       setAutomationConfig(config);
       setAutoPlayStoreWebLink(config.playStoreWebLink || '');
+      setAutoPlayStoreAppLink(config.playStoreAppLink || '');
+      setAutoAppStorePublicLink(config.appStorePublicLink || '');
       setAutoTestFlightPublicLink(config.testFlightPublicLink || '');
       setAutoSupportEmail(config.supportEmail || '');
+      setAutoAndroidAvailability(config.androidAvailability || 'BETA_OPEN');
+      setAutoIosAvailability(config.iosAvailability || 'BETA_OPEN');
+      setAutoInstructionsAndroid(config.instructionsAndroid || '');
+      setAutoInstructionsIos(config.instructionsIos || '');
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Erreur chargement automatisation.';
       toastRef.current.error(msg);
@@ -287,6 +302,22 @@ export default function BetaTestersPage() {
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Erreur envoi invitation iOS.';
       toast.error(msg);
+    }
+  };
+
+  const handleUpdateDetailConfirmationStatus = async (newStatus: string) => {
+    if (!detailTester) return;
+    try {
+      setIsUpdatingDetailStatus(true);
+      const updated = await betaTestersService.updateStatus(detailTester.id, undefined, undefined, newStatus);
+      setDetailTester(updated);
+      toastRef.current.success(`Statut de progression mis à jour : ${newStatus}`);
+      loadTesters();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Erreur mise à jour statut.';
+      toastRef.current.error(msg);
+    } finally {
+      setIsUpdatingDetailStatus(false);
     }
   };
 
@@ -539,11 +570,17 @@ export default function BetaTestersPage() {
       setIsSavingAutomation(true);
       const updated = await betaTestersService.updateAutomationConfig({
         playStoreWebLink: autoPlayStoreWebLink.trim(),
-        testFlightPublicLink: autoTestFlightPublicLink.trim() || undefined,
+        playStoreAppLink: autoPlayStoreAppLink.trim(),
+        appStorePublicLink: autoAppStorePublicLink.trim() || null,
+        testFlightPublicLink: autoTestFlightPublicLink.trim() || null,
         supportEmail: autoSupportEmail.trim(),
+        androidAvailability: autoAndroidAvailability,
+        iosAvailability: autoIosAvailability,
+        instructionsAndroid: autoInstructionsAndroid.trim() || null,
+        instructionsIos: autoInstructionsIos.trim() || null,
       });
       setAutomationConfig(updated);
-      toastRef.current.success('Liens globaux et email support enregistrés.');
+      toastRef.current.success('Paramètres de disponibilité et liens enregistrés avec succès.');
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Erreur enregistrement liens.';
       toastRef.current.error(msg);
@@ -611,7 +648,7 @@ export default function BetaTestersPage() {
         />
 
         {/* ─── KPIS GLOBAUX TEMPS RÉEL ─── */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
           <div className="p-4 bg-white dark:bg-stone-800/80 border border-stone-200 dark:border-stone-700/60 rounded-xl">
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium text-stone-500 dark:text-stone-400">Total Inscrits</span>
@@ -650,6 +687,22 @@ export default function BetaTestersPage() {
               <Send className="w-4 h-4 text-blue-500" />
             </div>
             <p className="mt-2 text-2xl font-bold text-blue-600 dark:text-blue-400">{stats.invitedCount}</p>
+          </div>
+
+          <div className="p-4 bg-white dark:bg-stone-800/80 border border-stone-200 dark:border-stone-700/60 rounded-xl">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium text-stone-500 dark:text-stone-400">Confirmés</span>
+              <ShieldCheck className="w-4 h-4 text-emerald-500" />
+            </div>
+            <p className="mt-2 text-2xl font-bold text-emerald-600 dark:text-emerald-400">{stats.confirmedCount || 0}</p>
+          </div>
+
+          <div className="p-4 bg-white dark:bg-stone-800/80 border border-stone-200 dark:border-stone-700/60 rounded-xl">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium text-stone-500 dark:text-stone-400">Installés</span>
+              <Smartphone className="w-4 h-4 text-sky-500" />
+            </div>
+            <p className="mt-2 text-2xl font-bold text-sky-600 dark:text-sky-400">{stats.installedCount || 0}</p>
           </div>
 
           <div className="p-4 bg-white dark:bg-stone-800/80 border border-stone-200 dark:border-stone-700/60 rounded-xl">
@@ -780,7 +833,7 @@ export default function BetaTestersPage() {
                 ))}
               </div>
 
-              {/* Filtre Statut */}
+              {/* Filtre Statut Global */}
               <div className="flex items-center gap-1 text-xs">
                 <span className="text-stone-400 mr-1">Statut :</span>
                 <select
@@ -796,6 +849,27 @@ export default function BetaTestersPage() {
                   <option value="APPROVED">Approuvé</option>
                   <option value="INVITED">Invité</option>
                   <option value="REJECTED">Refusé</option>
+                </select>
+              </div>
+
+              {/* Filtre Progression du Testeur */}
+              <div className="flex items-center gap-1 text-xs">
+                <span className="text-stone-400 mr-1">Progression :</span>
+                <select
+                  value={selectedConfirmationStatus}
+                  onChange={(e) => {
+                    setSelectedConfirmationStatus(e.target.value);
+                    setPage(1);
+                  }}
+                  className="px-2.5 py-1 text-xs bg-stone-50 dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-md focus:outline-none font-medium"
+                >
+                  <option value="ALL">Toutes étapes</option>
+                  <option value="INSCRIT">1. Inscrit</option>
+                  <option value="EN_ATTENTE">2. En attente</option>
+                  <option value="CONFIRME">3. Confirmé (Rejoint)</option>
+                  <option value="VERIFIE">4. Accès vérifié</option>
+                  <option value="INSTALLE">5. Installé</option>
+                  <option value="INACTIF">Désinscrit</option>
                 </select>
               </div>
 
@@ -886,6 +960,7 @@ export default function BetaTestersPage() {
                     <th className="p-3">Cohorte</th>
                     <th className="p-3">Statut Android</th>
                     <th className="p-3">Statut iOS</th>
+                    <th className="p-3">Progression</th>
                     <th className="p-3">Date</th>
                     <th className="p-3 text-right">Actions</th>
                   </tr>
@@ -893,13 +968,13 @@ export default function BetaTestersPage() {
                 <tbody className="divide-y divide-stone-100 dark:divide-stone-800">
                   {isLoading ? (
                     <tr>
-                      <td colSpan={8} className="p-8 text-center text-stone-400">
+                      <td colSpan={9} className="p-8 text-center text-stone-400">
                         Chargement des testeurs...
                       </td>
                     </tr>
                   ) : testers.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="p-8 text-center text-stone-400">
+                      <td colSpan={9} className="p-8 text-center text-stone-400">
                         Aucun testeur trouvé avec ces critères.
                       </td>
                     </tr>
@@ -1007,6 +1082,23 @@ export default function BetaTestersPage() {
                             ) : (
                               <span className="text-stone-300 dark:text-stone-600 text-[11px]">Non requis</span>
                             )}
+                          </td>
+                          <td className="p-3">
+                            <span
+                              className={`px-2 py-0.5 text-[10px] font-semibold rounded border ${
+                                tester.confirmationStatus === 'INSTALLE'
+                                  ? 'bg-sky-500/10 text-sky-600 border-sky-500/25'
+                                  : tester.confirmationStatus === 'VERIFIE'
+                                    ? 'bg-emerald-600 text-white border-emerald-600'
+                                    : tester.confirmationStatus === 'CONFIRME'
+                                      ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
+                                      : tester.confirmationStatus === 'EN_ATTENTE'
+                                        ? 'bg-amber-500/10 text-amber-600 border-amber-500/25'
+                                        : 'bg-stone-500/10 text-stone-500 border-stone-500/20'
+                              }`}
+                            >
+                              {tester.confirmationStatus || 'INSCRIT'}
+                            </span>
                           </td>
                           <td className="p-3 text-stone-500 text-[11px]">
                             {new Date(tester.createdAt).toLocaleDateString('fr-FR')}
@@ -1566,44 +1658,135 @@ export default function BetaTestersPage() {
               </div>
 
               {/* Formulaire des liens et contacts de distribution */}
-              <form onSubmit={handleSaveAutomationLinks} className="pt-4 border-t border-stone-100 dark:border-stone-700/60 space-y-3">
-                <div>
-                  <label className="block text-xs font-medium text-stone-700 dark:text-stone-300 mb-1">
-                    Lien Web Closed Testing Google Play
-                  </label>
-                  <input
-                    type="text"
-                    value={autoPlayStoreWebLink}
-                    onChange={(e) => setAutoPlayStoreWebLink(e.target.value)}
-                    placeholder="https://play.google.com/apps/testing/com.devengalere.kantomg"
-                    className="w-full px-3 py-1.5 text-xs bg-stone-50 dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                  />
+              <form onSubmit={handleSaveAutomationLinks} className="pt-4 border-t border-stone-100 dark:border-stone-700/60 space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 p-3 bg-stone-50 dark:bg-stone-900/60 rounded-xl border border-stone-200/70 dark:border-stone-700/70">
+                  <div>
+                    <label className="block text-xs font-semibold text-stone-800 dark:text-stone-200 mb-1">
+                      Disponibilité Android
+                    </label>
+                    <select
+                      value={autoAndroidAvailability}
+                      onChange={(e) => setAutoAndroidAvailability(e.target.value)}
+                      className="w-full px-3 py-1.5 text-xs bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-500 font-medium"
+                    >
+                      <option value="BETA_OPEN">Programme Bêta ouvert (Closed Testing)</option>
+                      <option value="PUBLIC">Version Publique disponible (Google Play)</option>
+                      <option value="BETA_CLOSED">Bêta fermée (Complet)</option>
+                      <option value="PENDING">En attente de validation Google</option>
+                      <option value="UNAVAILABLE">Temporairement indisponible</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-stone-800 dark:text-stone-200 mb-1">
+                      Disponibilité Apple iOS
+                    </label>
+                    <select
+                      value={autoIosAvailability}
+                      onChange={(e) => setAutoIosAvailability(e.target.value)}
+                      className="w-full px-3 py-1.5 text-xs bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-500 font-medium"
+                    >
+                      <option value="BETA_OPEN">Programme Bêta ouvert (Apple TestFlight)</option>
+                      <option value="PUBLIC">Version Publique disponible (App Store)</option>
+                      <option value="BETA_CLOSED">Bêta fermée (Complet)</option>
+                      <option value="PENDING">En attente de validation Apple</option>
+                      <option value="UNAVAILABLE">Temporairement indisponible</option>
+                    </select>
+                  </div>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-medium text-stone-700 dark:text-stone-300 mb-1">
-                    Lien Public TestFlight Apple iOS
-                  </label>
-                  <input
-                    type="text"
-                    value={autoTestFlightPublicLink}
-                    placeholder="https://testflight.apple.com/join/..."
-                    onChange={(e) => setAutoTestFlightPublicLink(e.target.value)}
-                    className="w-full px-3 py-1.5 text-xs bg-stone-50 dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                  />
-                </div>
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-xs font-medium text-stone-700 dark:text-stone-300 mb-1">
+                      Lien Web Closed Testing Google Play (Opt-in Bêta)
+                    </label>
+                    <input
+                      type="text"
+                      value={autoPlayStoreWebLink}
+                      onChange={(e) => setAutoPlayStoreWebLink(e.target.value)}
+                      placeholder="https://play.google.com/apps/testing/com.devengalere.kantomg"
+                      className="w-full px-3 py-1.5 text-xs bg-stone-50 dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-500 font-mono"
+                    />
+                  </div>
 
-                <div>
-                  <label className="block text-xs font-medium text-stone-700 dark:text-stone-300 mb-1">
-                    Adresse e-mail support bêta
-                  </label>
-                  <input
-                    type="email"
-                    value={autoSupportEmail}
-                    onChange={(e) => setAutoSupportEmail(e.target.value)}
-                    placeholder="contact@kanto.mg"
-                    className="w-full px-3 py-1.5 text-xs bg-stone-50 dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                  />
+                  <div>
+                    <label className="block text-xs font-medium text-stone-700 dark:text-stone-300 mb-1">
+                      Lien Fiche Google Play Store (App)
+                    </label>
+                    <input
+                      type="text"
+                      value={autoPlayStoreAppLink}
+                      onChange={(e) => setAutoPlayStoreAppLink(e.target.value)}
+                      placeholder="https://play.google.com/store/apps/details?id=com.devengalere.kantomg"
+                      className="w-full px-3 py-1.5 text-xs bg-stone-50 dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-500 font-mono"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-stone-700 dark:text-stone-300 mb-1">
+                      Lien Public Apple TestFlight (iOS Bêta)
+                    </label>
+                    <input
+                      type="text"
+                      value={autoTestFlightPublicLink}
+                      placeholder="https://testflight.apple.com/join/kantomg"
+                      onChange={(e) => setAutoTestFlightPublicLink(e.target.value)}
+                      className="w-full px-3 py-1.5 text-xs bg-stone-50 dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-500 font-mono"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-stone-700 dark:text-stone-300 mb-1">
+                      Lien Public Apple App Store (Version Publique)
+                    </label>
+                    <input
+                      type="text"
+                      value={autoAppStorePublicLink}
+                      placeholder="https://apps.apple.com/app/kanto-mg/id..."
+                      onChange={(e) => setAutoAppStorePublicLink(e.target.value)}
+                      className="w-full px-3 py-1.5 text-xs bg-stone-50 dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-500 font-mono"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-stone-700 dark:text-stone-300 mb-1">
+                      Adresse e-mail support bêta
+                    </label>
+                    <input
+                      type="email"
+                      value={autoSupportEmail}
+                      onChange={(e) => setAutoSupportEmail(e.target.value)}
+                      placeholder="contact@kanto.mg"
+                      className="w-full px-3 py-1.5 text-xs bg-stone-50 dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
+                    <div>
+                      <label className="block text-xs font-medium text-stone-700 dark:text-stone-300 mb-1">
+                        Instructions personnalisées Android (Guide portail)
+                      </label>
+                      <textarea
+                        rows={3}
+                        value={autoInstructionsAndroid}
+                        onChange={(e) => setAutoInstructionsAndroid(e.target.value)}
+                        placeholder="1. Se connecter avec son compte Google... 2. Devenir testeur..."
+                        className="w-full px-3 py-1.5 text-xs bg-stone-50 dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-stone-700 dark:text-stone-300 mb-1">
+                        Instructions personnalisées iOS (Guide portail)
+                      </label>
+                      <textarea
+                        rows={3}
+                        value={autoInstructionsIos}
+                        onChange={(e) => setAutoInstructionsIos(e.target.value)}
+                        placeholder="1. Installer TestFlight... 2. Ouvrir le lien..."
+                        className="w-full px-3 py-1.5 text-xs bg-stone-50 dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                      />
+                    </div>
+                  </div>
                 </div>
 
                 <div className="pt-2 flex justify-end">
@@ -1613,7 +1796,7 @@ export default function BetaTestersPage() {
                     className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition disabled:opacity-50"
                   >
                     <Save className="w-3.5 h-3.5" />
-                    <span>{isSavingAutomation ? 'Enregistrement...' : 'Enregistrer les liens'}</span>
+                    <span>{isSavingAutomation ? 'Enregistrement...' : 'Enregistrer la configuration'}</span>
                   </button>
                 </div>
               </form>
@@ -1662,36 +1845,156 @@ export default function BetaTestersPage() {
                 </button>
               </div>
 
-              <div className="grid grid-cols-2 gap-3 text-xs">
-                <div>
-                  <span className="text-stone-400 block">Nom complet</span>
-                  <span className="font-medium text-stone-800 dark:text-stone-200">
-                    {detailTester.fullName || 'Non spécifié'}
-                  </span>
+              <div className="space-y-4 text-xs">
+                {/* Informations générales */}
+                <div className="grid grid-cols-2 gap-3 bg-stone-50 dark:bg-stone-900/50 p-3 rounded-xl border border-stone-100 dark:border-stone-700/60">
+                  <div>
+                    <span className="text-stone-400 block text-[11px]">Nom complet</span>
+                    <span className="font-medium text-stone-800 dark:text-stone-200">
+                      {detailTester.fullName || 'Non spécifié'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-stone-400 block text-[11px]">Cohorte</span>
+                    <span className="font-medium text-stone-800 dark:text-stone-200">
+                      {detailTester.group?.name || 'Aucune'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-stone-400 block text-[11px]">Plateformes demandées</span>
+                    <span className="font-medium text-stone-800 dark:text-stone-200">
+                      {Array.isArray(detailTester.platforms) && detailTester.platforms.length > 0
+                        ? detailTester.platforms.join(', ')
+                        : 'Non spécifié'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-stone-400 block text-[11px]">Date d&apos;inscription</span>
+                    <span className="font-medium text-stone-800 dark:text-stone-200">
+                      {new Date(detailTester.createdAt).toLocaleString('fr-FR')}
+                    </span>
+                  </div>
                 </div>
-                <div>
-                  <span className="text-stone-400 block">Cohorte</span>
-                  <span className="font-medium text-stone-800 dark:text-stone-200">
-                    {detailTester.group?.name || 'Aucune'}
-                  </span>
+
+                {/* Progression & Statut Bêta */}
+                <div className="p-3 bg-emerald-50/50 dark:bg-emerald-950/20 rounded-xl border border-emerald-100 dark:border-emerald-900/40 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-semibold text-emerald-900 dark:text-emerald-300 uppercase tracking-wider">
+                      Progression Bêta
+                    </span>
+                    <span
+                      className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                        detailTester.confirmationStatus === 'INSTALLE'
+                          ? 'bg-purple-100 dark:bg-purple-900/40 text-purple-800 dark:text-purple-300'
+                          : detailTester.confirmationStatus === 'VERIFIE'
+                          ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-300'
+                          : detailTester.confirmationStatus === 'CONFIRME'
+                          ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300'
+                          : detailTester.confirmationStatus === 'EN_ATTENTE'
+                          ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300'
+                          : detailTester.confirmationStatus === 'INACTIF'
+                          ? 'bg-stone-200 dark:bg-stone-700 text-stone-600 dark:text-stone-400'
+                          : 'bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300'
+                      }`}
+                    >
+                      {detailTester.confirmationStatus || 'INSCRIT'}
+                    </span>
+                  </div>
+
+                  {/* Sélecteur de mise à jour rapide */}
+                  <div className="flex items-center gap-2 pt-1">
+                    <label htmlFor="detail-confirmation-status" className="text-stone-500 text-[11px]">Modifier statut :</label>
+                    <select
+                      id="detail-confirmation-status"
+                      value={detailTester.confirmationStatus || 'INSCRIT'}
+                      disabled={isUpdatingDetailStatus}
+                      onChange={(e) => handleUpdateDetailConfirmationStatus(e.target.value)}
+                      className="text-xs bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-lg px-2 py-1 font-medium text-stone-800 dark:text-stone-200 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                    >
+                      <option value="INSCRIT">INSCRIT (étape 1)</option>
+                      <option value="EN_ATTENTE">EN_ATTENTE (invitation requise)</option>
+                      <option value="CONFIRME">CONFIRME (a rejoint le programme)</option>
+                      <option value="VERIFIE">VERIFIE (accès vérifié)</option>
+                      <option value="INSTALLE">INSTALLE (app installée)</option>
+                      <option value="INACTIF">INACTIF (désinscrit)</option>
+                    </select>
+                    {isUpdatingDetailStatus && (
+                      <span className="text-[10px] text-emerald-600 dark:text-emerald-400 animate-spin">⌛</span>
+                    )}
+                  </div>
                 </div>
-                <div>
-                  <span className="text-stone-400 block">Statut Android</span>
-                  <span className="font-medium text-stone-800 dark:text-stone-200">
-                    {detailTester.androidStatus} (invité {detailTester.androidInviteCount}x)
-                  </span>
+
+                {/* Jalons & Horodatages */}
+                <div className="grid grid-cols-2 gap-2 text-[11px]">
+                  <div className="p-2 bg-stone-50 dark:bg-stone-900/40 rounded-lg border border-stone-100 dark:border-stone-700/50">
+                    <span className="text-stone-400 block text-[10px]">A rejoint le programme</span>
+                    <span className="font-semibold text-stone-800 dark:text-stone-200">
+                      {detailTester.confirmedAt
+                        ? new Date(detailTester.confirmedAt).toLocaleString('fr-FR')
+                        : '— Non confirmé'}
+                    </span>
+                  </div>
+                  <div className="p-2 bg-stone-50 dark:bg-stone-900/40 rounded-lg border border-stone-100 dark:border-stone-700/50">
+                    <span className="text-stone-400 block text-[10px]">Application installée</span>
+                    <span className="font-semibold text-stone-800 dark:text-stone-200">
+                      {detailTester.installedAt
+                        ? new Date(detailTester.installedAt).toLocaleString('fr-FR')
+                        : '— Non installée'}
+                    </span>
+                  </div>
+                  <div className="p-2 bg-stone-50 dark:bg-stone-900/40 rounded-lg border border-stone-100 dark:border-stone-700/50">
+                    <span className="text-stone-400 block text-[10px]">Vérification par l&apos;équipe</span>
+                    <span className="font-semibold text-stone-800 dark:text-stone-200">
+                      {detailTester.verifiedAt
+                        ? new Date(detailTester.verifiedAt).toLocaleString('fr-FR')
+                        : '— Non vérifié'}
+                    </span>
+                  </div>
+                  <div className="p-2 bg-stone-50 dark:bg-stone-900/40 rounded-lg border border-stone-100 dark:border-stone-700/50">
+                    <span className="text-stone-400 block text-[10px]">Dernier contact</span>
+                    <span className="font-semibold text-stone-800 dark:text-stone-200">
+                      {detailTester.lastContactedAt
+                        ? new Date(detailTester.lastContactedAt).toLocaleString('fr-FR')
+                        : '—'}
+                    </span>
+                  </div>
                 </div>
-                <div>
-                  <span className="text-stone-400 block">Statut iOS</span>
-                  <span className="font-medium text-stone-800 dark:text-stone-200">
-                    {detailTester.iosStatus} (invité {detailTester.iosInviteCount}x)
-                  </span>
-                </div>
-                <div className="col-span-2">
-                  <span className="text-stone-400 block">Date d&apos;inscription</span>
-                  <span className="font-medium text-stone-800 dark:text-stone-200">
-                    {new Date(detailTester.createdAt).toLocaleString('fr-FR')}
-                  </span>
+
+                {/* Statuts par plateforme & actions rapides d'invitation */}
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="p-2.5 rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-900/40 space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold text-[11px] text-stone-700 dark:text-stone-300">Google Play</span>
+                      <span className="text-[10px] text-stone-500">{detailTester.androidStatus}</span>
+                    </div>
+                    <div className="text-[10px] text-stone-400">
+                      Invitations expédiées : <strong className="text-stone-700 dark:text-stone-200">{detailTester.androidInviteCount}x</strong>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleSendAndroidInvite(detailTester)}
+                      className="w-full mt-1 px-2 py-1 text-[11px] font-medium bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition"
+                    >
+                      Envoyer invitation Android
+                    </button>
+                  </div>
+
+                  <div className="p-2.5 rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-900/40 space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold text-[11px] text-stone-700 dark:text-stone-300">TestFlight</span>
+                      <span className="text-[10px] text-stone-500">{detailTester.iosStatus}</span>
+                    </div>
+                    <div className="text-[10px] text-stone-400">
+                      Invitations expédiées : <strong className="text-stone-700 dark:text-stone-200">{detailTester.iosInviteCount}x</strong>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleSendIosInvite(detailTester)}
+                      className="w-full mt-1 px-2 py-1 text-[11px] font-medium bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition"
+                    >
+                      Envoyer invitation iOS
+                    </button>
+                  </div>
                 </div>
               </div>
 

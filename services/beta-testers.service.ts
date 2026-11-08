@@ -26,6 +26,10 @@ export interface BetaTester {
   status: TesterStatus;
   androidStatus: string;
   iosStatus: string;
+  confirmationStatus?: 'INSCRIT' | 'EN_ATTENTE' | 'CONFIRME' | 'VERIFIE' | 'INSTALLE' | 'INACTIF' | string;
+  confirmedAt?: string | null;
+  installedAt?: string | null;
+  verifiedAt?: string | null;
   termsAccepted: boolean;
   termsAcceptedAt?: string | null;
   groupId?: string | null;
@@ -121,8 +125,13 @@ export interface BetaAutomationConfig {
   feedbackRequestDays: number;
   playStoreWebLink: string;
   playStoreAppLink: string;
+  appStorePublicLink?: string | null;
   testFlightPublicLink?: string | null;
   supportEmail: string;
+  androidAvailability?: 'PUBLIC' | 'BETA_OPEN' | 'BETA_CLOSED' | 'PENDING' | 'UNAVAILABLE' | string;
+  iosAvailability?: 'PUBLIC' | 'BETA_OPEN' | 'BETA_CLOSED' | 'PENDING' | 'UNAVAILABLE' | string;
+  instructionsAndroid?: string | null;
+  instructionsIos?: string | null;
 }
 
 export interface BetaTesterStats {
@@ -135,6 +144,9 @@ export interface BetaTesterStats {
   activeCount: number;
   unsubscribedCount: number;
   feedbacksCount: number;
+  confirmedCount?: number;
+  installedCount?: number;
+  verifiedCount?: number;
   // Rétrocompatibilité
   pending?: number;
   approved?: number;
@@ -178,6 +190,7 @@ export const betaTestersService = {
 
   async getTesters(params?: {
     status?: string;
+    confirmationStatus?: string;
     androidStatus?: string;
     iosStatus?: string;
     groupId?: string;
@@ -188,6 +201,7 @@ export const betaTestersService = {
   }): Promise<BetaTestersResponse> {
     const query = new URLSearchParams();
     if (params?.status && params.status !== 'ALL') query.set('status', params.status);
+    if (params?.confirmationStatus && params.confirmationStatus !== 'ALL') query.set('confirmationStatus', params.confirmationStatus);
     if (params?.androidStatus && params.androidStatus !== 'ALL') query.set('androidStatus', params.androidStatus);
     if (params?.iosStatus && params.iosStatus !== 'ALL') query.set('iosStatus', params.iosStatus);
     if (params?.groupId && params.groupId !== 'ALL') query.set('groupId', params.groupId);
@@ -222,12 +236,13 @@ export const betaTestersService = {
 
   async updateStatus(
     id: string,
-    status: TesterStatus,
-    notes?: string
+    status?: TesterStatus,
+    notes?: string,
+    confirmationStatus?: string,
   ): Promise<BetaTester> {
     return fetchApi<BetaTester>(`/api/beta-testers/${id}/status`, {
       method: 'PATCH',
-      body: JSON.stringify({ status, notes }),
+      body: JSON.stringify({ status, notes, confirmationStatus }),
     });
   },
 
