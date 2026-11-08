@@ -34,6 +34,8 @@ import {
   History,
   Mail,
   Compass,
+  Building2,
+  Target,
 } from 'lucide-react';
 
 
@@ -53,6 +55,14 @@ const NAV_GROUPS: { label: string; items: { href: string; icon: React.ElementTyp
       { href: '/events',        icon: Calendar,        label: 'Événements & Défis' },
       { href: '/contributions', icon: HeartHandshake,  label: 'Contributions' },
       { href: '/referrals',     icon: Gift,            label: 'Parrainage & Filleuls' },
+    ],
+  },
+  {
+    label: 'Plateforme Partenaires',
+    items: [
+      { href: '/partners',           icon: Building2, label: 'Organisations & API' },
+      { href: '/partner-events',     icon: Calendar,  label: 'Modération Événements' },
+      { href: '/marketing-requests', icon: Target,    label: 'Campagnes & Sponsoring' },
     ],
   },
   {

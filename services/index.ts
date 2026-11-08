@@ -10,4 +10,6 @@ export * from './emails.service';
 export * from './raki-teny.service';
 export * from './referral.service';
 export * from './events.service';
+export * from './partners.service';
+export * from './portal.service';
 
