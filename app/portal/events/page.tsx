@@ -157,12 +157,15 @@ export default function PartnerPortalEventsPage() {
     }
 
     const headers = ['Nom d affichage', 'Username', 'Statut', 'Date d inscription'];
-    const rows = list.map((p) => [
-      `"${p.user?.name || p.participant?.displayName || 'Anonyme'}"`,
-      `"${p.user?.username || p.participant?.username || '-'}"`,
-      `"${p.status}"`,
-      `"${new Date(p.createdAt || p.registeredAt).toLocaleString('fr-FR')}"`,
-    ]);
+    const rows = list.map((p) => {
+      const regDate = p.createdAt || p.registeredAt;
+      return [
+        `"${p.user?.name || p.participant?.displayName || 'Anonyme'}"`,
+        `"${p.user?.username || p.participant?.username || '-'}"`,
+        `"${p.status}"`,
+        `"${regDate ? new Date(regDate).toLocaleString('fr-FR') : '-'}"`,
+      ];
+    });
 
     const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -349,7 +352,9 @@ export default function PartnerPortalEventsPage() {
                       </div>
                       <div className="text-[10px] text-zinc-500">
                         @{p.user?.username || p.participant?.username || 'user'} • Inscription le{' '}
-                        {new Date(p.createdAt || p.registeredAt).toLocaleDateString('fr-FR')}
+                        {p.createdAt || p.registeredAt
+                          ? new Date(p.createdAt || p.registeredAt!).toLocaleDateString('fr-FR')
+                          : '-'}
                       </div>
                     </div>
                     <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
