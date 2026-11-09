@@ -24,6 +24,7 @@ export async function fetchApi<T = unknown>(
       !window.location.pathname.startsWith('/login') &&
       !window.location.pathname.startsWith('/reset-password')
     ) {
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination
       window.location.href = '/login';
     }
 

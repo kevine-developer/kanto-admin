@@ -58,8 +58,9 @@ export default function AdminReviewsPage() {
       setReviews(res.data);
       setTotalPages(res.pagination.totalPages);
       setTotalCount(res.pagination.total);
-    } catch (err: any) {
-      toast.error(err?.message || 'Impossible de charger la liste des avis.');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Impossible de charger la liste des avis.';
+      toast.error(msg);
     } finally {
       setIsLoading(false);
     }
@@ -101,8 +102,9 @@ export default function AdminReviewsPage() {
       setActionType(null);
       setModeratorNote('');
       loadReviews();
-    } catch (err: any) {
-      toast.error(err?.message || 'Erreur lors de la modération de l’avis.');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Erreur lors de la modération de l’avis.';
+      toast.error(msg);
     } finally {
       setIsSubmittingAction(false);
     }
@@ -198,7 +200,7 @@ export default function AdminReviewsPage() {
                 <option value="APPROVED">Approuvés (En ligne)</option>
                 <option value="NOT_AUTHORIZED">Usage interne uniquement</option>
                 <option value="REJECTED">Refusés</option>
-                <option value="WITHDRAWN">Retirés par l'auteur</option>
+                <option value="WITHDRAWN">Retirés par l’auteur</option>
               </select>
             </div>
 
