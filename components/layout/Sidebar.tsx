@@ -36,6 +36,7 @@ import {
   Compass,
   Building2,
   Target,
+  Star,
 } from 'lucide-react';
 
 
@@ -54,6 +55,7 @@ const NAV_GROUPS: { label: string; items: { href: string; icon: React.ElementTyp
       { href: '/',              icon: LayoutDashboard, label: "Vue d'ensemble" },
       { href: '/events',        icon: Calendar,        label: 'Événements & Défis' },
       { href: '/contributions', icon: HeartHandshake,  label: 'Contributions' },
+      { href: '/reviews',       icon: Star,            label: 'Avis & Témoignages' },
       { href: '/referrals',     icon: Gift,            label: 'Parrainage & Filleuls' },
     ],
   },
