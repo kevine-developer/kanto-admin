@@ -36,6 +36,7 @@ import {
   Check,
   X,
   Smartphone,
+  Languages,
 } from 'lucide-react';
 
 interface AuthUser {
@@ -133,6 +134,69 @@ export default function SettingsPage() {
   const [showConfirmNewPassword, setShowConfirmNewPassword] = useState(false);
   const [revokeOtherSessions, setRevokeOtherSessions] = useState(true);
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+
+  // État des langues de l'application mobile
+  const [appLanguages, setAppLanguages] = useState<{
+    fr: boolean;
+    mg: boolean;
+    activeLanguages: ('fr' | 'mg')[];
+    defaultLanguage: 'fr' | 'mg';
+  }>({
+    fr: true,
+    mg: true,
+    activeLanguages: ['fr', 'mg'],
+    defaultLanguage: 'fr',
+  });
+  const [isLoadingLanguages, setIsLoadingLanguages] = useState<boolean>(true);
+  const [isUpdatingLanguage, setIsUpdatingLanguage] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    systemService.getAppLanguages()
+      .then((data) => {
+        if (isMounted && data) {
+          setAppLanguages(data);
+        }
+      })
+      .catch((err) => {
+        console.error('Erreur chargement langues:', err);
+      })
+      .finally(() => {
+        if (isMounted) setIsLoadingLanguages(false);
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const handleToggleLanguage = async (lang: 'fr' | 'mg') => {
+    const isCurrentlyActive = lang === 'fr' ? appLanguages.fr : appLanguages.mg;
+    
+    // Règle d'or : interdiction absolue de désactiver la seule langue restante
+    if (isCurrentlyActive && appLanguages.activeLanguages.length <= 1) {
+      toast.error(
+        "Impossible de désactiver toutes les langues : au moins une langue doit obligatoirement rester active pour l'application."
+      );
+      return;
+    }
+
+    try {
+      setIsUpdatingLanguage(lang);
+      const nextValue = !isCurrentlyActive;
+      const res = await systemService.updateAppLanguages({ [lang]: nextValue });
+      setAppLanguages(res);
+      toast.success(
+        nextValue
+          ? `Langue ${lang === 'fr' ? 'Française' : 'Malagasy'} activée avec succès !`
+          : `Langue ${lang === 'fr' ? 'Française' : 'Malagasy'} désactivée. Les utilisateurs basculent sur la langue active.`
+      );
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Erreur mise à jour de la langue';
+      toast.error(msg);
+    } finally {
+      setIsUpdatingLanguage(null);
+    }
+  };
 
   // État de la sidebar mémorisée
   const [defaultCollapsed, setDefaultCollapsed] = useState<boolean>(true);
@@ -465,7 +529,119 @@ export default function SettingsPage() {
               </div>
             </div>
 
-            {/* 3. Navigation & Maintenance Locale */}
+            {/* 3. Langues de l'Application Mobile (Kanto MG / FR) */}
+            <div className="p-4 rounded-xl border border-[var(--card-border)] bg-[var(--card)] space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-xs font-bold text-[var(--foreground)] flex items-center gap-1.5">
+                    <Languages size={15} className="text-[var(--accent)]" />
+                    <span>Langues de l&apos;Application Mobile</span>
+                  </div>
+                  <div className="text-[11px] text-[var(--text-muted)] mt-0.5">
+                    Activez ou désactivez une langue pour l&apos;application. Au moins une langue doit obligatoirement rester active.
+                  </div>
+                </div>
+
+                {isLoadingLanguages ? (
+                  <Loader2 size={14} className="animate-spin text-[var(--text-muted)]" />
+                ) : (
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-[var(--accent-light)] text-[var(--accent-text)] border border-[var(--accent-border)]">
+                    {appLanguages.activeLanguages.length} / 2 active{appLanguages.activeLanguages.length > 1 ? 's' : ''}
+                  </span>
+                )}
+              </div>
+
+              {/* Liste des langues */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                {/* 1. Français */}
+                <div className={`p-3 rounded-lg border transition ${
+                  appLanguages.fr
+                    ? 'border-emerald-500/30 bg-emerald-500/5 dark:bg-emerald-950/10'
+                    : 'border-[var(--card-border)] bg-[var(--input-bg)] opacity-70'
+                }`}>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg">🇫🇷</span>
+                      <div>
+                        <div className="text-xs font-bold text-[var(--foreground)] flex items-center gap-1.5">
+                          <span>Français</span>
+                          <span className="text-[10px] font-mono text-[var(--text-muted)]">(FR)</span>
+                        </div>
+                        <div className="text-[10px] text-[var(--text-muted)]">
+                          {appLanguages.fr ? 'Disponible dans l\'application' : 'Désactivée pour les utilisateurs'}
+                        </div>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      disabled={isUpdatingLanguage !== null || (appLanguages.fr && appLanguages.activeLanguages.length <= 1)}
+                      onClick={() => handleToggleLanguage('fr')}
+                      title={appLanguages.fr && appLanguages.activeLanguages.length <= 1 ? "Impossible de désactiver : c'est la seule langue active" : "Activer / Désactiver le français"}
+                      className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-hidden disabled:opacity-40 disabled:cursor-not-allowed ${
+                        appLanguages.fr ? 'bg-[var(--accent)]' : 'bg-neutral-300 dark:bg-neutral-700'
+                      }`}
+                    >
+                      <span
+                        className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-xs ring-0 transition duration-200 ease-in-out ${
+                          appLanguages.fr ? 'translate-x-4' : 'translate-x-0'
+                        }`}
+                      />
+                    </button>
+                  </div>
+                  {appLanguages.fr && appLanguages.activeLanguages.length <= 1 && (
+                    <div className="mt-2 text-[10px] text-amber-600 dark:text-amber-400 font-medium flex items-center gap-1">
+                      <span>• Seule langue active (désactivation impossible)</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* 2. Malagasy */}
+                <div className={`p-3 rounded-lg border transition ${
+                  appLanguages.mg
+                    ? 'border-emerald-500/30 bg-emerald-500/5 dark:bg-emerald-950/10'
+                    : 'border-[var(--card-border)] bg-[var(--input-bg)] opacity-70'
+                }`}>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg">🇲🇬</span>
+                      <div>
+                        <div className="text-xs font-bold text-[var(--foreground)] flex items-center gap-1.5">
+                          <span>Malagasy</span>
+                          <span className="text-[10px] font-mono text-[var(--text-muted)]">(MG)</span>
+                        </div>
+                        <div className="text-[10px] text-[var(--text-muted)]">
+                          {appLanguages.mg ? 'Disponible dans l\'application' : 'Désactivée pour les utilisateurs'}
+                        </div>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      disabled={isUpdatingLanguage !== null || (appLanguages.mg && appLanguages.activeLanguages.length <= 1)}
+                      onClick={() => handleToggleLanguage('mg')}
+                      title={appLanguages.mg && appLanguages.activeLanguages.length <= 1 ? "Impossible de désactiver : c'est la seule langue active" : "Activer / Désactiver le malagasy"}
+                      className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-hidden disabled:opacity-40 disabled:cursor-not-allowed ${
+                        appLanguages.mg ? 'bg-[var(--accent)]' : 'bg-neutral-300 dark:bg-neutral-700'
+                      }`}
+                    >
+                      <span
+                        className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-xs ring-0 transition duration-200 ease-in-out ${
+                          appLanguages.mg ? 'translate-x-4' : 'translate-x-0'
+                        }`}
+                      />
+                    </button>
+                  </div>
+                  {appLanguages.mg && appLanguages.activeLanguages.length <= 1 && (
+                    <div className="mt-2 text-[10px] text-amber-600 dark:text-amber-400 font-medium flex items-center gap-1">
+                      <span>• Seule langue active (désactivation impossible)</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* 4. Navigation & Maintenance Locale */}
             <div className="p-4 rounded-xl border border-[var(--card-border)] bg-[var(--card)] divide-y divide-[var(--card-border)]">
               {/* Sidebar compacte */}
               <div className="flex items-center justify-between pb-3">

@@ -171,4 +171,25 @@ export const systemService = {
       body: JSON.stringify({ to, template }),
     });
   },
+  // ─── Langues de l'application mobile ────────────────────────────────────────
+  async getAppLanguages(): Promise<{
+    fr: boolean;
+    mg: boolean;
+    activeLanguages: ('fr' | 'mg')[];
+    defaultLanguage: 'fr' | 'mg';
+  }> {
+    return fetchApi('/admin/system/languages');
+  },
+
+  async updateAppLanguages(data: { fr?: boolean; mg?: boolean }): Promise<{
+    fr: boolean;
+    mg: boolean;
+    activeLanguages: ('fr' | 'mg')[];
+    defaultLanguage: 'fr' | 'mg';
+  }> {
+    return fetchApi('/admin/system/languages', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
 };
