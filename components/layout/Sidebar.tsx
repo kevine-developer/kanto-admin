@@ -37,6 +37,7 @@ import {
   Building2,
   Target,
   Star,
+  GraduationCap,
 } from 'lucide-react';
 
 
@@ -85,6 +86,12 @@ const NAV_GROUPS: { label: string; items: { href: string; icon: React.ElementTyp
       { href: '/kabary',    icon: Mic,        label: 'Discours & Kabary' },
       { href: '/citations', icon: Quote,      label: 'Citations & Auteurs' },
       { href: '/raki-teny', icon: BookMarked, label: 'Mots Rares & Insolites' },
+    ],
+  },
+  {
+    label: 'Pédagogie & Savoirs',
+    items: [
+      { href: '/learning', icon: GraduationCap, label: 'Parcours & Leçons' },
     ],
   },
   {
