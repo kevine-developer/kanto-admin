@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { AdminShell } from '@/components/layout/AdminShell';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { ConfirmModal, Modal } from '@/components/ui';
@@ -97,25 +97,26 @@ export default function LearningAdminPage() {
   const [deletingLesson, setDeletingLesson] = useState<AdminLearningLesson | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
       const data = await learningService.getTracks();
       setTracks(data);
-      if (data.length > 0 && !selectedTrackId) {
-        setSelectedTrackId(data[0].id);
+      if (data.length > 0) {
+        setSelectedTrackId((prev) => prev || data[0].id);
       }
-    } catch (err: any) {
-      setError(err?.message || 'Erreur lors du chargement des parcours');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Erreur lors du chargement des parcours';
+      setError(message);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [loadData]);
 
   const selectedTrack = useMemo(() => {
     return tracks.find((t) => t.id === selectedTrackId) || tracks[0];
@@ -255,8 +256,9 @@ export default function LearningAdminPage() {
     try {
       await learningService.togglePublish(lesson.id);
       await loadData();
-    } catch (err: any) {
-      alert(`Erreur: ${err?.message}`);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      alert(`Erreur: ${message}`);
     }
   };
 
@@ -269,8 +271,9 @@ export default function LearningAdminPage() {
     try {
       await learningService.toggleAllAudio(enable, selectedTrack?.id);
       await loadData();
-    } catch (err: any) {
-      alert(`Erreur bascule audio: ${err?.message}`);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      alert(`Erreur bascule audio: ${message}`);
     } finally {
       setIsTogglingAllAudio(false);
     }
@@ -283,8 +286,9 @@ export default function LearningAdminPage() {
       await learningService.deleteLesson(deletingLesson.id);
       setDeletingLesson(null);
       await loadData();
-    } catch (err: any) {
-      alert(`Erreur suppression: ${err?.message}`);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      alert(`Erreur suppression: ${message}`);
     } finally {
       setIsDeleting(false);
     }
@@ -385,8 +389,9 @@ export default function LearningAdminPage() {
 
       setIsLessonModalOpen(false);
       await loadData();
-    } catch (err: any) {
-      alert(`Erreur enregistrement: ${err?.message}`);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      alert(`Erreur enregistrement: ${message}`);
     } finally {
       setIsSaving(false);
     }
@@ -407,13 +412,19 @@ export default function LearningAdminPage() {
           }}
         />
 
+        {error && (
+          <div className="p-3 bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-400 text-xs rounded-lg border border-red-200 dark:border-red-800">
+            {error}
+          </div>
+        )}
+
         {/* ── 1. Sélecteur de Parcours (UX Tabs immersives) ── */}
         <div className="bg-white dark:bg-[#141412] p-4 rounded-xl border border-stone-200 dark:border-stone-800 shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <GraduationCap className="w-5 h-5 text-[#4A6741]" />
               <h2 className="font-semibold text-stone-900 dark:text-stone-100">
-                Parcours d'Apprentissage
+                Parcours d&apos;Apprentissage
               </h2>
             </div>
             <span className="text-xs text-stone-500 font-medium">
@@ -528,7 +539,7 @@ export default function LearningAdminPage() {
                   : typeof lesson.sections === 'string'
                   ? JSON.parse(lesson.sections)
                   : [];
-                const quizCount = rawSecs.filter((s: any) => s.type === 'quiz').length;
+                const quizCount = rawSecs.filter((s: { type?: string }) => s.type === 'quiz').length;
 
                 return (
                   <div
@@ -791,7 +802,7 @@ export default function LearningAdminPage() {
 
                   <div>
                     <label className="block text-xs font-semibold text-stone-700 dark:text-stone-300 mb-1">
-                      Ordre d'étape
+                      Ordre d&apos;étape
                     </label>
                     <input
                       type="number"
@@ -807,7 +818,7 @@ export default function LearningAdminPage() {
                 <div className="p-3.5 bg-stone-50 dark:bg-stone-900/60 rounded-lg border border-stone-200 dark:border-stone-800 space-y-3">
                   <h4 className="text-xs font-bold text-stone-700 dark:text-stone-300 flex items-center gap-1.5">
                     <BookOpen className="w-3.5 h-3.5 text-[#4A6741]" />
-                    Texte d'introduction de la leçon
+                    Texte d&apos;introduction de la leçon
                   </h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <textarea
@@ -1085,7 +1096,7 @@ export default function LearningAdminPage() {
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <p className="text-xs text-stone-500 font-medium">
-                    Configurez les <span className="text-[#4A6741] font-bold">5 questions</span> de micro-quiz obligatoires pour la validation de cette leçon (seuil d'admission : ≥ 60%, soit au moins 3/5).
+                    Configurez les <span className="text-[#4A6741] font-bold">5 questions</span> de micro-quiz obligatoires pour la validation de cette leçon (seuil d&apos;admission : ≥ 60%, soit au moins 3/5).
                   </p>
                   <span className="text-xs font-bold text-[#4A6741] px-2 py-0.5 rounded bg-[#4A6741]/10">
                     5/5 questions
