@@ -12,4 +12,5 @@ export * from './referral.service';
 export * from './events.service';
 export * from './partners.service';
 export * from './portal.service';
+export * from './learning.service';
 
