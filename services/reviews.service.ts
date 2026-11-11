@@ -37,12 +37,19 @@ export interface AdminReviewItem {
   appVersion?: string | null;
   platform?: string | null;
   deviceInfo?: string | null;
+  authorKey?: string;
+  authorTotalReviews?: number;
+  authorApprovedReviewsCount?: number;
   createdAt: string;
   updatedAt: string;
 }
 
 export interface AdminReviewsResponse {
   data: AdminReviewItem[];
+  summary?: {
+    approvedCount: number;
+    pendingCount: number;
+  };
   pagination: {
     page: number;
     limit: number;
@@ -83,14 +90,45 @@ export const adminReviewsService = {
     reviewId: string,
     status: 'APPROVED' | 'REJECTED' | 'PENDING',
     moderatorNote?: string,
-  ): Promise<{ success: boolean; id: string; moderationStatus: string }> {
-    return fetchApi<{ success: boolean; id: string; moderationStatus: string }>(
-      `/api/admin/reviews/${reviewId}/moderate`,
-      {
-        method: 'PATCH',
-        body: JSON.stringify({ status, moderatorNote }),
-      },
-    );
+  ): Promise<{
+    success: boolean;
+    id: string;
+    moderationStatus: string;
+    replacedReviewIds?: string[];
+  }> {
+    return fetchApi<{
+      success: boolean;
+      id: string;
+      moderationStatus: string;
+      replacedReviewIds?: string[];
+    }>(`/api/admin/reviews/${reviewId}/moderate`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status, moderatorNote }),
+    });
+  },
+
+  /**
+   * Sélectionne ou retire un lot d'avis à afficher sur app-kanto.gastsar.fr
+   */
+  async batchModerateReviews(
+    reviewIds: string[],
+    status: 'APPROVED' | 'REJECTED' | 'PENDING',
+    moderatorNote?: string,
+  ): Promise<{
+    success: boolean;
+    updatedCount: number;
+    replacedReviewIds: string[];
+    status: string;
+  }> {
+    return fetchApi<{
+      success: boolean;
+      updatedCount: number;
+      replacedReviewIds: string[];
+      status: string;
+    }>('/api/admin/reviews/batch-visibility', {
+      method: 'PATCH',
+      body: JSON.stringify({ reviewIds, status, moderatorNote }),
+    });
   },
 };
 

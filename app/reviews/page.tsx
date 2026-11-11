@@ -25,6 +25,7 @@ import {
   Smartphone,
   Calendar,
   X,
+  Users,
 } from 'lucide-react';
 
 export default function AdminReviewsPage() {
@@ -38,8 +39,17 @@ export default function AdminReviewsPage() {
   const [page, setPage] = useState<number>(1);
   const [totalPages, setTotalPages] = useState<number>(1);
   const [totalCount, setTotalCount] = useState<number>(0);
+  const [summary, setSummary] = useState<{ approvedCount: number; pendingCount: number }>({
+    approvedCount: 0,
+    pendingCount: 0,
+  });
 
-  // Modale de modération
+  // Sélection multiple pour app-kanto.gastsar.fr
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [isBatchSubmitting, setIsBatchSubmitting] = useState<boolean>(false);
+  const [quickUpdatingId, setQuickUpdatingId] = useState<string | null>(null);
+
+  // Modale de modération (motif de refus)
   const [selectedReview, setSelectedReview] = useState<AdminReviewItem | null>(null);
   const [actionType, setActionType] = useState<'APPROVED' | 'REJECTED' | 'PENDING' | null>(null);
   const [moderatorNote, setModeratorNote] = useState<string>('');
@@ -58,6 +68,10 @@ export default function AdminReviewsPage() {
       setReviews(res.data);
       setTotalPages(res.pagination.totalPages);
       setTotalCount(res.pagination.total);
+      if (res.summary) {
+        setSummary(res.summary);
+      }
+      setSelectedIds([]);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Impossible de charger la liste des avis.';
       toast.error(msg);
@@ -69,6 +83,93 @@ export default function AdminReviewsPage() {
   useEffect(() => {
     loadReviews();
   }, [loadReviews]);
+
+  const handleToggleSelectReview = (review: AdminReviewItem) => {
+    if (!review.isPublicationAuthorized) return;
+
+    setSelectedIds((prev) => {
+      if (prev.includes(review.id)) {
+        return prev.filter((id) => id !== review.id);
+      }
+
+      const sameAuthorConflictId = review.authorKey
+        ? prev.find((id) => {
+            const existing = reviews.find((item) => item.id === id);
+            return existing?.authorKey && existing.authorKey === review.authorKey;
+          })
+        : undefined;
+
+      if (sameAuthorConflictId) {
+        toast.info(
+          'Un autre avis de la même personne était coché : la sélection a été basculée sur celui-ci.',
+        );
+        return [...prev.filter((id) => id !== sameAuthorConflictId), review.id];
+      }
+
+      return [...prev, review.id];
+    });
+  };
+
+  const handleQuickVisibilityChange = async (
+    review: AdminReviewItem,
+    targetStatus: 'APPROVED' | 'PENDING',
+  ) => {
+    setQuickUpdatingId(review.id);
+    try {
+      const res = await adminReviewsService.moderateReview(review.id, targetStatus);
+      const replacedCount = res.replacedReviewIds?.length ?? 0;
+      if (targetStatus === 'APPROVED') {
+        toast.success(
+          replacedCount > 0
+            ? 'Avis affiché sur app-kanto. Le précédent avis de cet auteur a été retiré automatiquement.'
+            : 'Avis affiché sur app-kanto.gastsar.fr.',
+        );
+      } else {
+        toast.success('Avis retiré de app-kanto.gastsar.fr (remis en attente).');
+      }
+      await loadReviews();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Erreur lors de la mise à jour de l’avis.';
+      toast.error(msg);
+    } finally {
+      setQuickUpdatingId(null);
+    }
+  };
+
+  const handleBatchVisibility = async (targetStatus: 'APPROVED' | 'PENDING') => {
+    if (selectedIds.length === 0) return;
+
+    setIsBatchSubmitting(true);
+    try {
+      const res = await adminReviewsService.batchModerateReviews(selectedIds, targetStatus);
+      const replacedCount = res.replacedReviewIds?.length ?? 0;
+      if (targetStatus === 'APPROVED') {
+        toast.success(
+          replacedCount > 0
+            ? `${res.updatedCount} avis affiché(s) sur app-kanto (${replacedCount} doublon(s) auteur remplacé(s)).`
+            : `${res.updatedCount} avis affiché(s) sur app-kanto.gastsar.fr.`,
+        );
+      } else {
+        toast.success(`${res.updatedCount} avis retiré(s) de app-kanto.gastsar.fr.`);
+      }
+      setSelectedIds([]);
+      await loadReviews();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Impossible de mettre à jour la sélection.';
+      toast.error(msg);
+    } finally {
+      setIsBatchSubmitting(false);
+    }
+  };
+
+  const handleFilterByAuthor = (rev: AdminReviewItem) => {
+    const query = rev.user?.email || rev.authorEmail || rev.user?.name || rev.authorName || '';
+    if (!query) return;
+    setStatusFilter('ALL');
+    setRatingFilter('ALL');
+    setSearchQuery(query);
+    setPage(1);
+  };
 
   const handleOpenModerationModal = (
     review: AdminReviewItem,
@@ -84,15 +185,18 @@ export default function AdminReviewsPage() {
 
     setIsSubmittingAction(true);
     try {
-      await adminReviewsService.moderateReview(
+      const res = await adminReviewsService.moderateReview(
         selectedReview.id,
         actionType,
         moderatorNote.trim() || undefined,
       );
 
+      const replacedCount = res.replacedReviewIds?.length ?? 0;
       toast.success(
         actionType === 'APPROVED'
-          ? 'L’avis a été approuvé et est désormais visible sur le site public.'
+          ? replacedCount > 0
+            ? 'Avis affiché sur app-kanto. Le précédent avis du même auteur a été retiré automatiquement.'
+            : 'L’avis a été approuvé et est désormais visible sur app-kanto.gastsar.fr.'
           : actionType === 'REJECTED'
           ? 'L’avis a été rejeté avec note interne.'
           : 'Le statut de l’avis a été mis à jour.'
@@ -178,8 +282,60 @@ export default function AdminReviewsPage() {
         {/* En-tête */}
         <PageHeader
           title="Modération des Avis & Témoignages"
-          description="Gérez les retours d'expérience utilisateurs et décidez de leur publication publique sur app-kanto.gastsar.fr en respectant scrupuleusement le consentement RGPD."
+          description="Sélectionnez les avis à afficher sur app-kanto.gastsar.fr tout en garantissant au plus un avis affiché par personne."
         />
+
+        {/* Synthèse rapide & accès filtres */}
+        <div className="p-4 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setStatusFilter(statusFilter === 'APPROVED' ? 'ALL' : 'APPROVED');
+                setPage(1);
+              }}
+              className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
+                statusFilter === 'APPROVED'
+                  ? 'bg-emerald-600 text-white border-emerald-600'
+                  : 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100'
+              }`}
+            >
+              <Globe size={13} />
+              {summary.approvedCount} affiché(s) sur app-kanto
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setStatusFilter(statusFilter === 'PENDING' ? 'ALL' : 'PENDING');
+                setPage(1);
+              }}
+              className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
+                statusFilter === 'PENDING'
+                  ? 'bg-amber-600 text-white border-amber-600'
+                  : 'bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-800 hover:bg-amber-100'
+              }`}
+            >
+              <Clock size={13} />
+              {summary.pendingCount} en attente
+            </button>
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchQuery('');
+                  setPage(1);
+                }}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300 hover:bg-stone-200"
+              >
+                Filtre actif : « {searchQuery} »
+                <X size={12} />
+              </button>
+            )}
+          </div>
+          <p className="text-xs text-stone-500 dark:text-stone-400">
+            Règle anti-doublon : 1 seul avis affiché par personne (les anciens avis restent conservés en base).
+          </p>
+        </div>
 
         {/* Barre de filtres et recherche */}
         <div className="p-4 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl flex flex-wrap items-center justify-between gap-4">
@@ -267,52 +423,135 @@ export default function AdminReviewsPage() {
           </div>
         ) : (
           <div className="space-y-4">
-            <div className="text-xs text-stone-500 dark:text-stone-400 px-1">
-              Affichage de {reviews.length} sur {totalCount} avis au total.
+            <div className="flex flex-wrap items-center justify-between gap-2 px-1">
+              <span className="text-xs text-stone-500 dark:text-stone-400">
+                Affichage de {reviews.length} sur {totalCount} avis au total. Cochez les avis à afficher sur app-kanto.
+              </span>
             </div>
+
+            {/* Barre d'action groupée lorsque des avis sont sélectionnés */}
+            {selectedIds.length > 0 && (
+              <div className="p-3.5 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-xl flex flex-wrap items-center justify-between gap-3 sticky top-3 z-20 shadow-sm">
+                <div className="text-xs font-semibold text-emerald-900 dark:text-emerald-200">
+                  {selectedIds.length} avis sélectionné(s) pour app-kanto.gastsar.fr
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={() => handleBatchVisibility('APPROVED')}
+                    isLoading={isBatchSubmitting}
+                    disabled={isBatchSubmitting}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                  >
+                    <CheckCircle2 size={13} className="mr-1" />
+                    Afficher sur app-kanto ({selectedIds.length})
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleBatchVisibility('PENDING')}
+                    disabled={isBatchSubmitting}
+                    className="text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-700 hover:bg-amber-50 dark:hover:bg-amber-950/30"
+                  >
+                    <EyeOff size={13} className="mr-1" />
+                    Retirer de l’affichage
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSelectedIds([])}
+                    disabled={isBatchSubmitting}
+                  >
+                    Désélectionner
+                  </Button>
+                </div>
+              </div>
+            )}
 
             <div className="grid grid-cols-1 gap-4">
               {reviews.map((rev) => {
                 const authorDisplay = rev.user?.name || rev.authorName || 'Visiteur';
                 const authorEmail = rev.user?.email || rev.authorEmail || 'Non communiqué';
+                const isChecked = selectedIds.includes(rev.id);
+                const hasMultipleFromAuthor = (rev.authorTotalReviews ?? 1) > 1;
+                const anotherApprovedExists =
+                  (rev.authorApprovedReviewsCount ?? 0) > 0 &&
+                  rev.moderationStatus !== 'APPROVED';
+                const isRowBusy = quickUpdatingId === rev.id || isBatchSubmitting;
 
                 return (
                   <div
                     key={rev.id}
-                    className="p-5 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl flex flex-col justify-between gap-4 shadow-sm"
+                    className={`p-5 bg-white dark:bg-stone-900 rounded-xl flex flex-col justify-between gap-4 shadow-sm border transition-colors ${
+                      isChecked
+                        ? 'border-emerald-500 ring-2 ring-emerald-500/20'
+                        : rev.moderationStatus === 'APPROVED'
+                          ? 'border-emerald-300 dark:border-emerald-800'
+                          : 'border-stone-200 dark:border-stone-800'
+                    }`}
                   >
                     <div className="flex flex-wrap items-start justify-between gap-3">
-                      {/* Note & Auteur */}
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-3">
-                          {renderStars(rev.rating)}
-                          <span className="text-sm font-bold text-stone-900 dark:text-stone-100">
-                            {rev.rating} / 5
-                          </span>
-                          {getStatusBadge(rev.moderationStatus, rev.isPublicationAuthorized)}
+                      {/* Sélection + Note + Auteur */}
+                      <div className="flex items-start gap-3">
+                        <div className="pt-0.5">
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            disabled={!rev.isPublicationAuthorized || isRowBusy}
+                            onChange={() => handleToggleSelectReview(rev)}
+                            aria-label={`Sélectionner l’avis de ${authorDisplay}`}
+                            title={
+                              rev.isPublicationAuthorized
+                                ? 'Sélectionner cet avis pour app-kanto'
+                                : 'Non sélectionnable : publication publique non autorisée par l’utilisateur'
+                            }
+                            className="h-4 w-4 rounded border-stone-300 dark:border-stone-700 text-emerald-600 focus:ring-emerald-600 disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
+                          />
                         </div>
 
-                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-stone-500 dark:text-stone-400 pt-1">
-                          <span className="flex items-center gap-1 font-medium text-stone-700 dark:text-stone-300">
-                            <User size={13} />
-                            {authorDisplay} ({authorEmail})
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <Calendar size={13} />
-                            {new Date(rev.createdAt).toLocaleDateString('fr-FR', {
-                              day: 'numeric',
-                              month: 'short',
-                              year: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit',
-                            })}
-                          </span>
-                          {rev.appVersion && (
-                            <span className="flex items-center gap-1">
-                              <Smartphone size={13} />
-                              Version {rev.appVersion} {rev.platform ? `(${rev.platform})` : ''}
+                        <div className="space-y-1">
+                          <div className="flex flex-wrap items-center gap-2.5">
+                            {renderStars(rev.rating)}
+                            <span className="text-sm font-bold text-stone-900 dark:text-stone-100">
+                              {rev.rating} / 5
                             </span>
-                          )}
+                            {getStatusBadge(rev.moderationStatus, rev.isPublicationAuthorized)}
+                            {hasMultipleFromAuthor && (
+                              <button
+                                type="button"
+                                onClick={() => handleFilterByAuthor(rev)}
+                                title="Filtrer tous les avis de cette personne"
+                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100"
+                              >
+                                <Users size={11} />
+                                {rev.authorTotalReviews} avis de cet auteur
+                              </button>
+                            )}
+                          </div>
+
+                          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-stone-500 dark:text-stone-400 pt-1">
+                            <span className="flex items-center gap-1 font-medium text-stone-700 dark:text-stone-300">
+                              <User size={13} />
+                              {authorDisplay} ({authorEmail})
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <Calendar size={13} />
+                              {new Date(rev.createdAt).toLocaleDateString('fr-FR', {
+                                day: 'numeric',
+                                month: 'short',
+                                year: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })}
+                            </span>
+                            {rev.appVersion && (
+                              <span className="flex items-center gap-1">
+                                <Smartphone size={13} />
+                                Version {rev.appVersion} {rev.platform ? `(${rev.platform})` : ''}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
 
@@ -333,6 +572,14 @@ export default function AdminReviewsPage() {
                         )}
                       </div>
                     </div>
+
+                    {anotherApprovedExists && (
+                      <div className="text-xs px-3 py-2 bg-indigo-50/70 dark:bg-indigo-950/30 text-indigo-800 dark:text-indigo-200 rounded-lg border border-indigo-200 dark:border-indigo-900/60 flex items-center justify-between gap-2">
+                        <span>
+                          Un autre avis de cette personne est déjà affiché sur app-kanto : publier celui-ci remplacera automatiquement le précédent.
+                        </span>
+                      </div>
+                    )}
 
                     {/* Commentaire de l'utilisateur (Non modifiable) */}
                     <div className="p-3 bg-stone-50 dark:bg-stone-800/60 rounded-lg border border-stone-200 dark:border-stone-800">
@@ -358,16 +605,18 @@ export default function AdminReviewsPage() {
                         Règle stricte : la note et le texte de l’avis sont immuables.
                       </div>
 
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         {rev.isPublicationAuthorized && rev.moderationStatus !== 'APPROVED' && (
                           <Button
                             variant="primary"
                             size="sm"
-                            onClick={() => handleOpenModerationModal(rev, 'APPROVED')}
+                            isLoading={quickUpdatingId === rev.id}
+                            disabled={isRowBusy}
+                            onClick={() => handleQuickVisibilityChange(rev, 'APPROVED')}
                             className="bg-emerald-600 hover:bg-emerald-700 text-white"
                           >
                             <CheckCircle2 size={13} className="mr-1" />
-                            Approuver la publication
+                            Afficher sur app-kanto
                           </Button>
                         )}
 
@@ -375,11 +624,13 @@ export default function AdminReviewsPage() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleOpenModerationModal(rev, 'REJECTED')}
+                            isLoading={quickUpdatingId === rev.id}
+                            disabled={isRowBusy}
+                            onClick={() => handleQuickVisibilityChange(rev, 'PENDING')}
                             className="text-amber-600 border-amber-300 dark:border-amber-800 hover:bg-amber-50"
                           >
                             <EyeOff size={13} className="mr-1" />
-                            Masquer / Dépublier
+                            Retirer d’app-kanto
                           </Button>
                         )}
 
@@ -387,6 +638,7 @@ export default function AdminReviewsPage() {
                           <Button
                             variant="outline"
                             size="sm"
+                            disabled={isRowBusy}
                             onClick={() => handleOpenModerationModal(rev, 'REJECTED')}
                             className="text-rose-600 border-rose-300 dark:border-rose-800 hover:bg-rose-50"
                           >
