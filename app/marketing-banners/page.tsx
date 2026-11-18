@@ -6,6 +6,7 @@ import { useToast } from '@/lib/hooks/useToast';
 import {
   marketingBannersService,
   MarketingBanner,
+  MarketingBannerAiStatus,
   CreateMarketingBannerInput,
   BANNER_TARGET_LOCATIONS,
   BANNER_CATEGORIES,
@@ -32,6 +33,8 @@ import {
   MessageSquare,
   Home,
   LayoutGrid,
+  Bot,
+  Play,
 } from 'lucide-react';
 
 const PRESET_COLORS = [
@@ -86,6 +89,12 @@ export default function MarketingBannersAdminPage() {
   const [modalCtaLink, setModalCtaLink] = useState('');
   const [deepLinkSearch, setDeepLinkSearch] = useState('');
 
+  // État de la génération automatique par IA (Gemini)
+  const [aiStatus, setAiStatus] = useState<MarketingBannerAiStatus | null>(null);
+  const [isAiLoading, setIsAiLoading] = useState(false);
+  const [isAiToggling, setIsAiToggling] = useState(false);
+  const [isGeneratingAi, setIsGeneratingAi] = useState(false);
+
   const loadBanners = useCallback(async () => {
     try {
       setIsLoading(true);
@@ -102,9 +111,61 @@ export default function MarketingBannersAdminPage() {
     }
   }, [toast]);
 
+  const loadAiStatus = useCallback(async () => {
+    try {
+      setIsAiLoading(true);
+      const status = await marketingBannersService.getAiStatus();
+      setAiStatus(status);
+    } catch {
+      setAiStatus({ enabled: false, description: 'Désactivée par défaut' });
+    } finally {
+      setIsAiLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     loadBanners();
-  }, [loadBanners]);
+    loadAiStatus();
+  }, [loadBanners, loadAiStatus]);
+
+  const handleToggleAiStatus = async () => {
+    const nextState = !aiStatus?.enabled;
+    try {
+      setIsAiToggling(true);
+      const res = await marketingBannersService.updateAiStatus(nextState);
+      setAiStatus(res);
+      toast.success(
+        nextState
+          ? 'Génération automatique IA activée (exécution programmée toutes les 48h).'
+          : 'Génération automatique IA désactivée par défaut.'
+      );
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Erreur lors du changement d’état IA.';
+      toast.error(msg);
+    } finally {
+      setIsAiToggling(false);
+    }
+  };
+
+  const handleTriggerAiGeneration = async () => {
+    try {
+      setIsGeneratingAi(true);
+      const res = await marketingBannersService.triggerAiGeneration(true);
+      if (res.success) {
+        toast.success(
+          res.message || 'Nouvelle bannière générée par IA avec succès (créée en attente de validation).'
+        );
+        await loadBanners();
+      } else {
+        toast.error(res.message || 'La génération IA a échoué.');
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Erreur lors du déclenchement IA.';
+      toast.error(msg);
+    } finally {
+      setIsGeneratingAi(false);
+    }
+  };
 
   const resetForm = () => {
     setEditingId(null);
@@ -312,6 +373,88 @@ export default function MarketingBannersAdminPage() {
             <Plus className="w-4 h-4" />
             Nouvelle Bannière
           </button>
+        </div>
+
+        {/* Contrôle de la génération automatique par IA (Gemini) */}
+        <div className="p-4 sm:p-5 rounded-xl border border-border bg-card/70 backdrop-blur-sm shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-start gap-3.5">
+            <div
+              className={`p-2.5 rounded-lg border transition-colors ${
+                aiStatus?.enabled
+                  ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400'
+                  : 'bg-muted/60 border-border text-muted-foreground'
+              }`}
+            >
+              <Bot className="w-5 h-5" />
+            </div>
+            <div className="space-y-1">
+              <div className="flex items-center gap-2.5 flex-wrap">
+                <h2 className="text-sm font-bold text-foreground">
+                  Génération automatique de bannières par IA
+                </h2>
+                {isAiLoading ? (
+                  <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground border border-border font-medium">
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                    Chargement...
+                  </span>
+                ) : aiStatus?.enabled ? (
+                  <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-semibold">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    Active toutes les 48h
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground border border-border font-medium">
+                    <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/60" />
+                    Désactivée par défaut
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground max-w-2xl leading-relaxed">
+                {aiStatus?.enabled
+                  ? 'Une nouvelle bannière culturelle bilingue est générée automatiquement tous les 2 jours à 08:00 UTC via Gemini AI (avec repli de secours). Les bannières créées restent inactives en attente de validation.'
+                  : 'La génération automatique par IA toutes les 48h est actuellement désactivée. Vous pouvez l’activer ci-contre ou déclencher une génération manuelle ponctuelle.'}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2.5 self-end md:self-center shrink-0">
+            {/* Bouton de déclenchement ponctuel manuel */}
+            <button
+              type="button"
+              onClick={handleTriggerAiGeneration}
+              disabled={isGeneratingAi}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-border bg-background hover:bg-muted text-foreground transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-xs"
+              title="Générer immédiatement une nouvelle bannière culturelle via IA (créée en attente de modération)"
+            >
+              {isGeneratingAi ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground" />
+              ) : (
+                <Play className="w-3.5 h-3.5 text-amber-500" />
+              )}
+              <span>{isGeneratingAi ? 'Génération...' : 'Générer maintenant'}</span>
+            </button>
+
+            {/* Switch Toggle Activer / Désactiver */}
+            <button
+              type="button"
+              onClick={handleToggleAiStatus}
+              disabled={isAiToggling || isAiLoading}
+              className={`inline-flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                aiStatus?.enabled
+                  ? 'bg-emerald-600 hover:bg-emerald-700 border-emerald-600 text-white'
+                  : 'bg-muted/70 hover:bg-muted border-border text-foreground'
+              }`}
+            >
+              {isAiToggling ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : aiStatus?.enabled ? (
+                <ToggleRight className="w-4 h-4" />
+              ) : (
+                <ToggleLeft className="w-4 h-4 text-muted-foreground" />
+              )}
+              <span>{aiStatus?.enabled ? 'IA Activée' : 'IA Désactivée'}</span>
+            </button>
+          </div>
         </div>
 
         {/* Aperçu en direct (Live Preview fidèle au mobile) */}

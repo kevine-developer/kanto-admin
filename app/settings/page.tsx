@@ -37,7 +37,12 @@ import {
   X,
   Smartphone,
   Languages,
+  Bot,
 } from 'lucide-react';
+import {
+  marketingBannersService,
+  MarketingBannerAiStatus,
+} from '@/services/marketing-banners.service';
 
 interface AuthUser {
   id?: string;
@@ -150,6 +155,11 @@ export default function SettingsPage() {
   const [isLoadingLanguages, setIsLoadingLanguages] = useState<boolean>(true);
   const [isUpdatingLanguage, setIsUpdatingLanguage] = useState<string | null>(null);
 
+  // État de la génération IA de bannières
+  const [bannerAiStatus, setBannerAiStatus] = useState<MarketingBannerAiStatus | null>(null);
+  const [isBannerAiLoading, setIsBannerAiLoading] = useState(false);
+  const [isBannerAiToggling, setIsBannerAiToggling] = useState(false);
+
   useEffect(() => {
     let isMounted = true;
     systemService.getAppLanguages()
@@ -251,6 +261,35 @@ export default function SettingsPage() {
       toast.error(`Échec connexion API : ${msg}`);
     } finally {
       setIsPingingApi(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'system') {
+      setIsBannerAiLoading(true);
+      marketingBannersService
+        .getAiStatus()
+        .then((status) => setBannerAiStatus(status))
+        .catch(() => setBannerAiStatus({ enabled: false, description: 'Désactivée par défaut' }))
+        .finally(() => setIsBannerAiLoading(false));
+    }
+  }, [activeTab]);
+
+  const handleToggleBannerAi = async () => {
+    const nextState = !bannerAiStatus?.enabled;
+    try {
+      setIsBannerAiToggling(true);
+      const res = await marketingBannersService.updateAiStatus(nextState);
+      setBannerAiStatus(res);
+      toast.success(
+        nextState
+          ? 'Génération automatique IA activée (exécution toutes les 48h).'
+          : 'Génération automatique IA désactivée par défaut.'
+      );
+    } catch {
+      toast.error('Erreur lors du changement de statut IA.');
+    } finally {
+      setIsBannerAiToggling(false);
     }
   };
 
@@ -925,6 +964,65 @@ export default function SettingsPage() {
                   <div className="text-xs font-semibold text-[var(--foreground)]">PostgreSQL</div>
                   <div className="text-[10px] text-[var(--text-muted)] truncate">Prisma ORM</div>
                 </div>
+              </div>
+            </div>
+
+            {/* Automatisation & Génération IA de bannières */}
+            <div className="p-4 rounded-xl border border-[var(--card-border)] bg-[var(--card)] space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-xs font-bold text-[var(--foreground)] flex items-center gap-1.5">
+                    <Bot size={14} className="text-[var(--accent)]" />
+                    <span>Génération Automatique de Bannières (Gemini IA)</span>
+                  </div>
+                  <div className="text-[11px] text-[var(--text-muted)] mt-0.5">
+                    Génération planifiée toutes les 48 heures d’une nouvelle bannière culturelle bilingue.
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  {isBannerAiLoading ? (
+                    <span className="text-[10px] text-[var(--text-muted)] flex items-center gap-1">
+                      <Loader2 size={10} className="animate-spin" /> Chargement...
+                    </span>
+                  ) : (
+                    <span
+                      className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
+                        bannerAiStatus?.enabled
+                          ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                          : 'bg-muted text-[var(--text-muted)] border-[var(--card-border)]'
+                      }`}
+                    >
+                      {bannerAiStatus?.enabled ? 'Active toutes les 48h' : 'Désactivée par défaut'}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-[var(--card-border)]">
+                <span className="text-[11px] text-[var(--text-muted)] max-w-xl">
+                  Par défaut, la génération automatique est désactivée pour préserver les quotas et permettre un contrôle éditorial strict des bannières sur l’application mobile.
+                </span>
+                <button
+                  type="button"
+                  onClick={handleToggleBannerAi}
+                  disabled={isBannerAiToggling || isBannerAiLoading}
+                  className={`px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors shrink-0 ${
+                    bannerAiStatus?.enabled
+                      ? 'bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-600'
+                      : 'bg-[var(--input-bg)] hover:bg-[var(--card-border)] text-[var(--foreground)] border-[var(--card-border)]'
+                  }`}
+                >
+                  {isBannerAiToggling ? (
+                    <span className="flex items-center gap-1.5">
+                      <Loader2 size={12} className="animate-spin" /> Mise à jour...
+                    </span>
+                  ) : bannerAiStatus?.enabled ? (
+                    'Désactiver l’IA'
+                  ) : (
+                    'Activer l’IA'
+                  )}
+                </button>
               </div>
             </div>
 

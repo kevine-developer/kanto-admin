@@ -28,6 +28,11 @@ export interface MarketingBanner {
   updatedAt: string;
 }
 
+export interface MarketingBannerAiStatus {
+  enabled: boolean;
+  description: string;
+}
+
 export interface CreateMarketingBannerInput {
   badgeFr: string;
   badgeMg: string;
@@ -129,5 +134,38 @@ export const marketingBannersService = {
       method: 'PATCH',
       body: JSON.stringify({ items }),
     });
+  },
+
+  /**
+   * Récupère le statut d'activation de la génération IA (Gemini)
+   */
+  async getAiStatus(): Promise<MarketingBannerAiStatus> {
+    const res = await fetchApi<MarketingBannerAiStatus>('/marketing-banners/ai-status');
+    return res || { enabled: false, description: 'Désactivée par défaut' };
+  },
+
+  /**
+   * Active ou désactive la génération automatique par IA
+   */
+  async updateAiStatus(enabled: boolean): Promise<MarketingBannerAiStatus> {
+    return fetchApi<MarketingBannerAiStatus>('/marketing-banners/ai-status', {
+      method: 'PATCH',
+      body: JSON.stringify({ enabled }),
+    });
+  },
+
+  /**
+   * Déclenche manuellement la génération d'une nouvelle bannière via Gemini AI
+   */
+  async triggerAiGeneration(
+    force = true
+  ): Promise<{ success: boolean; bannerId?: string; message: string }> {
+    return fetchApi<{ success: boolean; bannerId?: string; message: string }>(
+      '/marketing-banners/generate',
+      {
+        method: 'POST',
+        body: JSON.stringify({ force }),
+      }
+    );
   },
 };
