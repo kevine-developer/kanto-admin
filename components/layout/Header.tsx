@@ -1,7 +1,7 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
-import { Sun, Moon, PanelLeft } from 'lucide-react';
+import { Sun, Moon, PanelLeft, ExternalLink } from 'lucide-react';
 import { useTheme } from '@/lib/theme-context';
 import { AdminAlertsBell } from './AdminAlertsBell';
 
@@ -80,6 +80,18 @@ export function Header() {
 
       {/* Actions droite */}
       <div className="flex items-center gap-2">
+        {/* Lien direct vers le portail web public */}
+        <a
+          href={process.env.NEXT_PUBLIC_PUBLIC_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3000'}
+          target="_blank"
+          rel="noopener noreferrer"
+          title="Ouvrir le portail web public Kanto MG dans un nouvel onglet"
+          className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border border-[var(--card-border)] bg-[var(--card)] hover:bg-[var(--card-hover)] text-[var(--foreground)] transition-colors"
+        >
+          <ExternalLink size={13} className="text-[var(--accent)]" />
+          <span>Portail Web</span>
+        </a>
+
         {/* Badge d'environnement neutre */}
         <div
           className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono font-medium border border-[var(--card-border)] bg-[var(--card)] text-[var(--text-muted)]"
