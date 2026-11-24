@@ -7,6 +7,11 @@ export const getAuthBaseUrl = getApiBaseUrl;
 export const authClient = createAuthClient({
   baseURL: getAuthBaseUrl(),
   plugins: [adminClient()],
+  fetchOptions: {
+    headers: {
+      'x-client-context': 'admin',
+    },
+  },
 });
 
 export const {

@@ -85,10 +85,17 @@ function ResetPasswordForm() {
 
     try {
       setIsLoading(true);
-      const res = await authClient.resetPassword({
-        newPassword: password,
-        token,
-      });
+      const res = await authClient.resetPassword(
+        {
+          newPassword: password,
+          token,
+        },
+        {
+          headers: {
+            'x-client-context': 'admin',
+          },
+        },
+      );
 
       if (res?.error) {
         setErrorMessage(

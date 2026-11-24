@@ -74,6 +74,9 @@ export interface EventAdminItem {
   isPaid?: boolean;
   ticketPrice?: number | null;
   currency?: string | null;
+  ticketingEnabled?: boolean;
+  ticketEntryMode?: 'SINGLE' | 'MULTI' | 'UNLIMITED';
+  ticketMaxEntries?: number;
   currentParticipantsCount: number;
   waitlistCount?: number;
   viewsCount: number;
@@ -205,6 +208,9 @@ export interface CreateEventInput {
   isPaid?: boolean;
   ticketPrice?: number;
   currency?: string;
+  ticketingEnabled?: boolean;
+  ticketEntryMode?: 'SINGLE' | 'MULTI' | 'UNLIMITED';
+  ticketMaxEntries?: number;
   isFeatured?: boolean;
   rulesMg?: string;
   rulesFr?: string;
@@ -400,6 +406,175 @@ export const eventsAdminService = {
       action: 'DELETED' | 'ARCHIVED';
       message: string;
     }>(`/events/admin/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    });
+  },
+
+  /**
+   * Récupère la liste des billets d'un événement
+   */
+  async getTickets(
+    eventId: string,
+    params: {
+      page?: number;
+      limit?: number;
+      status?: string;
+      search?: string;
+    } = {}
+  ): Promise<{
+    data: any[];
+    pagination: { total: number; page: number; limit: number; totalPages: number };
+  }> {
+    const qs = new URLSearchParams();
+    if (params.page) qs.append('page', params.page.toString());
+    if (params.limit) qs.append('limit', params.limit.toString());
+    if (params.status && params.status !== 'ALL') qs.append('status', params.status);
+    if (params.search && params.search.trim()) qs.append('search', params.search.trim());
+
+    return fetchApi<{
+      data: any[];
+      pagination: { total: number; page: number; limit: number; totalPages: number };
+    }>(`/tickets/admin/event/${encodeURIComponent(eventId)}${qs.toString() ? `?${qs.toString()}` : ''}`);
+  },
+
+  /**
+   * Récupère les métriques de billetterie d'un événement
+   */
+  async getTicketingStats(eventId: string): Promise<{
+    eventId: string;
+    totalTickets: number;
+    validTickets: number;
+    usedTickets: number;
+    cancelledTickets: number;
+    revokedTickets: number;
+    totalScans: number;
+    checkInRate: number;
+  }> {
+    return fetchApi<{
+      eventId: string;
+      totalTickets: number;
+      validTickets: number;
+      usedTickets: number;
+      cancelledTickets: number;
+      revokedTickets: number;
+      totalScans: number;
+      checkInRate: number;
+    }>(`/tickets/admin/event/${encodeURIComponent(eventId)}/stats`);
+  },
+
+  /**
+   * Annule administrativement un billet individuel
+   */
+  async cancelTicket(
+    ticketId: string,
+    reason: string,
+    internalNotes?: string
+  ): Promise<{ success: boolean }> {
+    return fetchApi<{ success: boolean }>(
+      `/tickets/admin/${encodeURIComponent(ticketId)}/cancel`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ reason, internalNotes }),
+      }
+    );
+  },
+
+  /**
+   * Révoque un billet frauduleux
+   */
+  async revokeTicket(ticketId: string, reason: string): Promise<{ success: boolean }> {
+    return fetchApi<{ success: boolean }>(
+      `/tickets/admin/${encodeURIComponent(ticketId)}/revoke`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ reason }),
+      }
+    );
+  },
+
+  /**
+   * Récupère l'historique des scans d'un billet
+   */
+  async getTicketHistory(ticketId: string): Promise<any> {
+    return fetchApi<any>(`/tickets/admin/${encodeURIComponent(ticketId)}/history`);
+  },
+
+  /**
+   * Récupère la liste des agents de contrôle / staff assignés à un événement spécifique
+   */
+  async getEventStaff(eventId: string): Promise<
+    Array<{
+      userId: string;
+      email: string;
+      name: string;
+      avatar?: string;
+      addedAt: string;
+    }>
+  > {
+    return fetchApi<
+      Array<{
+        userId: string;
+        email: string;
+        name: string;
+        avatar?: string;
+        addedAt: string;
+      }>
+    >(`/events/admin/${encodeURIComponent(eventId)}/staff`);
+  },
+
+  /**
+   * Assigne un agent de contrôle à un événement spécifique (par son adresse email)
+   */
+  async addEventStaff(
+    eventId: string,
+    email: string
+  ): Promise<
+    Array<{
+      userId: string;
+      email: string;
+      name: string;
+      avatar?: string;
+      addedAt: string;
+    }>
+  > {
+    return fetchApi<
+      Array<{
+        userId: string;
+        email: string;
+        name: string;
+        avatar?: string;
+        addedAt: string;
+      }>
+    >(`/events/admin/${encodeURIComponent(eventId)}/staff`, {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    });
+  },
+
+  /**
+   * Retire un agent de contrôle d'un événement spécifique
+   */
+  async removeEventStaff(
+    eventId: string,
+    userId: string
+  ): Promise<
+    Array<{
+      userId: string;
+      email: string;
+      name: string;
+      avatar?: string;
+      addedAt: string;
+    }>
+  > {
+    return fetchApi<
+      Array<{
+        userId: string;
+        email: string;
+        name: string;
+        avatar?: string;
+        addedAt: string;
+      }>
+    >(`/events/admin/${encodeURIComponent(eventId)}/staff/${encodeURIComponent(userId)}`, {
       method: 'DELETE',
     });
   },

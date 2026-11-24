@@ -123,10 +123,17 @@ function LoginFormContent() {
     try {
       const origin = typeof window !== 'undefined' ? window.location.origin : '';
       const redirectTo = origin ? `${origin}/reset-password` : '/reset-password';
-      const res = await authClient.requestPasswordReset({
-        email: email.trim().toLowerCase(),
-        redirectTo,
-      });
+      const res = await authClient.requestPasswordReset(
+        {
+          email: email.trim().toLowerCase(),
+          redirectTo,
+        },
+        {
+          headers: {
+            'x-client-context': 'admin',
+          },
+        },
+      );
 
       if (res?.error) {
         setErrorMessage(
@@ -519,6 +526,12 @@ function LoginFormContent() {
                         }}
                       />
                     </div>
+                    <p
+                      className="text-[11px] leading-relaxed mt-1"
+                      style={{ color: 'var(--sidebar-muted)' }}
+                    >
+                      🛡️ Seules les adresses email associées à un compte administrateur vérifié peuvent être réinitialisées ici.
+                    </p>
                   </div>
 
                   <button
