@@ -6,6 +6,7 @@ import { AdminShell } from '@/components/layout/AdminShell';
 import { useToast } from '@/lib/hooks/useToast';
 import { EventWizardModal } from '@/components/events/EventWizardModal';
 import { EventParticipantsModal } from '@/components/events/EventParticipantsModal';
+import { EventTicketsModal } from '@/components/events/EventTicketsModal';
 import {
   eventsAdminService,
   EventAdminItem,
@@ -35,6 +36,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Flame,
+  Ticket,
 } from 'lucide-react';
 
 function EventsAdminPageContent() {
@@ -77,6 +79,8 @@ function EventsAdminPageContent() {
   const [editingEvent, setEditingEvent] = useState<EventAdminItem | null>(null);
   const [isParticipantsModalOpen, setIsParticipantsModalOpen] = useState(false);
   const [selectedEventForParticipants, setSelectedEventForParticipants] = useState<EventAdminItem | null>(null);
+  const [isTicketsModalOpen, setIsTicketsModalOpen] = useState(false);
+  const [selectedEventForTickets, setSelectedEventForTickets] = useState<EventAdminItem | null>(null);
 
   // Modal Statut / Annulation globale
   const [statusModalEvent, setStatusModalEvent] = useState<EventAdminItem | null>(null);
@@ -147,6 +151,11 @@ function EventsAdminPageContent() {
   const openParticipantsModal = (event: EventAdminItem) => {
     setSelectedEventForParticipants(event);
     setIsParticipantsModalOpen(true);
+  };
+
+  const openTicketsModal = (event: EventAdminItem) => {
+    setSelectedEventForTickets(event);
+    setIsTicketsModalOpen(true);
   };
 
   const searchParams = useSearchParams();
@@ -518,6 +527,14 @@ function EventsAdminPageContent() {
                                 <Flame size={10} /> À la une
                               </span>
                             )}
+                            {item.ticketingEnabled && (
+                              <span
+                                className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-900 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-300 dark:border-amber-800"
+                                title="Billet individuel obligatoire"
+                              >
+                                <Ticket size={10} /> Billetterie
+                              </span>
+                            )}
                             <span className="font-semibold text-[var(--foreground)] line-clamp-1">
                               {item.titleFr}
                             </span>
@@ -629,6 +646,17 @@ function EventsAdminPageContent() {
                                 title="Clôturer l'événement (Terminer)"
                               >
                                 <CheckCircle2 size={14} />
+                              </button>
+                            )}
+
+                            {/* Billetterie */}
+                            {item.ticketingEnabled && (
+                              <button
+                                onClick={() => openTicketsModal(item)}
+                                className="p-1.5 text-xs text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/50 rounded-lg transition-colors"
+                                title="Gérer la billetterie et scanner"
+                              >
+                                <Ticket size={14} />
                               </button>
                             )}
 
@@ -744,6 +772,15 @@ function EventsAdminPageContent() {
               loadEvents();
               loadOverview();
             }}
+          />
+        )}
+
+        {/* ─── MODAL : GESTION DE LA BILLETTERIE ÉVÉNEMENT ─────────────────────── */}
+        {isTicketsModalOpen && selectedEventForTickets && (
+          <EventTicketsModal
+            isOpen={isTicketsModalOpen}
+            onClose={() => setIsTicketsModalOpen(false)}
+            event={selectedEventForTickets}
           />
         )}
 

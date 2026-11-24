@@ -21,6 +21,9 @@ import {
   Eye,
   Trash2,
   RefreshCw,
+  Ticket,
+  Lock,
+  AlertTriangle,
 } from 'lucide-react';
 import {
   EventAdminItem,
@@ -106,10 +109,18 @@ export function EventWizardModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
 
-  // Configuration langues et sections
-  const [formLanguageMode, setFormLanguageMode] = useState<EventLanguageMode>(
-    editingEvent?.metadata?.contentConfig?.languageMode || 'both'
-  );
+  // Configuration langues et sections (détection robuste à la création ou modification)
+  const initialLanguageMode: EventLanguageMode =
+    editingEvent?.metadata?.contentConfig?.languageMode ||
+    (editingEvent
+      ? (!editingEvent.titleFr && editingEvent.titleMg
+          ? 'mg'
+          : !editingEvent.titleMg && editingEvent.titleFr
+          ? 'fr'
+          : 'both')
+      : 'both');
+
+  const [formLanguageMode, setFormLanguageMode] = useState<EventLanguageMode>(initialLanguageMode);
   const [enabledSections, setEnabledSections] = useState<EventSectionsConfig>(
     editingEvent?.metadata?.contentConfig?.sections || {
       shortDescription: true,
@@ -162,6 +173,9 @@ export function EventWizardModal({
   const [formExternalUrl, setFormExternalUrl] = useState(editingEvent?.externalUrl || '');
 
   // Champs Étape 4 : Participation & Billetterie
+  const [formTicketingEnabled, setFormTicketingEnabled] = useState(
+    Boolean(editingEvent?.ticketingEnabled)
+  );
   const [formParticipationType, setFormParticipationType] = useState<EventParticipationType>(
     editingEvent?.participationType || 'OPEN'
   );
@@ -319,6 +333,16 @@ export function EventWizardModal({
     const isFr = formLanguageMode === 'fr' || formLanguageMode === 'both';
     const isMg = formLanguageMode === 'mg' || formLanguageMode === 'both';
 
+    // Confirmation obligatoire avant création si la billetterie est activée (règle immuable)
+    if (!editingEvent && formTicketingEnabled) {
+      const confirmed = window.confirm(
+        'Cet événement nécessitera des billets individuels. Ce choix ne pourra plus être modifié après sa création. Confirmez-vous ce choix ?',
+      );
+      if (!confirmed) {
+        return;
+      }
+    }
+
     try {
       setIsSubmitting(true);
 
@@ -349,6 +373,7 @@ export function EventWizardModal({
         isPaid: formIsPaid,
         ticketPrice: formIsPaid && formTicketPrice ? parseFloat(formTicketPrice) : undefined,
         currency: formCurrency || 'MGA',
+        ticketingEnabled: !editingEvent ? formTicketingEnabled : undefined,
         enableWaitlist: formEnableWaitlist,
         waitlistCapacity:
           formEnableWaitlist && formWaitlistCapacity
@@ -445,8 +470,8 @@ export function EventWizardModal({
               </h2>
               <p className="text-xs text-[var(--text-muted)]">
                 Étape {step} sur 5 —{' '}
-                {step === 1 && 'Présentation & Photo 16:9'}
-                {step === 2 && 'Langues & Contenus modulaires'}
+                {step === 1 && 'Langue, Présentation & Couverture 16:9'}
+                {step === 2 && 'Sections modulaires & Règles'}
                 {step === 3 && 'Informations pratiques'}
                 {step === 4 && 'Participation & Billetterie'}
                 {step === 5 && 'Vérification & Publication'}
@@ -464,8 +489,8 @@ export function EventWizardModal({
           {/* Stepper horizontal */}
           <div className="grid grid-cols-5 gap-2 pt-1">
             {[
-              { num: 1, title: 'Présentation' },
-              { num: 2, title: 'Langues' },
+              { num: 1, title: 'Langue & Titre' },
+              { num: 2, title: 'Sections' },
               { num: 3, title: 'Pratique' },
               { num: 4, title: 'Participation' },
               { num: 5, title: 'Vérification' },
@@ -509,10 +534,58 @@ export function EventWizardModal({
         {/* ─── Contenu scrollable du Wizard ───────────────────────────────────── */}
         <div className="p-6 space-y-6 overflow-y-auto flex-1">
           {/* ════════════════════════════════════════════════════════════════════ */}
-          {/* ÉTAPE 1 : PRÉSENTATION & PHOTO DE COUVERTURE 16:9                   */}
+          {/* ÉTAPE 1 : LANGUE, PRÉSENTATION & COUVERTURE 16:9                    */}
           {/* ════════════════════════════════════════════════════════════════════ */}
           {step === 1 && (
             <div className="space-y-5 animate-in fade-in duration-200">
+              {/* Choix des langues en priorité absolue */}
+              <div className="p-4 rounded-xl border border-[var(--border)] bg-[var(--background)] space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-[var(--foreground)] uppercase tracking-wider flex items-center gap-1.5">
+                    <Globe size={14} className="text-[var(--accent)]" />
+                    Langue(s) officielle(s) de communication <span className="text-red-500">*</span>
+                  </span>
+                  <span className="text-[11px] text-[var(--text-muted)]">
+                    Définit les langues obligatoires pour le titre et la description
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setFormLanguageMode('both')}
+                    className={`py-2.5 px-3 rounded-lg border text-xs font-bold transition-all ${
+                      formLanguageMode === 'both'
+                        ? 'border-[var(--accent)] bg-[var(--accent)]/15 text-[var(--foreground)] ring-1 ring-[var(--accent)]/30'
+                        : 'border-[var(--border)] bg-[var(--card)] text-[var(--text-muted)] hover:bg-[var(--card-hover)]'
+                    }`}
+                  >
+                    🌍 Bilingue (Malgache + Français)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFormLanguageMode('mg')}
+                    className={`py-2.5 px-3 rounded-lg border text-xs font-bold transition-all ${
+                      formLanguageMode === 'mg'
+                        ? 'border-emerald-500 bg-emerald-500/15 text-[var(--foreground)] ring-1 ring-emerald-500/30'
+                        : 'border-[var(--border)] bg-[var(--card)] text-[var(--text-muted)] hover:bg-[var(--card-hover)]'
+                    }`}
+                  >
+                    🇲🇬 Malgache uniquement
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFormLanguageMode('fr')}
+                    className={`py-2.5 px-3 rounded-lg border text-xs font-bold transition-all ${
+                      formLanguageMode === 'fr'
+                        ? 'border-blue-500 bg-blue-500/15 text-[var(--foreground)] ring-1 ring-blue-500/30'
+                        : 'border-[var(--border)] bg-[var(--card)] text-[var(--text-muted)] hover:bg-[var(--card-hover)]'
+                    }`}
+                  >
+                    🇫🇷 Français uniquement
+                  </button>
+                </div>
+              </div>
+
               {/* Photo de couverture 16:9 */}
               <div className="p-4 rounded-xl border border-[var(--border)] bg-[var(--background)] space-y-3">
                 <div className="flex items-center justify-between">
@@ -728,51 +801,28 @@ export function EventWizardModal({
           )}
 
           {/* ════════════════════════════════════════════════════════════════════ */}
-          {/* ÉTAPE 2 : LANGUES ET SECTIONS MODULAIRES                             */}
+          {/* ÉTAPE 2 : SECTIONS MODULAIRES & CONTENUS                           */}
           {/* ════════════════════════════════════════════════════════════════════ */}
           {step === 2 && (
             <div className="space-y-5 animate-in fade-in duration-200">
-              {/* Choix des langues */}
-              <div className="p-4 rounded-xl border border-[var(--border)] bg-[var(--background)] space-y-3">
-                <span className="text-xs font-bold text-[var(--foreground)] uppercase tracking-wider flex items-center gap-1.5">
+              {/* Rappel du mode linguistique configuré en Étape 1 */}
+              <div className="flex items-center justify-between p-3.5 rounded-xl border border-[var(--border)] bg-[var(--background)]">
+                <div className="flex items-center gap-2">
                   <Globe size={14} className="text-[var(--accent)]" />
-                  Langue(s) officielle(s) de communication
-                </span>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setFormLanguageMode('both')}
-                    className={`py-2.5 px-3 rounded-lg border text-xs font-bold transition-all ${
-                      formLanguageMode === 'both'
-                        ? 'border-[var(--accent)] bg-[var(--accent)]/15 text-[var(--foreground)] ring-1 ring-[var(--accent)]/30'
-                        : 'border-[var(--border)] bg-[var(--card)] text-[var(--text-muted)]'
-                    }`}
-                  >
-                    🌍 Bilingue (Malgache + Français)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setFormLanguageMode('mg')}
-                    className={`py-2.5 px-3 rounded-lg border text-xs font-bold transition-all ${
-                      formLanguageMode === 'mg'
-                        ? 'border-emerald-500 bg-emerald-500/15 text-[var(--foreground)] ring-1 ring-emerald-500/30'
-                        : 'border-[var(--border)] bg-[var(--card)] text-[var(--text-muted)]'
-                    }`}
-                  >
-                    🇲🇬 Malgache uniquement
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setFormLanguageMode('fr')}
-                    className={`py-2.5 px-3 rounded-lg border text-xs font-bold transition-all ${
-                      formLanguageMode === 'fr'
-                        ? 'border-blue-500 bg-blue-500/15 text-[var(--foreground)] ring-1 ring-blue-500/30'
-                        : 'border-[var(--border)] bg-[var(--card)] text-[var(--text-muted)]'
-                    }`}
-                  >
-                    🇫🇷 Français uniquement
-                  </button>
+                  <span className="text-xs text-[var(--text-muted)]">Mode linguistique actif :</span>
+                  <span className="text-xs font-bold text-[var(--foreground)]">
+                    {formLanguageMode === 'both' && '🌍 Bilingue (Malgache + Français)'}
+                    {formLanguageMode === 'mg' && '🇲🇬 Malgache uniquement'}
+                    {formLanguageMode === 'fr' && '🇫🇷 Français uniquement'}
+                  </span>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => setStep(1)}
+                  className="text-xs text-[var(--accent)] hover:underline font-semibold"
+                >
+                  Modifier à l&apos;étape 1
+                </button>
               </div>
 
               {/* Sections activables */}
@@ -1051,6 +1101,87 @@ export function EventWizardModal({
                     </div>
                   </div>
                 )}
+              </div>
+
+              {/* Configuration Billetterie (Switch Immuable) */}
+              <div className="p-4 rounded-xl border border-[var(--border)] bg-[var(--background)] space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-[var(--foreground)] uppercase tracking-wider flex items-center gap-1.5">
+                    <Ticket size={14} className="text-[var(--accent)]" />
+                    Billetterie Numérique & Contrôle d&apos;Accès
+                  </span>
+                  {editingEvent && (
+                    <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                      <Lock size={11} />
+                      Paramètre immuable
+                    </span>
+                  )}
+                </div>
+
+                <div
+                  className={`p-3.5 rounded-xl border transition-all ${
+                    formTicketingEnabled
+                      ? 'border-[var(--accent)] bg-[var(--accent)]/10 ring-1 ring-[var(--accent)]/20'
+                      : 'border-[var(--border)] bg-[var(--card)]'
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <label
+                          htmlFor="ticketing-switch"
+                          className="text-xs font-bold text-[var(--foreground)] cursor-pointer"
+                        >
+                          Billet obligatoire pour participer
+                        </label>
+                        {formTicketingEnabled && (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 border border-emerald-500/20">
+                            Actif
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-[var(--text-muted)] leading-relaxed">
+                        Chaque participant recevra automatiquement un billet individuel unique avec QR Code sécurisé à présenter lors du contrôle à l&apos;entrée.
+                      </p>
+                    </div>
+
+                    {editingEvent ? (
+                      <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--background)] border border-[var(--border)] text-xs font-bold text-[var(--foreground)] shrink-0">
+                        <Lock size={12} className="text-[var(--text-muted)]" />
+                        <span>{formTicketingEnabled ? 'Activé' : 'Désactivé'}</span>
+                      </div>
+                    ) : (
+                      <label className="relative inline-flex items-center cursor-pointer shrink-0 mt-1">
+                        <input
+                          id="ticketing-switch"
+                          type="checkbox"
+                          checked={formTicketingEnabled}
+                          onChange={(e) => setFormTicketingEnabled(e.target.checked)}
+                          className="sr-only peer"
+                        />
+                        <div className="w-11 h-6 bg-zinc-300 dark:bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[var(--accent)]" />
+                      </label>
+                    )}
+                  </div>
+
+                  {!editingEvent && (
+                    <div className="mt-3 pt-2.5 border-t border-[var(--border)] flex items-start gap-2 text-[11px] text-amber-600 dark:text-amber-400">
+                      <AlertTriangle size={13} className="shrink-0 mt-0.5" />
+                      <span>
+                        <strong>Règle métier Kanto :</strong> La configuration de billetterie est définie lors de la création et devient <strong>strictement immuable</strong> par la suite.
+                      </span>
+                    </div>
+                  )}
+
+                  {editingEvent && (
+                    <div className="mt-2.5 pt-2 border-t border-[var(--border)] text-[11px] text-[var(--text-muted)] flex items-center gap-1.5">
+                      <Lock size={12} className="shrink-0" />
+                      <span>
+                        Ce paramètre a été verrouillé lors de la création de l&apos;événement et ne peut plus être modifié.
+                      </span>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Capacité et Liste d'attente */}
@@ -1332,6 +1463,24 @@ export function EventWizardModal({
                       <MapPin size={13} className="text-[var(--accent)]" />
                       <span>{formLocation || 'En ligne'}</span>
                     </div>
+                  </div>
+
+                  <div className="pt-2 border-t border-[var(--border)] flex items-center justify-between text-xs">
+                    <span className="flex items-center gap-1.5 text-[var(--text-muted)]">
+                      <Ticket size={13} className="text-[var(--accent)]" />
+                      Billetterie :
+                    </span>
+                    <span
+                      className={`font-semibold ${
+                        formTicketingEnabled
+                          ? 'text-emerald-600 dark:text-emerald-400'
+                          : 'text-[var(--text-muted)]'
+                      }`}
+                    >
+                      {formTicketingEnabled
+                        ? 'Billet obligatoire (QR Code sécurisé)'
+                        : 'Accès sans billet'}
+                    </span>
                   </div>
                 </div>
               </div>

@@ -42,6 +42,68 @@ export interface EventRewardItem {
   claimsCount?: number;
 }
 
+export interface EventTicketValidationItem {
+  id: string;
+  ticketId: string;
+  eventId: string;
+  scannedById: string;
+  scannedByName?: string | null;
+  result: string;
+  deviceInfo?: string | null;
+  ipAddress?: string | null;
+  location?: string | null;
+  scannedAt: string;
+}
+
+export interface EventTicketAdminItem {
+  id: string;
+  ticketNumber: string;
+  status: 'VALID' | 'USED' | 'CANCELLED' | 'REVOKED' | 'EXPIRED' | string;
+  entryMode: 'SINGLE' | 'MULTI' | 'UNLIMITED' | string;
+  usedCount: number;
+  maxEntries: number;
+  validFrom: string;
+  validUntil: string;
+  usedAt?: string | null;
+  createdAt: string;
+  cancelledAt?: string | null;
+  cancellationReason?: string | null;
+  revokedAt?: string | null;
+  revokeReason?: string | null;
+  participant?: {
+    id: string;
+    name: string;
+    username?: string | null;
+    email?: string | null;
+  } | null;
+  recentScans?: EventTicketValidationItem[];
+}
+
+export interface EventTicketingStats {
+  eventId: string;
+  totalTickets: number;
+  validTickets: number;
+  usedTickets: number;
+  cancelledTickets: number;
+  revokedTickets: number;
+  totalScans: number;
+  checkInRate: number;
+}
+
+export interface EventTicketHistoryResponse {
+  ticketNumber: string;
+  status: string;
+  validations: EventTicketValidationItem[];
+}
+
+export interface EventStaffMember {
+  userId: string;
+  email: string;
+  name: string;
+  avatar?: string | null;
+  addedAt: string;
+}
+
 export interface EventMetadataPayload {
   contentConfig?: EventContentConfig;
   gameModuleId?: string;
@@ -74,6 +136,9 @@ export interface EventAdminItem {
   isPaid?: boolean;
   ticketPrice?: number | null;
   currency?: string | null;
+  ticketingEnabled?: boolean;
+  ticketEntryMode?: 'SINGLE' | 'MULTI' | 'UNLIMITED';
+  ticketMaxEntries?: number;
   currentParticipantsCount: number;
   waitlistCount?: number;
   viewsCount: number;
@@ -205,6 +270,9 @@ export interface CreateEventInput {
   isPaid?: boolean;
   ticketPrice?: number;
   currency?: string;
+  ticketingEnabled?: boolean;
+  ticketEntryMode?: 'SINGLE' | 'MULTI' | 'UNLIMITED';
+  ticketMaxEntries?: number;
   isFeatured?: boolean;
   rulesMg?: string;
   rulesFr?: string;
@@ -402,5 +470,109 @@ export const eventsAdminService = {
     }>(`/events/admin/${encodeURIComponent(id)}`, {
       method: 'DELETE',
     });
+  },
+
+  /**
+   * Récupère la liste des billets d'un événement
+   */
+  async getTickets(
+    eventId: string,
+    params: {
+      page?: number;
+      limit?: number;
+      status?: string;
+      search?: string;
+    } = {}
+  ): Promise<{
+    data: EventTicketAdminItem[];
+    pagination: { total: number; page: number; limit: number; totalPages: number };
+  }> {
+    const qs = new URLSearchParams();
+    if (params.page) qs.append('page', params.page.toString());
+    if (params.limit) qs.append('limit', params.limit.toString());
+    if (params.status && params.status !== 'ALL') qs.append('status', params.status);
+    if (params.search && params.search.trim()) qs.append('search', params.search.trim());
+
+    return fetchApi<{
+      data: EventTicketAdminItem[];
+      pagination: { total: number; page: number; limit: number; totalPages: number };
+    }>(`/tickets/admin/event/${encodeURIComponent(eventId)}${qs.toString() ? `?${qs.toString()}` : ''}`);
+  },
+
+  /**
+   * Récupère les métriques de billetterie d'un événement
+   */
+  async getTicketingStats(eventId: string): Promise<EventTicketingStats> {
+    return fetchApi<EventTicketingStats>(
+      `/tickets/admin/event/${encodeURIComponent(eventId)}/stats`
+    );
+  },
+
+  /**
+   * Annule administrativement un billet individuel
+   */
+  async cancelTicket(
+    ticketId: string,
+    reason: string,
+    internalNotes?: string
+  ): Promise<{ success: boolean }> {
+    return fetchApi<{ success: boolean }>(
+      `/tickets/admin/${encodeURIComponent(ticketId)}/cancel`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ reason, internalNotes }),
+      }
+    );
+  },
+
+  /**
+   * Révoque un billet frauduleux
+   */
+  async revokeTicket(ticketId: string, reason: string): Promise<{ success: boolean }> {
+    return fetchApi<{ success: boolean }>(
+      `/tickets/admin/${encodeURIComponent(ticketId)}/revoke`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ reason }),
+      }
+    );
+  },
+
+  /**
+   * Récupère l'historique des scans d'un billet
+   */
+  async getTicketHistory(ticketId: string): Promise<EventTicketHistoryResponse> {
+    return fetchApi<EventTicketHistoryResponse>(
+      `/tickets/admin/${encodeURIComponent(ticketId)}/history`
+    );
+  },
+
+  /**
+   * Récupère la liste des agents de contrôle / staff assignés à un événement spécifique
+   */
+  async getEventStaff(eventId: string): Promise<EventStaffMember[]> {
+    return fetchApi<EventStaffMember[]>(`/events/admin/${encodeURIComponent(eventId)}/staff`);
+  },
+
+  /**
+   * Assigne un agent de contrôle à un événement spécifique (par son adresse email)
+   */
+  async addEventStaff(eventId: string, email: string): Promise<EventStaffMember[]> {
+    return fetchApi<EventStaffMember[]>(`/events/admin/${encodeURIComponent(eventId)}/staff`, {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    });
+  },
+
+  /**
+   * Retire un agent de contrôle d'un événement spécifique
+   */
+  async removeEventStaff(eventId: string, userId: string): Promise<EventStaffMember[]> {
+    return fetchApi<EventStaffMember[]>(
+      `/events/admin/${encodeURIComponent(eventId)}/staff/${encodeURIComponent(userId)}`,
+      {
+        method: 'DELETE',
+      }
+    );
   },
 };
