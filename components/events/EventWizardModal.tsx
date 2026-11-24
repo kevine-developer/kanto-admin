@@ -1108,7 +1108,7 @@ export function EventWizardModal({
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-[var(--foreground)] uppercase tracking-wider flex items-center gap-1.5">
                     <Ticket size={14} className="text-[var(--accent)]" />
-                    Billetterie Numérique & Contrôle d'Accès
+                    Billetterie Numérique & Contrôle d&apos;Accès
                   </span>
                   {editingEvent && (
                     <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
@@ -1141,7 +1141,7 @@ export function EventWizardModal({
                         )}
                       </div>
                       <p className="text-[11px] text-[var(--text-muted)] leading-relaxed">
-                        Chaque participant recevra automatiquement un billet individuel unique avec QR Code sécurisé à présenter lors du contrôle à l'entrée.
+                        Chaque participant recevra automatiquement un billet individuel unique avec QR Code sécurisé à présenter lors du contrôle à l&apos;entrée.
                       </p>
                     </div>
 
@@ -1177,7 +1177,7 @@ export function EventWizardModal({
                     <div className="mt-2.5 pt-2 border-t border-[var(--border)] text-[11px] text-[var(--text-muted)] flex items-center gap-1.5">
                       <Lock size={12} className="shrink-0" />
                       <span>
-                        Ce paramètre a été verrouillé lors de la création de l'événement et ne peut plus être modifié.
+                        Ce paramètre a été verrouillé lors de la création de l&apos;événement et ne peut plus être modifié.
                       </span>
                     </div>
                   )}

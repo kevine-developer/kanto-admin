@@ -1,5 +1,6 @@
 'use client';
 
+/* eslint-disable @next/next/no-img-element */
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   X,
@@ -8,12 +9,9 @@ import {
   Loader2,
   CheckCircle2,
   Clock,
-  AlertCircle,
   Ban,
   ShieldAlert,
   History,
-  QrCode,
-  User,
   Users,
   UserPlus,
   Trash2,
@@ -23,6 +21,11 @@ import {
 import {
   eventsAdminService,
   EventAdminItem,
+  EventTicketAdminItem,
+  EventTicketingStats,
+  EventTicketHistoryResponse,
+  EventTicketValidationItem,
+  EventStaffMember,
 } from '@/services/events.service';
 import { useToast } from '@/lib/hooks/useToast';
 
@@ -42,8 +45,8 @@ export function EventTicketsModal({
   const { toast } = useToast();
 
   const [activeTab, setActiveTab] = useState<TicketFilterTab>('ALL');
-  const [tickets, setTickets] = useState<any[]>([]);
-  const [stats, setStats] = useState<any | null>(null);
+  const [tickets, setTickets] = useState<EventTicketAdminItem[]>([]);
+  const [stats, setStats] = useState<EventTicketingStats | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -52,24 +55,24 @@ export function EventTicketsModal({
   const [totalCount, setTotalCount] = useState(0);
 
   // Modale d'annulation de billet
-  const [cancellingTicket, setCancellingTicket] = useState<any | null>(null);
+  const [cancellingTicket, setCancellingTicket] = useState<EventTicketAdminItem | null>(null);
   const [cancelReason, setCancelReason] = useState('');
   const [cancelNotes, setCancelNotes] = useState('');
   const [isCancelling, setIsCancelling] = useState(false);
 
   // Modale de révocation de billet
-  const [revokingTicket, setRevokingTicket] = useState<any | null>(null);
+  const [revokingTicket, setRevokingTicket] = useState<EventTicketAdminItem | null>(null);
   const [revokeReason, setRevokeReason] = useState('');
   const [isRevoking, setIsRevoking] = useState(false);
 
   // Modale d'historique de scan
-  const [historyTicket, setHistoryTicket] = useState<any | null>(null);
-  const [historyData, setHistoryData] = useState<any | null>(null);
+  const [historyTicket, setHistoryTicket] = useState<EventTicketAdminItem | null>(null);
+  const [historyData, setHistoryData] = useState<EventTicketHistoryResponse | null>(null);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
 
   // Onglet principal : 'TICKETS' (Billetterie) ou 'STAFF' (Agents de contrôle)
   const [viewMode, setViewMode] = useState<'TICKETS' | 'STAFF'>('TICKETS');
-  const [staffList, setStaffList] = useState<any[]>([]);
+  const [staffList, setStaffList] = useState<EventStaffMember[]>([]);
   const [isLoadingStaff, setIsLoadingStaff] = useState(false);
   const [newAgentEmail, setNewAgentEmail] = useState('');
   const [isAddingAgent, setIsAddingAgent] = useState(false);
@@ -229,7 +232,7 @@ export function EventTicketsModal({
     }
   };
 
-  const handleOpenHistory = async (ticket: any) => {
+  const handleOpenHistory = async (ticket: EventTicketAdminItem) => {
     setHistoryTicket(ticket);
     setIsLoadingHistory(true);
     try {
@@ -793,7 +796,7 @@ export function EventTicketsModal({
               </div>
 
               <p className="text-xs text-[var(--text-muted)] bg-red-500/10 p-3 rounded-xl border border-red-500/20 leading-relaxed">
-                ⚠️ <strong>Avertissement :</strong> La révocation bloque définitivement l’accès du porteur au point de contrôle. Cette action est consignée dans le journal d'audit de sécurité.
+                ⚠️ <strong>Avertissement :</strong> La révocation bloque définitivement l’accès du porteur au point de contrôle. Cette action est consignée dans le journal d&apos;audit de sécurité.
               </p>
 
               <div>
@@ -867,7 +870,7 @@ export function EventTicketsModal({
                 </p>
               ) : (
                 <div className="space-y-2 max-h-60 overflow-y-auto">
-                  {historyData?.validations?.map((v: any) => (
+                  {historyData?.validations?.map((v: EventTicketValidationItem) => (
                     <div
                       key={v.id}
                       className="p-3 rounded-xl border border-[var(--border)] bg-[var(--background)] flex items-center justify-between text-xs"
