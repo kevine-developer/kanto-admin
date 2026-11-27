@@ -38,6 +38,7 @@ import {
   Target,
   Star,
   GraduationCap,
+  Bot,
 } from 'lucide-react';
 
 
@@ -54,6 +55,7 @@ const NAV_GROUPS: { label: string; items: { href: string; icon: React.ElementTyp
     label: 'Pilotage & Activité',
     items: [
       { href: '/',              icon: LayoutDashboard, label: "Vue d'ensemble" },
+      { href: '/kanto-ai',      icon: Bot,             label: 'Kanto AI Studio' },
       { href: '/events',        icon: Calendar,        label: 'Événements & Défis' },
       { href: '/contributions', icon: HeartHandshake,  label: 'Contributions' },
       { href: '/reviews',       icon: Star,            label: 'Avis & Témoignages' },
