@@ -100,6 +100,7 @@ export default function MarketingBannersAdminPage() {
   const [isUpdatingAiLanguage, setIsUpdatingAiLanguage] = useState(false);
   const [isGeneratingAi, setIsGeneratingAi] = useState(false);
   const [aiCustomTheme, setAiCustomTheme] = useState('');
+  const [aiGenerationError, setAiGenerationError] = useState<string | null>(null);
 
   const loadBanners = useCallback(async () => {
     try {
@@ -192,6 +193,7 @@ export default function MarketingBannersAdminPage() {
   const handleTriggerAiGeneration = async () => {
     const customTheme = aiCustomTheme.trim() || undefined;
     try {
+      setAiGenerationError(null);
       setIsGeneratingAi(true);
       const res = await marketingBannersService.triggerAiGeneration(
         true,
@@ -207,10 +209,13 @@ export default function MarketingBannersAdminPage() {
         }
         await loadBanners();
       } else {
-        toast.error(res.message || 'La génération IA a échoué.');
+        const errText = res.message || 'La génération IA a échoué.';
+        setAiGenerationError(errText);
+        toast.error(errText);
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Erreur lors du déclenchement IA.';
+      setAiGenerationError(msg);
       toast.error(msg);
     } finally {
       setIsGeneratingAi(false);
@@ -299,7 +304,7 @@ export default function MarketingBannersAdminPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const hasMissingCommon = !imageUrl.trim() || !deepLink.trim();
+    const hasMissingCommon = !deepLink.trim();
     const hasMissingFr = !titleFr.trim() || !descriptionFr.trim();
     const hasMissingMg = !titleMg.trim() || !descriptionMg.trim();
 
@@ -311,10 +316,10 @@ export default function MarketingBannersAdminPage() {
     ) {
       toast.error(
         manualLanguageMode === 'MG_ONLY'
-          ? 'Veuillez remplir les champs malgaches obligatoires (titre, description), l’image et le deep link.'
+          ? 'Veuillez remplir les champs malgaches obligatoires (titre, description) et le deep link.'
           : manualLanguageMode === 'FR_ONLY'
-            ? 'Veuillez remplir les champs français obligatoires (titre, description), l’image et le deep link.'
-            : 'Veuillez remplir tous les champs obligatoires (titres, descriptions FR/MG, image, deep link).'
+            ? 'Veuillez remplir les champs français obligatoires (titre, description) et le deep link.'
+            : 'Veuillez remplir tous les champs obligatoires (titres, descriptions FR/MG et deep link).'
       );
       return;
     }
@@ -542,8 +547,8 @@ export default function MarketingBannersAdminPage() {
                         : activeAiLanguageMode === 'FR_ONLY'
                           ? 'seulement en français'
                           : 'bilingue malgache & français'
-                    }) est générée automatiquement tous les 2 jours à 08:00 UTC via Gemini AI (avec repli de secours). Les bannières créées restent inactives en attente de validation.`
-                  : 'La génération automatique par IA toutes les 48h est actuellement désactivée. Vous pouvez l’activer ci-contre ou déclencher une génération manuelle ponctuelle.'}
+                    }) est générée automatiquement tous les 2 jours à 08:00 UTC via Gemini AI sans génération d’image (fond Design System Kanto par défaut). Les bannières créées restent inactives en attente de validation.`
+                  : 'La génération automatique par IA toutes les 48h est actuellement désactivée. Vous pouvez l’activer ci-contre ou déclencher une génération manuelle ponctuelle (aucune image générée : fond Design System Kanto par défaut).'}
               </p>
 
               {/* Sélecteur de langue de génération IA */}
@@ -614,6 +619,23 @@ export default function MarketingBannersAdminPage() {
                   )}
                 </div>
               </div>
+
+              {aiGenerationError && (
+                <div
+                  role="alert"
+                  className="mt-2 max-w-2xl flex items-start justify-between gap-2 rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-xs text-rose-600 dark:text-rose-300"
+                >
+                  <span>{aiGenerationError}</span>
+                  <button
+                    type="button"
+                    onClick={() => setAiGenerationError(null)}
+                    aria-label="Fermer le message d'erreur"
+                    className="p-0.5 rounded hover:bg-rose-500/20 shrink-0"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 
@@ -715,14 +737,23 @@ export default function MarketingBannersAdminPage() {
             <div className="max-w-md mx-auto">
               <div
                 className="relative h-40 rounded-lg overflow-hidden border border-white/15 bg-neutral-950 flex flex-col justify-between p-3.5 shadow-md select-none"
-                style={{
-                  backgroundImage: `url(${selectedPreviewBanner.imageUrl})`,
-                  backgroundSize: 'cover',
-                  backgroundPosition: 'center',
-                }}
+                style={
+                  selectedPreviewBanner.imageUrl?.trim()
+                    ? {
+                        backgroundImage: `url(${selectedPreviewBanner.imageUrl})`,
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
+                      }
+                    : {
+                        background:
+                          'linear-gradient(135deg, #2B4426 0%, #1A2918 55%, #0D0D0B 100%)',
+                      }
+                }
               >
-                {/* Dégradé cinématique identique à kanto-app */}
-                <div className="absolute inset-0 bg-gradient-to-b from-neutral-950/40 via-neutral-950/75 to-neutral-950/95 pointer-events-none" />
+                {/* Dégradé cinématique identique à kanto-app si image présente */}
+                {selectedPreviewBanner.imageUrl?.trim() && (
+                  <div className="absolute inset-0 bg-gradient-to-b from-neutral-950/40 via-neutral-950/75 to-neutral-950/95 pointer-events-none" />
+                )}
                 <div
                   className="absolute inset-0 pointer-events-none opacity-20"
                   style={{
@@ -858,17 +889,28 @@ export default function MarketingBannersAdminPage() {
               >
                 {/* Miniature & Infos */}
                 <div className="flex items-center gap-4 flex-1 min-w-0">
-                  <div className="w-16 h-12 rounded-lg overflow-hidden border border-border/60 bg-neutral-900 flex-shrink-0 relative">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={banner.imageUrl}
-                      alt={banner.titleFr}
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        e.currentTarget.src =
-                          'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=800&q=80';
-                      }}
-                    />
+                  <div
+                    className="w-16 h-12 rounded-lg overflow-hidden border border-border/60 bg-neutral-900 flex-shrink-0 relative"
+                    style={
+                      !banner.imageUrl?.trim()
+                        ? {
+                            background:
+                              'linear-gradient(135deg, #2B4426 0%, #1A2918 55%, #0D0D0B 100%)',
+                          }
+                        : undefined
+                    }
+                  >
+                    {banner.imageUrl?.trim() ? (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img
+                        src={banner.imageUrl}
+                        alt={banner.titleFr}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                        }}
+                      />
+                    ) : null}
                     <div
                       className="absolute bottom-0 left-0 right-0 h-1"
                       style={{ backgroundColor: banner.accentColor }}
@@ -1613,19 +1655,18 @@ export default function MarketingBannersAdminPage() {
                   <div>
                     <label htmlFor="banner-image-url" className="text-xs font-semibold text-muted-foreground block mb-1 flex items-center gap-1.5">
                       <ImageIcon className="w-3.5 h-3.5" />
-                      URL Image de fond *
+                      URL Image de fond (optionnel — fond Design System par défaut)
                     </label>
                     <input
                       id="banner-image-url"
                       name="imageUrl"
                       type="url"
-                      required
                       value={imageUrl}
                       onChange={(e) => setImageUrl(e.target.value)}
-                      placeholder="https://images.unsplash.com/..."
+                      placeholder="Laisser vide pour utiliser le fond Design System Kanto MG"
                       className="w-full text-sm px-3 py-2 rounded-lg border border-border bg-background font-mono text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500"
                     />
-                    {imageUrl && (
+                    {imageUrl ? (
                       <div className="mt-2 h-16 rounded-lg overflow-hidden border border-border/80 relative">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
@@ -1633,6 +1674,16 @@ export default function MarketingBannersAdminPage() {
                           alt="Prévisualisation"
                           className="w-full h-full object-cover"
                         />
+                      </div>
+                    ) : (
+                      <div
+                        className="mt-2 h-10 rounded-lg border border-border/80 flex items-center px-3 text-[11px] text-white/85 font-medium"
+                        style={{
+                          background:
+                            'linear-gradient(135deg, #2B4426 0%, #1A2918 55%, #0D0D0B 100%)',
+                        }}
+                      >
+                        Aperçu du fond Design System Kanto MG (Vert Tanimbary)
                       </div>
                     )}
                   </div>

@@ -68,7 +68,7 @@ export interface CreateMarketingBannerInput {
   descriptionMg: string;
   ctaFr?: string;
   ctaMg?: string;
-  imageUrl: string;
+  imageUrl?: string;
   deepLink: string;
   accentColor?: string;
   orderIndex?: number;
