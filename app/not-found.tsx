@@ -1,11 +1,11 @@
 import Link from 'next/link';
-import { Compass, LayoutDashboard, ArrowLeft } from 'lucide-react';
+import { Compass, LayoutDashboard } from 'lucide-react';
+import { BackButton } from '@/components/feedback/BackButton';
 
 export default function AdminNotFound() {
   return (
     <div className="min-h-screen w-full bg-[var(--background)] text-[var(--foreground)] flex flex-col items-center justify-center p-6 selection:bg-[var(--accent)] selection:text-white">
       <div className="w-full max-w-sm flex flex-col items-center text-center space-y-6 animate-in fade-in zoom-in-95 duration-200">
-        
         {/* Badge & Icône minimaliste */}
         <div className="flex flex-col items-center gap-3">
           <div className="w-16 h-16 rounded-full border border-[var(--card-border)] bg-[var(--card)] flex items-center justify-center text-[var(--accent)] shadow-xs">
@@ -37,13 +37,10 @@ export default function AdminNotFound() {
             <span>Tableau de bord</span>
           </Link>
 
-          <Link
-            href="/locks"
+          <BackButton
+            fallbackHref="/"
             className="w-full sm:flex-1 py-2 px-3 rounded-lg border border-[var(--card-border)] bg-[var(--card)] text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--card-hover)] transition text-xs font-medium flex items-center justify-center gap-2 cursor-pointer"
-          >
-            <ArrowLeft className="w-3.5 h-3.5" />
-            <span>Jeux &amp; Catégories</span>
-          </Link>
+          />
         </div>
       </div>
     </div>
