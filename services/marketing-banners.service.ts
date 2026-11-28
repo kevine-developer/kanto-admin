@@ -28,12 +28,38 @@ export interface MarketingBanner {
   updatedAt: string;
 }
 
+export type MarketingBannerAiLanguageMode = 'MG_ONLY' | 'BILINGUAL' | 'FR_ONLY';
+
+export const BANNER_AI_LANGUAGE_OPTIONS: ReadonlyArray<{
+  value: MarketingBannerAiLanguageMode;
+  label: string;
+  shortLabel: string;
+}> = [
+  {
+    value: 'BILINGUAL',
+    label: 'Malgache & Français',
+    shortLabel: 'MG + FR',
+  },
+  {
+    value: 'MG_ONLY',
+    label: 'Seulement en malgache',
+    shortLabel: 'Malagasy',
+  },
+  {
+    value: 'FR_ONLY',
+    label: 'Seulement en français',
+    shortLabel: 'Français',
+  },
+];
+
 export interface MarketingBannerAiStatus {
   enabled: boolean;
   description: string;
+  languageMode?: MarketingBannerAiLanguageMode;
 }
 
 export interface CreateMarketingBannerInput {
+  languageMode?: MarketingBannerAiLanguageMode;
   badgeFr: string;
   badgeMg: string;
   titleFr: string;
@@ -137,34 +163,71 @@ export const marketingBannersService = {
   },
 
   /**
-   * Récupère le statut d'activation de la génération IA (Gemini)
+   * Récupère le statut d'activation et la langue de génération IA (Gemini)
    */
   async getAiStatus(): Promise<MarketingBannerAiStatus> {
     const res = await fetchApi<MarketingBannerAiStatus>('/marketing-banners/ai-status');
-    return res || { enabled: false, description: 'Désactivée par défaut' };
+    return res
+      ? {
+          ...res,
+          languageMode: res.languageMode ?? 'BILINGUAL',
+        }
+      : {
+          enabled: false,
+          description: 'Désactivée par défaut',
+          languageMode: 'BILINGUAL',
+        };
   },
 
   /**
-   * Active ou désactive la génération automatique par IA
+   * Active/désactive la génération automatique par IA et/ou met à jour sa langue
    */
-  async updateAiStatus(enabled: boolean): Promise<MarketingBannerAiStatus> {
-    return fetchApi<MarketingBannerAiStatus>('/marketing-banners/ai-status', {
+  async updateAiStatus(
+    payload:
+      | boolean
+      | {
+          enabled?: boolean;
+          languageMode?: MarketingBannerAiLanguageMode;
+        }
+  ): Promise<MarketingBannerAiStatus> {
+    const body = typeof payload === 'boolean' ? { enabled: payload } : payload;
+    const res = await fetchApi<MarketingBannerAiStatus>('/marketing-banners/ai-status', {
       method: 'PATCH',
-      body: JSON.stringify({ enabled }),
+      body: JSON.stringify(body),
     });
+    return {
+      ...res,
+      languageMode: res.languageMode ?? 'BILINGUAL',
+    };
   },
 
   /**
    * Déclenche manuellement la génération d'une nouvelle bannière via Gemini AI
    */
   async triggerAiGeneration(
-    force = true
+    force = true,
+    languageMode?: MarketingBannerAiLanguageMode,
+    theme?: string
   ): Promise<{ success: boolean; bannerId?: string; message: string }> {
+    const cleanTheme = theme?.trim();
+    const body: {
+      force: boolean;
+      languageMode?: MarketingBannerAiLanguageMode;
+      theme?: string;
+    } = { force };
+
+    if (languageMode) {
+      body.languageMode = languageMode;
+    }
+    if (cleanTheme) {
+      body.theme = cleanTheme;
+    }
+
     return fetchApi<{ success: boolean; bannerId?: string; message: string }>(
       '/marketing-banners/generate',
       {
         method: 'POST',
-        body: JSON.stringify({ force }),
+        body: JSON.stringify(body),
       }
     );
   },

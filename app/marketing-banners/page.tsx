@@ -7,6 +7,8 @@ import {
   marketingBannersService,
   MarketingBanner,
   MarketingBannerAiStatus,
+  MarketingBannerAiLanguageMode,
+  BANNER_AI_LANGUAGE_OPTIONS,
   CreateMarketingBannerInput,
   BANNER_TARGET_LOCATIONS,
   BANNER_CATEGORIES,
@@ -60,6 +62,8 @@ export default function MarketingBannersAdminPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [manualLanguageMode, setManualLanguageMode] =
+    useState<MarketingBannerAiLanguageMode>('BILINGUAL');
 
   // Form Fields
   const [titleFr, setTitleFr] = useState('');
@@ -93,7 +97,9 @@ export default function MarketingBannersAdminPage() {
   const [aiStatus, setAiStatus] = useState<MarketingBannerAiStatus | null>(null);
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [isAiToggling, setIsAiToggling] = useState(false);
+  const [isUpdatingAiLanguage, setIsUpdatingAiLanguage] = useState(false);
   const [isGeneratingAi, setIsGeneratingAi] = useState(false);
+  const [aiCustomTheme, setAiCustomTheme] = useState('');
 
   const loadBanners = useCallback(async () => {
     try {
@@ -111,13 +117,20 @@ export default function MarketingBannersAdminPage() {
     }
   }, [toast]);
 
+  const activeAiLanguageMode: MarketingBannerAiLanguageMode =
+    aiStatus?.languageMode ?? 'BILINGUAL';
+
   const loadAiStatus = useCallback(async () => {
     try {
       setIsAiLoading(true);
       const status = await marketingBannersService.getAiStatus();
       setAiStatus(status);
     } catch {
-      setAiStatus({ enabled: false, description: 'Désactivée par défaut' });
+      setAiStatus({
+        enabled: false,
+        description: 'Désactivée par défaut',
+        languageMode: 'BILINGUAL',
+      });
     } finally {
       setIsAiLoading(false);
     }
@@ -132,7 +145,9 @@ export default function MarketingBannersAdminPage() {
     const nextState = !aiStatus?.enabled;
     try {
       setIsAiToggling(true);
-      const res = await marketingBannersService.updateAiStatus(nextState);
+      const res = await marketingBannersService.updateAiStatus({
+        enabled: nextState,
+      });
       setAiStatus(res);
       toast.success(
         nextState
@@ -147,14 +162,49 @@ export default function MarketingBannersAdminPage() {
     }
   };
 
+  const handleChangeAiLanguageMode = async (
+    nextMode: MarketingBannerAiLanguageMode
+  ) => {
+    if (nextMode === activeAiLanguageMode || isUpdatingAiLanguage || isAiLoading) {
+      return;
+    }
+    try {
+      setIsUpdatingAiLanguage(true);
+      const res = await marketingBannersService.updateAiStatus({
+        languageMode: nextMode,
+      });
+      setAiStatus(res);
+      const chosen = BANNER_AI_LANGUAGE_OPTIONS.find((opt) => opt.value === nextMode);
+      toast.success(
+        `Langue de génération IA définie sur : ${chosen?.label ?? nextMode}.`
+      );
+    } catch (err: unknown) {
+      const msg =
+        err instanceof Error
+          ? err.message
+          : 'Erreur lors de la mise à jour de la langue de génération IA.';
+      toast.error(msg);
+    } finally {
+      setIsUpdatingAiLanguage(false);
+    }
+  };
+
   const handleTriggerAiGeneration = async () => {
+    const customTheme = aiCustomTheme.trim() || undefined;
     try {
       setIsGeneratingAi(true);
-      const res = await marketingBannersService.triggerAiGeneration(true);
+      const res = await marketingBannersService.triggerAiGeneration(
+        true,
+        activeAiLanguageMode,
+        customTheme
+      );
       if (res.success) {
         toast.success(
           res.message || 'Nouvelle bannière générée par IA avec succès (créée en attente de validation).'
         );
+        if (customTheme) {
+          setAiCustomTheme('');
+        }
         await loadBanners();
       } else {
         toast.error(res.message || 'La génération IA a échoué.');
@@ -169,6 +219,7 @@ export default function MarketingBannersAdminPage() {
 
   const resetForm = () => {
     setEditingId(null);
+    setManualLanguageMode('BILINGUAL');
     setTitleFr('');
     setTitleMg('');
     setBadgeFr('');
@@ -200,6 +251,7 @@ export default function MarketingBannersAdminPage() {
 
   const openEditModal = (banner: MarketingBanner) => {
     setEditingId(banner.id);
+    setManualLanguageMode('BILINGUAL');
     setTitleFr(banner.titleFr);
     setTitleMg(banner.titleMg);
     setBadgeFr(banner.badgeFr);
@@ -225,28 +277,101 @@ export default function MarketingBannersAdminPage() {
     setIsModalOpen(true);
   };
 
+  const handleChangeManualLanguageMode = (nextMode: MarketingBannerAiLanguageMode) => {
+    if (nextMode === 'MG_ONLY') {
+      if (!titleMg.trim() && titleFr.trim()) setTitleMg(titleFr);
+      if (!badgeMg.trim() && badgeFr.trim()) setBadgeMg(badgeFr);
+      if (!descriptionMg.trim() && descriptionFr.trim()) setDescriptionMg(descriptionFr);
+      if (!modalBodyMg.trim() && modalBodyFr.trim()) setModalBodyMg(modalBodyFr);
+    } else if (nextMode === 'FR_ONLY') {
+      if (!titleFr.trim() && titleMg.trim()) setTitleFr(titleMg);
+      if (!badgeFr.trim() && badgeMg.trim()) setBadgeFr(badgeMg);
+      if (!descriptionFr.trim() && descriptionMg.trim()) setDescriptionFr(descriptionMg);
+      if (!modalBodyFr.trim() && modalBodyMg.trim()) setModalBodyFr(modalBodyMg);
+    }
+    setManualLanguageMode(nextMode);
+  };
+
   const handleSelectDeepLinkDirect = (val: string) => {
     setDeepLink(val);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!titleFr.trim() || !titleMg.trim() || !imageUrl.trim() || !deepLink.trim()) {
-      toast.error('Veuillez remplir tous les champs obligatoires (titres, image, deep link).');
+
+    const hasMissingCommon = !imageUrl.trim() || !deepLink.trim();
+    const hasMissingFr = !titleFr.trim() || !descriptionFr.trim();
+    const hasMissingMg = !titleMg.trim() || !descriptionMg.trim();
+
+    if (
+      hasMissingCommon ||
+      (manualLanguageMode === 'FR_ONLY' && hasMissingFr) ||
+      (manualLanguageMode === 'MG_ONLY' && hasMissingMg) ||
+      (manualLanguageMode === 'BILINGUAL' && (hasMissingFr || hasMissingMg))
+    ) {
+      toast.error(
+        manualLanguageMode === 'MG_ONLY'
+          ? 'Veuillez remplir les champs malgaches obligatoires (titre, description), l’image et le deep link.'
+          : manualLanguageMode === 'FR_ONLY'
+            ? 'Veuillez remplir les champs français obligatoires (titre, description), l’image et le deep link.'
+            : 'Veuillez remplir tous les champs obligatoires (titres, descriptions FR/MG, image, deep link).'
+      );
       return;
     }
+
+    const resolvedTitleFr =
+      manualLanguageMode === 'MG_ONLY' ? titleMg.trim() : titleFr.trim();
+    const resolvedTitleMg =
+      manualLanguageMode === 'FR_ONLY' ? titleFr.trim() : titleMg.trim();
+    const resolvedBadgeFr =
+      manualLanguageMode === 'MG_ONLY'
+        ? badgeMg.trim() || 'TOLOTRA MANOKANA'
+        : badgeFr.trim() || 'OFFRE SPÉCIALE';
+    const resolvedBadgeMg =
+      manualLanguageMode === 'FR_ONLY'
+        ? badgeFr.trim() || 'OFFRE SPÉCIALE'
+        : badgeMg.trim() || 'TOLOTRA MANOKANA';
+    const resolvedDescFr =
+      manualLanguageMode === 'MG_ONLY' ? descriptionMg.trim() : descriptionFr.trim();
+    const resolvedDescMg =
+      manualLanguageMode === 'FR_ONLY' ? descriptionFr.trim() : descriptionMg.trim();
+    const resolvedCtaFr =
+      manualLanguageMode === 'MG_ONLY'
+        ? ctaMg.trim() || 'Hizaha'
+        : ctaFr.trim() || 'Découvrir';
+    const resolvedCtaMg =
+      manualLanguageMode === 'FR_ONLY'
+        ? ctaFr.trim() || 'Découvrir'
+        : ctaMg.trim() || 'Hizaha';
+    const resolvedModalBodyFr =
+      manualLanguageMode === 'MG_ONLY'
+        ? modalBodyMg.trim() || undefined
+        : modalBodyFr.trim() || undefined;
+    const resolvedModalBodyMg =
+      manualLanguageMode === 'FR_ONLY'
+        ? modalBodyFr.trim() || undefined
+        : modalBodyMg.trim() || undefined;
+    const resolvedModalCtaFr =
+      manualLanguageMode === 'MG_ONLY'
+        ? modalCtaLabelMg.trim() || undefined
+        : modalCtaLabelFr.trim() || undefined;
+    const resolvedModalCtaMg =
+      manualLanguageMode === 'FR_ONLY'
+        ? modalCtaLabelFr.trim() || undefined
+        : modalCtaLabelMg.trim() || undefined;
 
     try {
       setIsSubmitting(true);
       const payload: CreateMarketingBannerInput = {
-        titleFr: titleFr.trim(),
-        titleMg: titleMg.trim(),
-        badgeFr: badgeFr.trim() || 'OFFRE SPÉCIALE',
-        badgeMg: badgeMg.trim() || 'TOLOTRA MANOKANA',
-        descriptionFr: descriptionFr.trim(),
-        descriptionMg: descriptionMg.trim(),
-        ctaFr: ctaFr.trim() || 'Découvrir',
-        ctaMg: ctaMg.trim() || 'Hizaha',
+        languageMode: manualLanguageMode,
+        titleFr: resolvedTitleFr,
+        titleMg: resolvedTitleMg,
+        badgeFr: resolvedBadgeFr,
+        badgeMg: resolvedBadgeMg,
+        descriptionFr: resolvedDescFr,
+        descriptionMg: resolvedDescMg,
+        ctaFr: resolvedCtaFr,
+        ctaMg: resolvedCtaMg,
         imageUrl: imageUrl.trim(),
         deepLink: deepLink.trim(),
         accentColor,
@@ -256,11 +381,11 @@ export default function MarketingBannersAdminPage() {
           ? (categoryKey && categoryKey !== 'ALL' ? categoryKey : 'ALL')
           : null,
         actionType,
-        modalBodyFr: modalBodyFr.trim() || undefined,
-        modalBodyMg: modalBodyMg.trim() || undefined,
+        modalBodyFr: resolvedModalBodyFr,
+        modalBodyMg: resolvedModalBodyMg,
         modalImageUrl: modalImageUrl.trim() || undefined,
-        modalCtaLabelFr: modalCtaLabelFr.trim() || undefined,
-        modalCtaLabelMg: modalCtaLabelMg.trim() || undefined,
+        modalCtaLabelFr: resolvedModalCtaFr,
+        modalCtaLabelMg: resolvedModalCtaMg,
         modalCtaLink: modalCtaLink.trim() || undefined,
       };
 
@@ -411,9 +536,84 @@ export default function MarketingBannersAdminPage() {
               </div>
               <p className="text-xs text-muted-foreground max-w-2xl leading-relaxed">
                 {aiStatus?.enabled
-                  ? 'Une nouvelle bannière culturelle bilingue est générée automatiquement tous les 2 jours à 08:00 UTC via Gemini AI (avec repli de secours). Les bannières créées restent inactives en attente de validation.'
+                  ? `Une nouvelle bannière culturelle (${
+                      activeAiLanguageMode === 'MG_ONLY'
+                        ? 'seulement en malgache'
+                        : activeAiLanguageMode === 'FR_ONLY'
+                          ? 'seulement en français'
+                          : 'bilingue malgache & français'
+                    }) est générée automatiquement tous les 2 jours à 08:00 UTC via Gemini AI (avec repli de secours). Les bannières créées restent inactives en attente de validation.`
                   : 'La génération automatique par IA toutes les 48h est actuellement désactivée. Vous pouvez l’activer ci-contre ou déclencher une génération manuelle ponctuelle.'}
               </p>
+
+              {/* Sélecteur de langue de génération IA */}
+              <div className="flex flex-wrap items-center gap-2 pt-1">
+                <span className="text-[11px] font-medium text-muted-foreground">
+                  Langue de génération :
+                </span>
+                <div
+                  role="group"
+                  aria-label="Langue de génération automatique de bannières par IA"
+                  className="inline-flex flex-wrap items-center gap-1 rounded-lg border border-border bg-muted/50 p-0.5"
+                >
+                  {BANNER_AI_LANGUAGE_OPTIONS.map((option) => {
+                    const isSelected = activeAiLanguageMode === option.value;
+                    return (
+                      <button
+                        key={option.value}
+                        type="button"
+                        aria-pressed={isSelected}
+                        disabled={isUpdatingAiLanguage || isAiLoading || isGeneratingAi}
+                        onClick={() => handleChangeAiLanguageMode(option.value)}
+                        className={`px-2.5 py-1 text-[11px] font-semibold rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                          isSelected
+                            ? 'bg-background text-foreground border border-border shadow-xs'
+                            : 'text-muted-foreground hover:text-foreground border border-transparent'
+                        }`}
+                      >
+                        {option.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                {isUpdatingAiLanguage && (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground" />
+                )}
+              </div>
+
+              {/* Champ de saisie libre pour le thème à générer */}
+              <div className="pt-1.5 max-w-2xl">
+                <label
+                  htmlFor="ai-banner-custom-theme"
+                  className="text-[11px] font-medium text-muted-foreground block mb-1"
+                >
+                  Thème de la bannière à générer (optionnel)
+                </label>
+                <div className="relative flex items-center">
+                  <input
+                    id="ai-banner-custom-theme"
+                    name="aiCustomTheme"
+                    type="text"
+                    maxLength={200}
+                    disabled={isGeneratingAi}
+                    value={aiCustomTheme}
+                    onChange={(e) => setAiCustomTheme(e.target.value)}
+                    placeholder="ex: Promotion des proverbes malgaches, Quiz de la fête nationale... (vide = thème aléatoire)"
+                    className="w-full text-xs px-3 py-1.5 pr-8 rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground/70 focus:outline-none focus:ring-1 focus:ring-emerald-500 disabled:opacity-50"
+                  />
+                  {aiCustomTheme && !isGeneratingAi && (
+                    <button
+                      type="button"
+                      onClick={() => setAiCustomTheme('')}
+                      aria-label="Effacer le thème personnalisé"
+                      title="Effacer le thème"
+                      className="absolute right-2 p-0.5 rounded text-muted-foreground hover:text-foreground hover:bg-muted"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
 
@@ -422,7 +622,7 @@ export default function MarketingBannersAdminPage() {
             <button
               type="button"
               onClick={handleTriggerAiGeneration}
-              disabled={isGeneratingAi}
+              disabled={isGeneratingAi || isUpdatingAiLanguage}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-border bg-background hover:bg-muted text-foreground transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-xs"
               title="Générer immédiatement une nouvelle bannière culturelle via IA (créée en attente de modération)"
             >
@@ -829,134 +1029,208 @@ export default function MarketingBannersAdminPage() {
 
               {/* Formulaire */}
               <form onSubmit={handleSubmit} className="p-5 space-y-4 overflow-y-auto flex-1">
+                {/* 0. Choix de la langue de la bannière */}
+                <div className="p-3.5 rounded-xl border border-border bg-muted/20 space-y-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="text-xs font-bold uppercase tracking-wider text-foreground">
+                      Langue de la bannière
+                    </span>
+                    <span className="text-[11px] text-muted-foreground">
+                      {manualLanguageMode === 'MG_ONLY'
+                        ? 'Affichée uniquement en malgache'
+                        : manualLanguageMode === 'FR_ONLY'
+                          ? 'Affichée uniquement en français'
+                          : 'Versions distinctes en français et en malgache'}
+                    </span>
+                  </div>
+                  <div
+                    role="group"
+                    aria-label="Langue de la bannière manuelle"
+                    className="grid grid-cols-1 sm:grid-cols-3 gap-2"
+                  >
+                    {BANNER_AI_LANGUAGE_OPTIONS.map((option) => {
+                      const isSelected = manualLanguageMode === option.value;
+                      return (
+                        <button
+                          key={option.value}
+                          type="button"
+                          aria-pressed={isSelected}
+                          onClick={() => handleChangeManualLanguageMode(option.value)}
+                          className={`px-3 py-2 text-xs font-semibold rounded-lg border text-center transition-colors ${
+                            isSelected
+                              ? 'border-emerald-500 bg-emerald-500/10 text-foreground shadow-xs'
+                              : 'border-border bg-background text-muted-foreground hover:text-foreground hover:bg-muted/40'
+                          }`}
+                        >
+                          {option.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
                 {/* 1. Titres FR & MG */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <div>
-                    <label htmlFor="banner-title-fr" className="text-xs font-semibold text-muted-foreground block mb-1">
-                      Titre Français *
-                    </label>
-                    <input
-                      id="banner-title-fr"
-                      name="titleFr"
-                      type="text"
-                      required
-                      value={titleFr}
-                      onChange={(e) => setTitleFr(e.target.value)}
-                      placeholder="ex: L'expérience Kanto sans aucune limite"
-                      className="w-full text-sm px-3 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="banner-title-mg" className="text-xs font-semibold text-muted-foreground block mb-1">
-                      Titre Malgache *
-                    </label>
-                    <input
-                      id="banner-title-mg"
-                      name="titleMg"
-                      type="text"
-                      required
-                      value={titleMg}
-                      onChange={(e) => setTitleMg(e.target.value)}
-                      placeholder="ex: Iainao feno ny haren-tsain'ny Razana"
-                      className="w-full text-sm px-3 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                    />
-                  </div>
+                <div
+                  className={`grid grid-cols-1 ${
+                    manualLanguageMode === 'BILINGUAL' ? 'md:grid-cols-2' : ''
+                  } gap-3`}
+                >
+                  {manualLanguageMode !== 'MG_ONLY' && (
+                    <div>
+                      <label htmlFor="banner-title-fr" className="text-xs font-semibold text-muted-foreground block mb-1">
+                        Titre Français *
+                      </label>
+                      <input
+                        id="banner-title-fr"
+                        name="titleFr"
+                        type="text"
+                        required
+                        value={titleFr}
+                        onChange={(e) => setTitleFr(e.target.value)}
+                        placeholder="ex: L'expérience Kanto sans aucune limite"
+                        className="w-full text-sm px-3 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                      />
+                    </div>
+                  )}
+                  {manualLanguageMode !== 'FR_ONLY' && (
+                    <div>
+                      <label htmlFor="banner-title-mg" className="text-xs font-semibold text-muted-foreground block mb-1">
+                        Titre Malgache *
+                      </label>
+                      <input
+                        id="banner-title-mg"
+                        name="titleMg"
+                        type="text"
+                        required
+                        value={titleMg}
+                        onChange={(e) => setTitleMg(e.target.value)}
+                        placeholder="ex: Iainao feno ny haren-tsain'ny Razana"
+                        className="w-full text-sm px-3 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                      />
+                    </div>
+                  )}
                 </div>
 
                 {/* 2. Badges FR & MG (sans icône) */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <div>
-                    <label htmlFor="banner-badge-fr" className="text-xs font-semibold text-muted-foreground block mb-1">
-                      Badge Français (texte pur)
-                    </label>
-                    <input
-                      id="banner-badge-fr"
-                      name="badgeFr"
-                      type="text"
-                      value={badgeFr}
-                      onChange={(e) => setBadgeFr(e.target.value)}
-                      placeholder="ex: OFFRE PRIVILÈGE"
-                      className="w-full text-sm px-3 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="banner-badge-mg" className="text-xs font-semibold text-muted-foreground block mb-1">
-                      Badge Malgache (texte pur)
-                    </label>
-                    <input
-                      id="banner-badge-mg"
-                      name="badgeMg"
-                      type="text"
-                      value={badgeMg}
-                      onChange={(e) => setBadgeMg(e.target.value)}
-                      placeholder="ex: TOLOTRA MANOKANA"
-                      className="w-full text-sm px-3 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                    />
-                  </div>
+                <div
+                  className={`grid grid-cols-1 ${
+                    manualLanguageMode === 'BILINGUAL' ? 'md:grid-cols-2' : ''
+                  } gap-3`}
+                >
+                  {manualLanguageMode !== 'MG_ONLY' && (
+                    <div>
+                      <label htmlFor="banner-badge-fr" className="text-xs font-semibold text-muted-foreground block mb-1">
+                        Badge Français (texte pur)
+                      </label>
+                      <input
+                        id="banner-badge-fr"
+                        name="badgeFr"
+                        type="text"
+                        value={badgeFr}
+                        onChange={(e) => setBadgeFr(e.target.value)}
+                        placeholder="ex: OFFRE PRIVILÈGE"
+                        className="w-full text-sm px-3 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                      />
+                    </div>
+                  )}
+                  {manualLanguageMode !== 'FR_ONLY' && (
+                    <div>
+                      <label htmlFor="banner-badge-mg" className="text-xs font-semibold text-muted-foreground block mb-1">
+                        Badge Malgache (texte pur)
+                      </label>
+                      <input
+                        id="banner-badge-mg"
+                        name="badgeMg"
+                        type="text"
+                        value={badgeMg}
+                        onChange={(e) => setBadgeMg(e.target.value)}
+                        placeholder="ex: TOLOTRA MANOKANA"
+                        className="w-full text-sm px-3 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                      />
+                    </div>
+                  )}
                 </div>
 
                 {/* 3. Descriptions FR & MG */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <div>
-                    <label htmlFor="banner-desc-fr" className="text-xs font-semibold text-muted-foreground block mb-1">
-                      Description Français
-                    </label>
-                    <textarea
-                      id="banner-desc-fr"
-                      name="descriptionFr"
-                      rows={2}
-                      value={descriptionFr}
-                      onChange={(e) => setDescriptionFr(e.target.value)}
-                      placeholder="Texte court et accrocheur..."
-                      className="w-full text-sm px-3 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-1 focus:ring-emerald-500 resize-none"
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="banner-desc-mg" className="text-xs font-semibold text-muted-foreground block mb-1">
-                      Description Malgache
-                    </label>
-                    <textarea
-                      id="banner-desc-mg"
-                      name="descriptionMg"
-                      rows={2}
-                      value={descriptionMg}
-                      onChange={(e) => setDescriptionMg(e.target.value)}
-                      placeholder="Fanasana fohy..."
-                      className="w-full text-sm px-3 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-1 focus:ring-emerald-500 resize-none"
-                    />
-                  </div>
+                <div
+                  className={`grid grid-cols-1 ${
+                    manualLanguageMode === 'BILINGUAL' ? 'md:grid-cols-2' : ''
+                  } gap-3`}
+                >
+                  {manualLanguageMode !== 'MG_ONLY' && (
+                    <div>
+                      <label htmlFor="banner-desc-fr" className="text-xs font-semibold text-muted-foreground block mb-1">
+                        Description Français *
+                      </label>
+                      <textarea
+                        id="banner-desc-fr"
+                        name="descriptionFr"
+                        rows={2}
+                        required
+                        value={descriptionFr}
+                        onChange={(e) => setDescriptionFr(e.target.value)}
+                        placeholder="Texte court et accrocheur..."
+                        className="w-full text-sm px-3 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-1 focus:ring-emerald-500 resize-none"
+                      />
+                    </div>
+                  )}
+                  {manualLanguageMode !== 'FR_ONLY' && (
+                    <div>
+                      <label htmlFor="banner-desc-mg" className="text-xs font-semibold text-muted-foreground block mb-1">
+                        Description Malgache *
+                      </label>
+                      <textarea
+                        id="banner-desc-mg"
+                        name="descriptionMg"
+                        rows={2}
+                        required
+                        value={descriptionMg}
+                        onChange={(e) => setDescriptionMg(e.target.value)}
+                        placeholder="Fanasana fohy..."
+                        className="w-full text-sm px-3 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-1 focus:ring-emerald-500 resize-none"
+                      />
+                    </div>
+                  )}
                 </div>
 
                 {/* 4. Boutons CTA FR & MG */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <div>
-                    <label htmlFor="banner-cta-fr" className="text-xs font-semibold text-muted-foreground block mb-1">
-                      Bouton CTA (FR)
-                    </label>
-                    <input
-                      id="banner-cta-fr"
-                      name="ctaFr"
-                      type="text"
-                      value={ctaFr}
-                      onChange={(e) => setCtaFr(e.target.value)}
-                      placeholder="ex: Découvrir Kanto Pro"
-                      className="w-full text-sm px-3 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="banner-cta-mg" className="text-xs font-semibold text-muted-foreground block mb-1">
-                      Bouton CTA (MG)
-                    </label>
-                    <input
-                      id="banner-cta-mg"
-                      name="ctaMg"
-                      type="text"
-                      value={ctaMg}
-                      onChange={(e) => setCtaMg(e.target.value)}
-                      placeholder="ex: Hizaha Kanto Pro"
-                      className="w-full text-sm px-3 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                    />
-                  </div>
+                <div
+                  className={`grid grid-cols-1 ${
+                    manualLanguageMode === 'BILINGUAL' ? 'md:grid-cols-2' : ''
+                  } gap-3`}
+                >
+                  {manualLanguageMode !== 'MG_ONLY' && (
+                    <div>
+                      <label htmlFor="banner-cta-fr" className="text-xs font-semibold text-muted-foreground block mb-1">
+                        Bouton CTA (FR)
+                      </label>
+                      <input
+                        id="banner-cta-fr"
+                        name="ctaFr"
+                        type="text"
+                        value={ctaFr}
+                        onChange={(e) => setCtaFr(e.target.value)}
+                        placeholder="ex: Découvrir Kanto Pro"
+                        className="w-full text-sm px-3 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                      />
+                    </div>
+                  )}
+                  {manualLanguageMode !== 'FR_ONLY' && (
+                    <div>
+                      <label htmlFor="banner-cta-mg" className="text-xs font-semibold text-muted-foreground block mb-1">
+                        Bouton CTA (MG)
+                      </label>
+                      <input
+                        id="banner-cta-mg"
+                        name="ctaMg"
+                        type="text"
+                        value={ctaMg}
+                        onChange={(e) => setCtaMg(e.target.value)}
+                        placeholder="ex: Hizaha Kanto Pro"
+                        className="w-full text-sm px-3 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                      />
+                    </div>
+                  )}
                 </div>
 
                 {/* Emplacement d'affichage & Catégorie ciblée */}
@@ -1127,47 +1401,61 @@ export default function MarketingBannersAdminPage() {
                       </div>
 
                       {/* Textes de la modale FR & MG */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <div>
-                          <label htmlFor="banner-modal-body-fr" className="text-xs font-semibold text-muted-foreground block mb-1">
-                            Texte du modal (Français) *
-                          </label>
-                          <textarea
-                            id="banner-modal-body-fr"
-                            name="modalBodyFr"
-                            rows={actionType === 'BOTTOM_SHEET' ? 4 : 2}
-                            value={modalBodyFr}
-                            onChange={(e) => setModalBodyFr(e.target.value)}
-                            placeholder={
-                              actionType === 'BOTTOM_SHEET'
-                                ? "Rédigez ici le contenu complet, explications détaillées, histoire ou règles du jeu..."
-                                : "Texte court et percutant de l'annonce..."
-                            }
-                            className="w-full text-sm px-3 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                          />
-                        </div>
-                        <div>
-                          <label htmlFor="banner-modal-body-mg" className="text-xs font-semibold text-muted-foreground block mb-1">
-                            Texte du modal (Malgache)
-                          </label>
-                          <textarea
-                            id="banner-modal-body-mg"
-                            name="modalBodyMg"
-                            rows={actionType === 'BOTTOM_SHEET' ? 4 : 2}
-                            value={modalBodyMg}
-                            onChange={(e) => setModalBodyMg(e.target.value)}
-                            placeholder={
-                              actionType === 'BOTTOM_SHEET'
-                                ? "Soraty eto ny tantara, fanazavana feno na fepetra..."
-                                : "Hafatra fohy sy manaitra..."
-                            }
-                            className="w-full text-sm px-3 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                          />
-                        </div>
+                      <div
+                        className={`grid grid-cols-1 ${
+                          manualLanguageMode === 'BILINGUAL' ? 'md:grid-cols-2' : ''
+                        } gap-3`}
+                      >
+                        {manualLanguageMode !== 'MG_ONLY' && (
+                          <div>
+                            <label htmlFor="banner-modal-body-fr" className="text-xs font-semibold text-muted-foreground block mb-1">
+                              Texte du modal (Français) *
+                            </label>
+                            <textarea
+                              id="banner-modal-body-fr"
+                              name="modalBodyFr"
+                              rows={actionType === 'BOTTOM_SHEET' ? 4 : 2}
+                              value={modalBodyFr}
+                              onChange={(e) => setModalBodyFr(e.target.value)}
+                              placeholder={
+                                actionType === 'BOTTOM_SHEET'
+                                  ? "Rédigez ici le contenu complet, explications détaillées, histoire ou règles du jeu..."
+                                  : "Texte court et percutant de l'annonce..."
+                              }
+                              className="w-full text-sm px-3 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                            />
+                          </div>
+                        )}
+                        {manualLanguageMode !== 'FR_ONLY' && (
+                          <div>
+                            <label htmlFor="banner-modal-body-mg" className="text-xs font-semibold text-muted-foreground block mb-1">
+                              Texte du modal (Malgache){manualLanguageMode === 'MG_ONLY' ? ' *' : ''}
+                            </label>
+                            <textarea
+                              id="banner-modal-body-mg"
+                              name="modalBodyMg"
+                              rows={actionType === 'BOTTOM_SHEET' ? 4 : 2}
+                              value={modalBodyMg}
+                              onChange={(e) => setModalBodyMg(e.target.value)}
+                              placeholder={
+                                actionType === 'BOTTOM_SHEET'
+                                  ? "Soraty eto ny tantara, fanazavana feno na fepetra..."
+                                  : "Hafatra fohy sy manaitra..."
+                              }
+                              className="w-full text-sm px-3 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                            />
+                          </div>
+                        )}
                       </div>
 
                       {/* Image spécifique au modal & CTA modal */}
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <div
+                        className={`grid grid-cols-1 ${
+                          manualLanguageMode === 'BILINGUAL'
+                            ? 'md:grid-cols-3'
+                            : 'md:grid-cols-2'
+                        } gap-3`}
+                      >
                         <div>
                           <label htmlFor="banner-modal-image-url" className="text-xs font-semibold text-muted-foreground block mb-1">
                             Image de la modale (optionnel)
@@ -1182,34 +1470,38 @@ export default function MarketingBannersAdminPage() {
                             className="w-full text-sm px-3 py-2 rounded-lg border border-border bg-background font-mono text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500"
                           />
                         </div>
-                        <div>
-                          <label htmlFor="banner-modal-cta-fr" className="text-xs font-semibold text-muted-foreground block mb-1">
-                            Bouton d&apos;action (FR)
-                          </label>
-                          <input
-                            id="banner-modal-cta-fr"
-                            name="modalCtaLabelFr"
-                            type="text"
-                            value={modalCtaLabelFr}
-                            onChange={(e) => setModalCtaLabelFr(e.target.value)}
-                            placeholder="ex: Continuer, J'ai compris"
-                            className="w-full text-sm px-3 py-2 rounded-lg border border-border bg-background text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                          />
-                        </div>
-                        <div>
-                          <label htmlFor="banner-modal-cta-mg" className="text-xs font-semibold text-muted-foreground block mb-1">
-                            Bouton d&apos;action (MG)
-                          </label>
-                          <input
-                            id="banner-modal-cta-mg"
-                            name="modalCtaLabelMg"
-                            type="text"
-                            value={modalCtaLabelMg}
-                            onChange={(e) => setModalCtaLabelMg(e.target.value)}
-                            placeholder="ex: Tohizo, Azoko"
-                            className="w-full text-sm px-3 py-2 rounded-lg border border-border bg-background text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                          />
-                        </div>
+                        {manualLanguageMode !== 'MG_ONLY' && (
+                          <div>
+                            <label htmlFor="banner-modal-cta-fr" className="text-xs font-semibold text-muted-foreground block mb-1">
+                              Bouton d&apos;action (FR)
+                            </label>
+                            <input
+                              id="banner-modal-cta-fr"
+                              name="modalCtaLabelFr"
+                              type="text"
+                              value={modalCtaLabelFr}
+                              onChange={(e) => setModalCtaLabelFr(e.target.value)}
+                              placeholder="ex: Continuer, J'ai compris"
+                              className="w-full text-sm px-3 py-2 rounded-lg border border-border bg-background text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                            />
+                          </div>
+                        )}
+                        {manualLanguageMode !== 'FR_ONLY' && (
+                          <div>
+                            <label htmlFor="banner-modal-cta-mg" className="text-xs font-semibold text-muted-foreground block mb-1">
+                              Bouton d&apos;action (MG)
+                            </label>
+                            <input
+                              id="banner-modal-cta-mg"
+                              name="modalCtaLabelMg"
+                              type="text"
+                              value={modalCtaLabelMg}
+                              onChange={(e) => setModalCtaLabelMg(e.target.value)}
+                              placeholder="ex: Tohizo, Azoko"
+                              className="w-full text-sm px-3 py-2 rounded-lg border border-border bg-background text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                            />
+                          </div>
+                        )}
                       </div>
 
                       <div>
