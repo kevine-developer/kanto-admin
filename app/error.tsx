@@ -5,10 +5,9 @@ import Link from 'next/link';
 import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
 
 /**
- * Error Boundary global — capte toutes les erreurs non gérées dans l'application admin.
- * Affiche une interface de récupération propre plutôt qu'une page blanche.
+ * Error Boundary de segment — capte les erreurs runtime des routes dans RootLayout.
  */
-export default function GlobalError({
+export default function SegmentError({
   error,
   reset,
 }: {
@@ -16,134 +15,53 @@ export default function GlobalError({
   reset: () => void;
 }) {
   useEffect(() => {
-    // Log structuré en production — ne jamais exposer les données sensibles
-    console.error('[Kanto Admin] Erreur non gérée:', {
+    console.error('[Kanto Admin] Erreur non gérée :', {
       message: error.message,
       digest: error.digest,
     });
   }, [error]);
 
   return (
-    <html lang="fr">
-      <body
-        style={{
-          minHeight: '100vh',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          background: '#0C0F14',
-          color: '#E8E3D9',
-          fontFamily: 'system-ui, sans-serif',
-          padding: '1.5rem',
-        }}
-      >
-        <div
-          style={{
-            maxWidth: '420px',
-            width: '100%',
-            textAlign: 'center',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: '1.25rem',
-          }}
-        >
-          <div
-            style={{
-              width: '56px',
-              height: '56px',
-              borderRadius: '16px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              background: 'rgba(239,68,68,0.1)',
-              border: '1px solid rgba(239,68,68,0.25)',
-            }}
-          >
-            <AlertTriangle size={26} color="#ef4444" />
-          </div>
-
-          <div>
-            <h1
-              style={{
-                fontSize: '1.125rem',
-                fontWeight: 700,
-                marginBottom: '0.375rem',
-                color: '#E8E3D9',
-              }}
-            >
-              Une erreur inattendue est survenue
-            </h1>
-            <p
-              style={{
-                fontSize: '0.8125rem',
-                color: '#8D9099',
-                lineHeight: 1.6,
-              }}
-            >
-              Le Conservatoire Kanto a rencontré un problème. Vous pouvez tenter de
-              recharger la page ou revenir au tableau de bord.
-            </p>
-          </div>
-
-          {error.digest && (
-            <code
-              style={{
-                fontSize: '0.6875rem',
-                fontFamily: 'monospace',
-                color: '#6B7280',
-                background: 'rgba(255,255,255,0.04)',
-                border: '1px solid rgba(255,255,255,0.08)',
-                padding: '0.375rem 0.75rem',
-                borderRadius: '6px',
-              }}
-            >
-              Ref: {error.digest}
-            </code>
-          )}
-
-          <div style={{ display: 'flex', gap: '0.625rem', flexWrap: 'wrap', justifyContent: 'center' }}>
-            <button
-              onClick={reset}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.375rem',
-                padding: '0.5rem 1rem',
-                borderRadius: '10px',
-                background: '#4A6741',
-                color: '#fff',
-                border: 'none',
-                fontSize: '0.8125rem',
-                fontWeight: 600,
-                cursor: 'pointer',
-              }}
-            >
-              <RefreshCw size={13} />
-              Réessayer
-            </button>
-            <Link
-              href="/"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.375rem',
-                padding: '0.5rem 1rem',
-                borderRadius: '10px',
-                background: 'rgba(255,255,255,0.06)',
-                border: '1px solid rgba(255,255,255,0.1)',
-                color: '#E8E3D9',
-                fontSize: '0.8125rem',
-                fontWeight: 600,
-                textDecoration: 'none',
-              }}
-            >
-              <Home size={13} />
-              Tableau de bord
-            </Link>
-          </div>
+    <div className="min-h-screen w-full bg-[var(--background)] text-[var(--foreground)] flex flex-col items-center justify-center p-6">
+      <div className="w-full max-w-md rounded-2xl border border-[var(--card-border)] bg-[var(--card)] p-6 sm:p-8 text-center flex flex-col items-center gap-5 shadow-sm">
+        <div className="w-14 h-14 rounded-2xl border border-rose-500/25 bg-rose-500/10 flex items-center justify-center text-rose-500">
+          <AlertTriangle className="w-6 h-6" />
         </div>
-      </body>
-    </html>
+
+        <div className="space-y-1.5">
+          <h1 className="text-lg font-bold tracking-tight text-[var(--foreground)]">
+            Une erreur inattendue est survenue
+          </h1>
+          <p className="text-xs text-[var(--text-muted)] leading-relaxed">
+            Le Conservatoire Kanto a rencontré un problème lors de l&apos;affichage de cette page. Vous pouvez réessayer ou revenir au tableau de bord.
+          </p>
+        </div>
+
+        {error.digest && (
+          <code className="text-[11px] font-mono text-[var(--text-subtle)] bg-[var(--background)] border border-[var(--card-border)] px-3 py-1 rounded-md">
+            Réf : {error.digest}
+          </code>
+        )}
+
+        <div className="flex flex-col sm:flex-row items-center gap-2.5 w-full pt-1">
+          <button
+            type="button"
+            onClick={reset}
+            className="w-full sm:flex-1 py-2 px-3 rounded-lg bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white transition text-xs font-semibold flex items-center justify-center gap-2 cursor-pointer"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            <span>Réessayer</span>
+          </button>
+
+          <Link
+            href="/"
+            className="w-full sm:flex-1 py-2 px-3 rounded-lg border border-[var(--card-border)] bg-[var(--background)] text-[var(--foreground)] hover:bg-[var(--card-hover)] transition text-xs font-medium flex items-center justify-center gap-2 cursor-pointer"
+          >
+            <Home className="w-3.5 h-3.5" />
+            <span>Tableau de bord</span>
+          </Link>
+        </div>
+      </div>
+    </div>
   );
 }
